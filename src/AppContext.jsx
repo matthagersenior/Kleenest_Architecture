@@ -13,6 +13,7 @@ import { createActivityEventService } from './domains/analytics/events.js';
 import { createOfflinePackService } from './domains/offline/packs.js';
 import { createBusinessManagementService } from './domains/business/management.js';
 import { createFleetOperationsService } from './domains/fleet/operations.js';
+import { createFleetMetricService } from './domains/fleet/metrics.js';
 import { createPartnerProgramService } from './domains/partners/programs.js';
 import { createFavoriteService } from './domains/consumer/favorites.js';
 import { createReviewService } from './domains/consumer/reviews.js';
@@ -20,7 +21,7 @@ import { createReviewService } from './domains/consumer/reviews.js';
 const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const services = useMemo(() => !supabase ? null : Object.freeze({
-    identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }), profile: createProfileService(supabase), entitlements: createEntitlementService(supabase), maps: createMapNetworkService(supabase), live: createLiveNetworkService(supabase), routing: createRoutingService(supabase), notifications: createNotificationInboxService(supabase), checkins: createCheckInService(supabase), analytics: createActivityEventService(supabase), offline: createOfflinePackService(supabase), business: createBusinessManagementService(supabase), fleet: createFleetOperationsService(supabase), partners: createPartnerProgramService(supabase), favorites: createFavoriteService(supabase), reviews: createReviewService(supabase)
+    identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }), profile: createProfileService(supabase), entitlements: createEntitlementService(supabase), maps: createMapNetworkService(supabase), live: createLiveNetworkService(supabase), routing: createRoutingService(supabase), notifications: createNotificationInboxService(supabase), checkins: createCheckInService(supabase), analytics: createActivityEventService(supabase), offline: createOfflinePackService(supabase), business: createBusinessManagementService(supabase), fleet: createFleetOperationsService(supabase), fleetMetrics: createFleetMetricService(supabase), partners: createPartnerProgramService(supabase), favorites: createFavoriteService(supabase), reviews: createReviewService(supabase)
   }), []);
   const [state, setState] = useState({ loading: true, user: null, profile: null, entitlements: [], capabilities: ['consumer'], error: null });
   useEffect(() => {
