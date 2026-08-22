@@ -1,3 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import {Navigate,Route,Routes} from 'react-router-dom';
 import Home from './runtime/Home.jsx';
-export default function CanonicalAppRuntime(){return <Routes><Route path="/" element={<Home/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>;}
+import MapSurface from './runtime/MapSurface.jsx';
+export default function CanonicalAppRuntime(){return <Routes><Route path="/" element={<Home/>}/><Route path="/map" element={<MapSurface/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
