@@ -1,9 +1,12 @@
 import BusinessIntelligencePage from './BusinessIntelligencePage.jsx';
+import BusinessAnalyticsPage from './BusinessAnalyticsPage.jsx';
 import BusinessManagePage from './BusinessManagePage.jsx';
 import EnterpriseCommandCenterPage from './EnterpriseCommandCenterPage.jsx';
 import FleetOperationsPage from './FleetOperationsPage.jsx';
 import CommunitySurface from './CommunitySurface.jsx';
 import ActivitySurface from './ActivitySurface.jsx';
+import ProgressionPage from './ProgressionPage.jsx';
+import FamilyPage from './FamilyPage.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import CapabilityPanel, { MetricGrid, ActionForm } from './CapabilityPanel.jsx';
 import { useAppContext } from '../AppContext.jsx';
@@ -11,22 +14,16 @@ import { useAppContext } from '../AppContext.jsx';
 /** Compatibility exports for legacy imports. Product workspaces terminate in canonical migrated surfaces. */
 export function BusinessPage({ section = 'overview' }) {
   if (section === 'intelligence') return <BusinessIntelligencePage />;
+  if (section === 'reviews') return <BusinessAnalyticsPage mode="reviews" />;
+  if (['analytics', 'performance'].includes(section)) return <BusinessAnalyticsPage />;
   return <BusinessManagePage />;
 }
 export function FleetPage() { return <FleetOperationsPage />; }
 export function EnterprisePage() { return <EnterpriseCommandCenterPage />; }
 export function ActivityPage() { return <ActivitySurface />; }
 export function CommunityPage() { return <CommunitySurface />; }
-
-export function PlayPage() {
-  const { services } = useAppContext();
-  return <WorkspaceShell workspace="consumer"><section className="page"><div className="page-header"><div><span className="eyebrow">PLAY</span><h1>Play</h1></div><a className="primary" href="/rewards">Rewards</a></div><CapabilityPanel title="Progression" load={() => services.progression.dashboard()} renderData={(data) => <MetricGrid items={data} />} /><CapabilityPanel title="Leaderboard" load={() => services.progression.platformLeaderboard('users:points', 25)} renderData={(data) => <MetricGrid items={data} />} /><CapabilityPanel title="Challenges" load={() => services.progression.challenges(25)} renderData={(data) => <MetricGrid items={data} />} /></section></WorkspaceShell>;
-}
-
-export function FamilyPage() {
-  const { services } = useAppContext();
-  return <WorkspaceShell workspace="consumer"><section className="page"><div className="page-header"><div><span className="eyebrow">FAMILY</span><h1>Family</h1></div></div><CapabilityPanel title="Premium access" load={() => services.family.hasPremiumAccess()} renderData={(data) => <MetricGrid items={data} />} /><ActionForm title="Create family" submitLabel="Create family" fields={[{ name: 'name', label: 'Family name' }]} onSubmit={(value) => services.family.create(value.name)} /><ActionForm title="Invite family member" submitLabel="Send invite" fields={[{ name: 'familyId', label: 'Family ID' }, { name: 'email', label: 'Member email' }]} onSubmit={(value) => services.family.invite(value.familyId, value.email)} /></section></WorkspaceShell>;
-}
+export function PlayPage() { return <ProgressionPage />; }
+export { FamilyPage };
 
 export function AdminPage() {
   const { services, profile } = useAppContext();
