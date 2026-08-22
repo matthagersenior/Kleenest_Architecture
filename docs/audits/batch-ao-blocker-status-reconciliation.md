@@ -2,9 +2,21 @@
 
 Date: 2026-08-22
 
-This is the authoritative status addendum to `batch-ao-full-architecture-audit.md`. The original audit preserves the point-in-time blocker snapshot; this document records later commits that changed those statuses.
+This is the authoritative status addendum to `batch-ao-full-architecture-audit.md`. The original audit preserves the point-in-time blocker snapshot; this document records later commits and current Production verification that changed those statuses.
 
 ## Resolved
+
+### A — follows
+
+Resolved by current Production verification. `follow_user(p_user_id uuid)` now inserts into `public.follows(follower_id, following_id)` with conflict protection and awards follow progression only for a new relationship. The application may therefore use `follow_user()` for creation while reads/deletion remain against the same canonical `follows` store. No second follow store is required.
+
+### B — favorites
+
+Resolved by current Production verification and application convergence. `kleenest_toggle_favorite(p_location_id uuid)` mutates `public.favorites`, while `my_favorite_locations()` returns the canonical favorite locations. The implementation must not read/write `location_favorites` for the same capability.
+
+### C — check-in aggregation
+
+Resolved by current Production verification plus the `dedupe_checkin_feature_event_authority` migration. `check_ins` has one BEFORE trigger for the displayed aggregate count, one AFTER gamification trigger for progression/reward, and one AFTER feature-event trigger. `create_check_in()` no longer performs a second explicit `data_feature_events` insert; the trigger is the single feature-event capture authority. The command remains idempotent for the existing 24-hour user/location window.
 
 ### D — QR/check-in authority
 
@@ -35,32 +47,12 @@ Resolved for the canonical adapter path by:
 
 Mutations requiring canonical `locations.id` must still fail closed when resolution is unavailable.
 
-## Partially resolved
-
-### B — favorites
-
-Later commits established and wired the canonical consumer favorites path:
-
-- `e6e2ba40a7f5e01e5e08a4357226850837428243` — canonical consumer favorites adapter.
-- `8a2365a41cc2beb77de15bb10e6c5c184645d71b` — expose consumer favorites/reviews.
-- `b9733bd05365b937de78a34eb90aa396d66d71ae` — wire consumer check-in/favorites/reviews/notifications.
-
-The client/domain path is therefore converged. Final closure still requires explicit end-to-end verification that the authoritative Production favorite store is singular.
-
-## Still open
-
-### A — follows
-
-No later architecture commit located establishes reconciliation of `follow_user()` with the canonical `follows` relationship store.
-
-### C — check-in aggregation
-
-The server-authoritative command path is established, but downstream profile/check-in aggregate effects still require explicit idempotency/duplicate-trigger verification.
-
-## Security gates remain separate
+## Remaining security/review gates
 
 The Partner benchmark authorization finding and SECURITY DEFINER classification work remain separate security gates until explicitly verified.
 
+Live-event mutation authority, enterprise engagement mutation semantics, notification mark-all mutation, and review-to-verification event semantics remain review items from the interoperability matrix; they do not block unrelated implementation batches.
+
 ## Updated implementation gate
 
-Broad implementation is no longer blocked by D, E, F, or H. B is partially resolved. A and C remain correctness gates. Security findings remain separate gates.
+Broad implementation is no longer blocked by A, B, C, D, E, F, or H. Security findings and the remaining review items are isolated gates and should be resolved when their corresponding capability is reached.
