@@ -34,7 +34,7 @@ export function createBusinessIntelligenceService(client){
     rewards:(businessId,start,end)=>rpc('business_rewards_analytics',windowArgs(businessId,start,end)),
     roi:(businessId,start,end)=>rpc('business_roi_analytics',windowArgs(businessId,start,end)),
     benchmark:(businessId,start,end)=>rpc('business_benchmark_analytics',windowArgs(businessId,start,end)),
-    actionLinks:async(businessId,{limit=50}={})=>{await requireUser();let q=client.from('intelligence_action_links').select('id,location_id,business_id,surface,signal_type,action_type,status,metadata,created_at,updated_at').eq('business_id',businessId).eq('surface','business').order('created_at',{ascending:false}).limit(Math.min(Math.max(Number(limit)||50,1),100));const{data,error}=await q;if(error)throw error;return Array.isArray(data)?data:[];},
+    actionLinks:async(businessId,{limit=50}={})=>{await requireUser();const{data,error}=await client.from('intelligence_action_links').select('id,location_id,business_id,surface,signal_type,action_type,status,metadata,created_at,updated_at').eq('business_id',businessId).eq('surface','business').order('created_at',{ascending:false}).limit(Math.min(Math.max(Number(limit)||50,1),100));if(error)throw error;return Array.isArray(data)?data:[];},
     executeAction:async(businessId,{action,locationId,title,description,name,goal,discount,startsAt,endsAt,eventDate,eventTime,type='general',status='draft'}={})=>{
       if(!action)throw new Error('This intelligence signal has no available action.');
       if(action==='create-promotion'){
@@ -44,7 +44,7 @@ export function createBusinessIntelligenceService(client){
       if(action==='create-campaign')return rpc('business_manage_campaign',{p_business_id:businessId,p_campaign_id:null,p_action:'create',p_name:name||'Quality improvement campaign',p_campaign_type:type,p_goal:goal||'Improve community experience and review sentiment.',p_status:status});
       if(action==='create-event'){
         await assertManagedLocation(businessId,locationId);
-        return rpc('business_manage_event',{p_business_id:businessId,p_event_id:null,p_action:'create',p_location_id:locationId,p_title:title||'Community activity event',p_description:description||'Event created from a Kleenest activity signal.',p_event_date:eventDate??null,p_event_time:eventTime??null});
+        return rpc('business_create_event',{p_business_id:businessId,p_title:title||'Community activity event',p_description:description||'Event created from a Kleenest activity signal.',p_event_date:eventDate??null,p_event_time:eventTime??null,p_location_id:locationId});
       }
       throw new Error(`Unsupported intelligence action: ${action}`);
     },
