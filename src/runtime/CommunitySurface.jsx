@@ -3,35 +3,12 @@ import { Heart, MessageCircle, RefreshCw, Trophy, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import { useAppContext } from '../AppContext.jsx';
-
 const asArray = value => Array.isArray(value) ? value : [];
 const pick = (row, keys, fallback = '—') => keys.map(key => row?.[key]).find(value => value !== undefined && value !== null && value !== '') ?? fallback;
-
 export default function CommunitySurface() {
   const { services } = useAppContext();
-  const [feed, setFeed] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const load = async () => {
-    setLoading(true); setError('');
-    try {
-      const [feedResult, boardResult] = await Promise.all([
-        services.consumer?.reviewsFeed ? services.consumer.reviewsFeed(30) : services.live.list(),
-        services.progression.platformLeaderboard('users:points', 20),
-      ]);
-      setFeed(asArray(feedResult)); setLeaderboard(asArray(boardResult));
-    } catch (e) { setError(e.message || 'Unable to load community.'); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { void load(); }, []);
-
-  const contributors = useMemo(() => leaderboard.slice(0, 10), [leaderboard]);
-  return <WorkspaceShell workspace="consumer"><section className="page business-page">
-    <div className="page-header"><div><span className="eyebrow">COMMUNITY</span><h1>Community</h1><p>Discover what people are reviewing, contributing, and accomplishing across Kleenest.</p></div><div className="hero-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/play"><Trophy size={16}/>Play</Link><Link className="secondary" to="/map"><Users size={16}/>Explore</Link></div></div>
-    {error && <div className="state error" role="alert">{error}</div>}
-    <div className="community-layout"><section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">LIVE FEED</span><h2>Recent community activity</h2></div><MessageCircle size={22}/></div>{loading ? <p className="muted">Loading community activity…</p> : feed.length ? feed.map((row,index)=><article className="business-row" key={row.id || row.review_id || `${index}-${JSON.stringify(row).slice(0,40)}`}><div><strong>{pick(row,['location_name','business_name','title'],'Community contribution')}</strong><span>{pick(row,['review_text','content','body','description'],'New community activity')}</span><small>{pick(row,['created_at','published_at','occurred_at'],'Recently')}</small></div><div className="inline-stat"><Heart size={15}/><span>{pick(row,['likes','helpful_count','reaction_count'],0)}</span></div></article>) : <div className="empty-state"><MessageCircle size={30}/><h3>No activity yet</h3><p>Visit a location, leave evidence or a review, and your contribution will appear here.</p><Link className="primary" to="/map">Explore locations</Link></div>}</section>
-    <aside className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">CONTRIBUTORS</span><h2>Top contributors</h2></div><Trophy size={22}/></div>{contributors.length ? contributors.map((row,index)=><div className="business-row" key={row.user_id || row.id || index}><div><strong>#{index+1} {pick(row,['display_name','name','username','user_name'],'Contributor')}</strong><span>{pick(row,['points','score','value'],0)} points</span></div></div>) : <p className="muted">No contributor data available.</p>}<Link className="secondary full-width" to="/leaderboard">View leaderboard</Link></aside></div>
-  </section></WorkspaceShell>;
+  const [feed, setFeed] = useState([]); const [leaderboard, setLeaderboard] = useState([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = async () => { setLoading(true); setError(''); try { const [feedResult, boardResult] = await Promise.all([services.live.list(), services.progression.platformLeaderboard('users:points', 20)]); setFeed(asArray(feedResult)); setLeaderboard(asArray(boardResult)); } catch (e) { setError(e.message || 'Unable to load community.'); } finally { setLoading(false); } };
+  useEffect(() => { void load(); }, []); const contributors = useMemo(() => leaderboard.slice(0, 10), [leaderboard]);
+  return <WorkspaceShell workspace="consumer"><section className="page business-page"><div className="page-header"><div><span className="eyebrow">COMMUNITY</span><h1>Community</h1><p>Discover what people are reviewing, contributing, and accomplishing across Kleenest.</p></div><div className="hero-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/play"><Trophy size={16}/>Play</Link><Link className="secondary" to="/map"><Users size={16}/>Explore</Link></div></div>{error&&<div className="state error" role="alert">{error}</div>}<div className="community-layout"><section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">LIVE FEED</span><h2>Recent community activity</h2></div><MessageCircle size={22}/></div>{loading?<p className="muted">Loading community activity…</p>:feed.length?feed.map((row,index)=><article className="business-row" key={row.id||row.review_id||`${index}-${JSON.stringify(row).slice(0,40)}`}><div><strong>{pick(row,['location_name','business_name','title'],'Community contribution')}</strong><span>{pick(row,['review_text','content','body','description'],'New community activity')}</span><small>{pick(row,['created_at','published_at','occurred_at'],'Recently')}</small></div><div className="inline-stat"><Heart size={15}/><span>{pick(row,['likes','helpful_count','reaction_count'],0)}</span></div></article>):<div className="empty-state"><MessageCircle size={30}/><h3>No activity yet</h3><p>Visit a location, leave evidence or a review, and your contribution will appear here.</p><Link className="primary" to="/map">Explore locations</Link></div>}</section><aside className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">CONTRIBUTORS</span><h2>Top contributors</h2></div><Trophy size={22}/></div>{contributors.length?contributors.map((row,index)=><div className="business-row" key={row.user_id||row.id||index}><div><strong>#{index+1} {pick(row,['display_name','name','username','user_name'],'Contributor')}</strong><span>{pick(row,['points','score','value'],0)} points</span></div></div>):<p className="muted">No contributor data available.</p>}<Link className="secondary full-width" to="/leaderboard">View leaderboard</Link></aside></div></section></WorkspaceShell>;
 }
