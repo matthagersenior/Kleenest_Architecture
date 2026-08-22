@@ -1,7 +1,18 @@
 export function createBusinessIntelligenceService(client){
   if(!client) throw new Error('Supabase client is required.');
   const rpc=(name,args={})=>client.rpc(name,args).then(({data,error})=>{if(error)throw error;return data;});
+  const requireUser=async()=>{const{data:{user},error}=await client.auth.getUser();if(error)throw error;if(!user)throw new Error('Sign in to continue.');return user;};
   const windowArgs=(businessId,start,end)=>({p_business_id:businessId,p_start:start,p_end:end});
+  const rows=value=>{if(Array.isArray(value))return value;if(!value||typeof value!=='object')return[];for(const key of ['rows','locations','intelligence','items','data'])if(Array.isArray(value[key]))return value[key];return Object.values(value).filter(v=>v&&typeof v==='object'&&!Array.isArray(v));};
+  const assertManagedLocation=async(businessId,locationId)=>{
+    if(!locationId)throw new Error('Select a managed location before completing this action.');
+    await requireUser();
+    const{data,error}=await client.rpc('business_list_locations',{p_business_id:businessId});
+    if(error)throw error;
+    const match=rows(data).find(x=>String(x?.id??x?.location_id)===String(locationId)||String(x?.location_id)===String(locationId));
+    if(!match)throw new Error('This location is not managed by the selected business.');
+    return match;
+  };
   return Object.freeze({
     dashboard:(businessId,start,end)=>rpc('business_dashboard_secure_summary',windowArgs(businessId,start,end)),
     summary:(businessId,start,end)=>rpc('business_summary_analytics',windowArgs(businessId,start,end)),
@@ -23,5 +34,19 @@ export function createBusinessIntelligenceService(client){
     rewards:(businessId,start,end)=>rpc('business_rewards_analytics',windowArgs(businessId,start,end)),
     roi:(businessId,start,end)=>rpc('business_roi_analytics',windowArgs(businessId,start,end)),
     benchmark:(businessId,start,end)=>rpc('business_benchmark_analytics',windowArgs(businessId,start,end)),
+    actionLinks:async(businessId,{limit=50}={})=>{await requireUser();let q=client.from('intelligence_action_links').select('id,location_id,business_id,surface,signal_type,action_type,status,metadata,created_at,updated_at').eq('business_id',businessId).eq('surface','business').order('created_at',{ascending:false}).limit(Math.min(Math.max(Number(limit)||50,1),100));const{data,error}=await q;if(error)throw error;return Array.isArray(data)?data:[];},
+    executeAction:async(businessId,{action,locationId,title,description,name,goal,discount,startsAt,endsAt,eventDate,eventTime,type='general',status='draft'}={})=>{
+      if(!action)throw new Error('This intelligence signal has no available action.');
+      if(action==='create-promotion'){
+        await assertManagedLocation(businessId,locationId);
+        return rpc('business_create_promotion',{p_business_id:businessId,p_title:title||'Demand opportunity promotion',p_description:description||'Promotion created from a Kleenest demand signal.',p_discount:discount??null,p_location_id:locationId,p_starts_at:startsAt??undefined,p_ends_at:endsAt??undefined});
+      }
+      if(action==='create-campaign')return rpc('business_manage_campaign',{p_business_id:businessId,p_campaign_id:null,p_action:'create',p_name:name||'Quality improvement campaign',p_campaign_type:type,p_goal:goal||'Improve community experience and review sentiment.',p_status:status});
+      if(action==='create-event'){
+        await assertManagedLocation(businessId,locationId);
+        return rpc('business_manage_event',{p_business_id:businessId,p_event_id:null,p_action:'create',p_location_id:locationId,p_title:title||'Community activity event',p_description:description||'Event created from a Kleenest activity signal.',p_event_date:eventDate??null,p_event_time:eventTime??null});
+      }
+      throw new Error(`Unsupported intelligence action: ${action}`);
+    },
   });
 }
