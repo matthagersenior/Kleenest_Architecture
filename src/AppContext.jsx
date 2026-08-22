@@ -6,22 +6,27 @@ import { createIdentitySnapshot } from './domains/identity/identity-snapshot.js'
 import { createEntitlementService, evaluateProfileCapabilities } from './domains/entitlements/access.js';
 import { createMapNetworkService } from './domains/maps/network.js';
 import { createLiveNetworkService } from './domains/live/network.js';
+import { createLiveFeedbackService } from './domains/live/feedback.js';
 import { createRoutingService } from './domains/routing/route.js';
 import { createNotificationInboxService } from './domains/notifications/inbox.js';
+import { createNotificationPreferencesService } from './domains/notifications/preferences.js';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const services = useMemo(() => {
     if (!supabase) return null;
+    const live = createLiveNetworkService(supabase);
     return Object.freeze({
       identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }),
       profile: createProfileService(supabase),
       entitlements: createEntitlementService(supabase),
       maps: createMapNetworkService(supabase),
-      live: createLiveNetworkService(supabase),
+      live,
+      liveFeedback: createLiveFeedbackService(live),
       routing: createRoutingService(supabase),
       notifications: createNotificationInboxService(supabase),
+      notificationPreferences: createNotificationPreferencesService(supabase),
     });
   }, []);
 
