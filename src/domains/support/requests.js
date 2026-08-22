@@ -7,10 +7,10 @@ export function createSupportService(client) {
     return user;
   }
   return Object.freeze({
-    create: async ({ subject, message, category = 'general', metadata = {} }) => {
+    create: async ({ subject, message, category = 'general' }) => {
       const me = await user();
       if (!String(subject ?? '').trim() || !String(message ?? '').trim()) throw new Error('Subject and message are required.');
-      const { data, error } = await client.from('support_requests').insert({ user_id: me.id, subject: String(subject).trim(), message: String(message).trim(), category, metadata }).select().single();
+      const { data, error } = await client.from('support_requests').insert({ user_id: me.id, subject: String(subject).trim(), message: String(message).trim(), category }).select().single();
       if (error) throw error;
       return data;
     },
@@ -20,14 +20,14 @@ export function createSupportService(client) {
       if (error) throw error;
       return data ?? [];
     },
-    feedback: async ({ message, category = 'general', metadata = {} }) => {
+    feedback: async ({ type = 'general', title, description, page = null, appVersion = null, browser = null, metadata = {} }) => {
       const me = await user();
-      const { data, error } = await client.from('user_feedback').insert({ user_id: me.id, message: String(message ?? '').trim(), category, metadata }).select().single();
+      const { data, error } = await client.from('user_feedback').insert({ user_id: me.id, type, title: String(title ?? '').trim(), description: String(description ?? '').trim(), page, app_version: appVersion, browser, metadata }).select().single();
       if (error) throw error;
       return data;
     },
     requestAccountDeletion: async (reason = null) => {
-      const me = await user();
+      await user();
       const { data, error } = await client.rpc('request_account_deletion', { p_reason: reason });
       if (error) throw error;
       return data;
