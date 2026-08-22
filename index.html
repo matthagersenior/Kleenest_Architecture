@@ -1,42 +1,32 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#111827" />
-    <meta name="description" content="Kleenest Architecture" />
-    <title>Kleenest</title>
-    <style>
-      :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e5e7eb;background:#0b1020}
-      body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#172554 0,#0b1020 48%,#050816 100%)}
-      #boot{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
-      .boot-card{width:min(760px,100%);padding:32px;border:1px solid #26324f;border-radius:20px;background:rgba(15,23,42,.88);box-shadow:0 20px 60px rgba(0,0,0,.35)}
-      .brand{font-size:32px;font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
-      .sub{color:#94a3b8;margin:0 0 24px;line-height:1.6}
-      .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-      .tile{padding:16px;border:1px solid #26324f;border-radius:14px;background:#111a30;color:#cbd5e1;text-decoration:none}
-      .tile strong{display:block;color:#fff;margin-bottom:5px}
-      .status{margin-top:24px;color:#64748b;font-size:13px}
-      #root:empty + #boot{display:grid}
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <div id="boot">
-      <section class="boot-card">
-        <h1 class="brand">Kleenest</h1>
-        <p class="sub">Architecture workspace · platform capabilities, intelligence, engagement and operations.</p>
-        <div class="grid">
-          <a class="tile" href="./"><strong>Consumer</strong>Explore the network</a>
-          <a class="tile" href="./business"><strong>Business</strong>Business workspace</a>
-          <a class="tile" href="./fleet"><strong>Fleet</strong>Fleet operations</a>
-          <a class="tile" href="./enterprise"><strong>Enterprise</strong>Partner command</a>
-          <a class="tile" href="./play"><strong>Play</strong>Quests & progression</a>
-          <a class="tile" href="./community"><strong>Community</strong>Reviews & evidence</a>
-        </div>
-        <div class="status">Loading the interactive application…</div>
-      </section>
-    </div>
-    <script type="module" src="./src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="Kleenest Architecture">
+<title>Kleenest Architecture</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#070b16;color:#eef2ff}body{min-height:100vh;background:radial-gradient(circle at 20% 0,#172554 0,transparent 42%),radial-gradient(circle at 90% 20%,#164e63 0,transparent 35%),#070b16}.wrap{width:min(1180px,100%);margin:auto;padding:28px}.nav{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:10px 0 32px}.logo{font-size:25px;font-weight:900;letter-spacing:-.04em}.badge{padding:7px 11px;border:1px solid #334155;border-radius:999px;color:#94a3b8;font-size:12px}.hero{padding:48px 0 32px}.eyebrow{color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.hero h1{font-size:clamp(42px,7vw,78px);line-height:.95;letter-spacing:-.06em;max-width:900px;margin:14px 0 20px}.hero p{max-width:760px;color:#a5b4fc;font-size:18px;line-height:1.65}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:30px}.card{display:block;padding:22px;border:1px solid #26324f;border-radius:18px;background:rgba(15,23,42,.76);color:inherit;text-decoration:none;transition:.15s transform,.15s border-color}.card:hover{transform:translateY(-2px);border-color:#64748b}.card h2{font-size:18px;margin:0 0 8px}.card p{color:#94a3b8;line-height:1.5;margin:0}.icon{font-size:25px;margin-bottom:14px}.section{margin-top:60px}.section h2{font-size:26px;letter-spacing:-.03em}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{padding:18px;border:1px solid #1e293b;border-radius:16px;background:#0f172a}.stat strong{display:block;font-size:25px}.stat span{color:#64748b;font-size:12px}.footer{padding:50px 0 20px;color:#64748b;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="nav"><div class="logo">Kleenest</div><div class="badge">Architecture · live source</div></header>
+<main>
+<section class="hero"><div class="eyebrow">Platform architecture</div><h1>Clean places. Better data. A smarter network.</h1><p>The Kleenest Architecture workspace maps the production capability graph into consumer, profile, business, fleet, enterprise, community, engagement and platform intelligence surfaces.</p></section>
+<section class="grid">
+<a class="card" href="./"><div class="icon">◎</div><h2>Consumer</h2><p>Locations, maps, ratings, check-ins, trusted information and discovery.</p></a>
+<a class="card" href="./profile"><div class="icon">◉</div><h2>Profile</h2><p>Identity, progression, entitlements, rewards and personal activity.</p></a>
+<a class="card" href="./business"><div class="icon">▣</div><h2>Business</h2><p>Locations, campaigns, promotions, QR, reviews and intelligence.</p></a>
+<a class="card" href="./fleet"><div class="icon">▤</div><h2>Fleet</h2><p>Routes, drivers, vehicles, metrics, operations and network leaderboards.</p></a>
+<a class="card" href="./enterprise"><div class="icon">◇</div><h2>Enterprise</h2><p>Partner networks, campaigns, outcomes and organizational intelligence.</p></a>
+<a class="card" href="./play"><div class="icon">★</div><h2>Play & Quest</h2><p>Routes, QR, geofences, tasks, XP, rewards, contests and progression.</p></a>
+<a class="card" href="./community"><div class="icon">◌</div><h2>Community</h2><p>Reviews, evidence, photos, social participation and trusted sources.</p></a>
+<a class="card" href="./admin"><div class="icon">◆</div><h2>Platform Admin</h2><p>Owner-level operations, analytics, moderation and platform control.</p></a>
+</section>
+<section class="section"><h2>Cross-platform intelligence</h2><div class="stats"><div class="stat"><strong>QR</strong><span>attribution · actions · rewards</span></div><div class="stat"><strong>Geo</strong><span>proximity · routes · notifications</span></div><div class="stat"><strong>Quest</strong><span>tasks · XP · progression</span></div><div class="stat"><strong>Fleet</strong><span>metrics · leaderboards · network</span></div><div class="stat"><strong>Business</strong><span>engagement · ROI · benchmarking</span></div><div class="stat"><strong>Network</strong><span>shared intelligence · participation</span></div></div></section>
+</main><footer class="footer">Kleenest Architecture · static entry available independently of the interactive build.</footer>
+</div>
+</body>
 </html>
