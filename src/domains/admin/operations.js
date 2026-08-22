@@ -5,6 +5,7 @@ export function createAdminOperationsService(client){
   const requireOwner=profile=>{if(!isPlatformOwner(profile))throw new Error('Platform owner access required.');};
   const ownerRpc=(profile,name,args={})=>{requireOwner(profile);return rpc(name,args);};
   return Object.freeze({
+    authorization:profile=>ownerRpc(profile,'admin_authorization_v1'),
     overview:profile=>ownerRpc(profile,'admin_get_overview'),
     integrity:profile=>ownerRpc(profile,'admin_data_integrity_summary'),
     pendingBusinesses:profile=>ownerRpc(profile,'admin_list_pending_businesses'),
