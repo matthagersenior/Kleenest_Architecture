@@ -10,6 +10,9 @@ export function createFleetOperationsService(client) {
     vehicleStatus: (businessId, vehicleId, status) => rpc('fleet_set_vehicle_status', { p_business_id: businessId, p_vehicle_id: vehicleId, p_status: status }),
     routeStatus: (businessId, routeId, status) => rpc('fleet_set_route_status', { p_business_id: businessId, p_route_id: routeId, p_status: status }),
     opportunities: businessId => rpc('fleet_service_opportunities_for_business', { p_business_id: businessId }).then(data => data ?? []),
-    intelligence: async businessId => Promise.all([rpc('fleet_dashboard_summary_v2', { p_business_id: businessId }), rpc('fleet_service_opportunities_for_business', { p_business_id: businessId })])
+    intelligence: async businessId => Promise.all([rpc('fleet_dashboard_summary_v2', { p_business_id: businessId }), rpc('fleet_service_opportunities_for_business', { p_business_id: businessId })]),
+    leaderboard: (businessId, metric = 'safety_score', targetType = 'driver', limit = 20) => rpc('get_fleet_leaderboard', { p_business_id: businessId, p_metric: metric, p_target_type: targetType, p_limit: limit }),
+    networkLeaderboard: (metric = 'stops_completed', limit = 20) => rpc('get_fleet_network_leaderboard', { p_metric: metric, p_limit: limit }),
+    platformLeaderboard: (key = 'users:points', limit = 20) => rpc('get_platform_leaderboard', { p_leaderboard_key: key, p_limit: limit })
   });
 }
