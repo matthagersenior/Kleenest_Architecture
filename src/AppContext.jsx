@@ -6,27 +6,28 @@ import { createIdentitySnapshot } from './domains/identity/identity-snapshot.js'
 import { createEntitlementService, evaluateProfileCapabilities } from './domains/entitlements/access.js';
 import { createMapNetworkService } from './domains/maps/network.js';
 import { createLiveNetworkService } from './domains/live/network.js';
-import { createLiveFeedbackService } from './domains/live/feedback.js';
 import { createRoutingService } from './domains/routing/route.js';
 import { createNotificationInboxService } from './domains/notifications/inbox.js';
-import { createNotificationPreferencesService } from './domains/notifications/preferences.js';
+import { createCheckInService } from './domains/checkins/checkins.js';
+import { createActivityEventService } from './domains/analytics/events.js';
+import { createOfflinePackService } from './domains/offline/packs.js';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const services = useMemo(() => {
     if (!supabase) return null;
-    const live = createLiveNetworkService(supabase);
     return Object.freeze({
       identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }),
       profile: createProfileService(supabase),
       entitlements: createEntitlementService(supabase),
       maps: createMapNetworkService(supabase),
-      live,
-      liveFeedback: createLiveFeedbackService(live),
+      live: createLiveNetworkService(supabase),
       routing: createRoutingService(supabase),
       notifications: createNotificationInboxService(supabase),
-      notificationPreferences: createNotificationPreferencesService(supabase),
+      checkins: createCheckInService(supabase),
+      analytics: createActivityEventService(supabase),
+      offline: createOfflinePackService(supabase),
     });
   }, []);
 
@@ -34,7 +35,11 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let active = true;
-    if (!services) { setState(value => ({ ...value, loading: false })); return undefined; }
+    if (!services) {
+      setState(value => ({ ...value, loading: false }));
+      return undefined;
+    }
+
     const load = async (sessionUser = null) => {
       try {
         const user = sessionUser || await services.identity.getCurrentUser();
@@ -42,19 +47,43 @@ export function AppProvider({ children }) {
           if (active) setState({ loading: false, user: null, profile: null, entitlements: [], capabilities: ['consumer'], error: null });
           return;
         }
-        const [profile, entitlements] = await Promise.all([services.profile.get(user.id), services.entitlements.getCurrentUserEntitlements()]);
-        if (active) setState({ loading: false, user, profile, entitlements, capabilities: evaluateProfileCapabilities(profile, entitlements), error: null });
-      } catch (error) { if (active) setState(value => ({ ...value, loading: false, error })); }
+        const [profile, entitlements] = await Promise.all([
+          services.profile.get(user.id),
+          services.entitlements.getCurrentUserEntitlements(),
+        ]);
+        if (active) {
+          setState({
+            loading: false,
+            user,
+            profile,
+            entitlements,
+            capabilities: evaluateProfileCapabilities(profile, entitlements),
+            error: null,
+          });
+        }
+      } catch (error) {
+        if (active) setState(value => ({ ...value, loading: false, error }));
+      }
     };
+
     void load();
     const { data } = supabase.auth.onAuthStateChange((_event, session) => void load(session?.user || null));
-    return () => { active = false; data.subscription.unsubscribe(); };
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, [services]);
 
   const value = useMemo(() => ({
     ...state,
     services,
-    identitySnapshot: createIdentitySnapshot({ user: state.user, profile: state.profile, entitlements: state.entitlements, loading: state.loading, error: state.error }),
+    identitySnapshot: createIdentitySnapshot({
+      user: state.user,
+      profile: state.profile,
+      entitlements: state.entitlements,
+      loading: state.loading,
+      error: state.error,
+    }),
     configured: Boolean(supabase),
     requireSupabase,
   }), [services, state]);
