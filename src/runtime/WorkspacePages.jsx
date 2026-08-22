@@ -7,7 +7,7 @@ function businessIdFrom(data) { const first = Array.isArray(data) ? data[0] : da
 function Page({ workspace, title, children }) { return <WorkspaceShell workspace={workspace}><section className="page-heading"><span className="eyebrow">Kleenest</span><h1>{title}</h1></section>{children}</WorkspaceShell>; }
 
 export function ActivityPage() { const { services } = useAppContext(); return <Page title="Activity"><CapabilityPanel title="Your activity" description="Notifications and live events from the canonical user experience." load={() => services.notifications.list()} renderData={data => <MetricGrid items={data} />} /></Page>; }
-export function PlayPage() { const { services } = useAppContext(); return <Page title="Play"><CapabilityPanel title="Progression activity" description="Your live contribution and reward activity." load={() => services.analytics.list({ limit: 20 })} renderData={data => <MetricGrid items={data} />} /><CapabilityPanel title="Recent check-in activity" description="Verified place activity from the canonical check-in system." load={() => services.live.list({ types: ['user.qr_check_in', 'user.arrived'] })} renderData={data => <MetricGrid items={data} />} /></Page>; }
+export function PlayPage() { const { services } = useAppContext(); return <Page title="Play"><CapabilityPanel title="Progression activity" description="Your live contribution and reward activity." load={() => services.live.list({ types: ['user.check_in', 'user.qr_check_in', 'user.arrived'] })} renderData={data => <MetricGrid items={data} />} /><CapabilityPanel title="Recent check-in activity" description="Verified place activity from the canonical check-in system." load={() => services.live.list({ types: ['user.qr_check_in', 'user.arrived'] })} renderData={data => <MetricGrid items={data} />} /></Page>; }
 export function CommunityPage() { const { services } = useAppContext(); return <Page title="Community"><CapabilityPanel title="Live community activity" load={() => services.live.list()} renderData={data => <MetricGrid items={data} />} /></Page>; }
 
 export function BusinessPage({ section = 'overview' }) {
@@ -23,7 +23,7 @@ export function BusinessPage({ section = 'overview' }) {
 }
 
 export function FleetPage({ section = 'operations' }) {
-  const { services } = useAppContext(); const [businesses, setBusinesses] = useState(null); const [refresh, setRefresh] = useState(0); const [selected, setSelected] = useState(null);
+  const { services } = useAppContext(); const [businesses, setBusinesses] = useState(null); const [refresh, setRefresh] = useState(0);
   useEffect(() => { void services.business.listBusinesses().then(setBusinesses).catch(() => setBusinesses([])); }, [services, refresh]);
   const id = businessIdFrom(businesses); const title = ({ performance: 'Performance', opportunities: 'Opportunities', goals: 'Goals', routes: 'Routes' })[section] || 'Fleet Operations';
   const load = async () => { if (!id) return []; if (section === 'opportunities') return services.fleet.opportunities(id); return services.fleet.dashboard(id); };
@@ -36,10 +36,10 @@ export function FleetPage({ section = 'operations' }) {
 }
 
 export function EnterprisePage({ section = 'command' }) {
-  const { services } = useAppContext(); const [refresh, setRefresh] = useState(0); const title = section === 'partners' ? 'Partners' : section === 'campaigns' ? 'Campaigns' : section === 'performance' ? 'Performance' : section === 'fleet' ? 'Fleet' : 'Enterprise Command';
+  const { services } = useAppContext(); const title = section === 'partners' ? 'Partners' : section === 'campaigns' ? 'Campaigns' : section === 'performance' ? 'Performance' : section === 'fleet' ? 'Fleet' : 'Enterprise Command';
   return <Page workspace="enterprise" title={title}>
     <CapabilityPanel title="Partner network" description="Existing partner-program capabilities exposed through the canonical service." load={() => services.partners.list()} renderData={data => <MetricGrid items={data} />} />
-    {section === 'partners' && <ActionForm title="Join partner program" submitLabel="Join program" fields={[{ name: 'programId', label: 'Program ID' }]} onSubmit={async values => { await services.partners.join(values.programId); setRefresh(v => v + 1); }} />}
+    {section === 'partners' && <ActionForm title="Join partner program" submitLabel="Join program" fields={[{ name: 'programId', label: 'Program ID' }]} onSubmit={values => services.partners.join(values.programId)} />}
     {section === 'partners' && <CapabilityPanel title="My memberships" description="Partner memberships available to the current enterprise identity." load={() => services.partners.memberships()} renderData={data => <MetricGrid items={data} />} />}
     {section !== 'partners' && <CapabilityPanel title={title} description="Enterprise capability data from the canonical partner boundary." load={() => services.partners.list()} renderData={data => <MetricGrid items={data} />} />}
   </Page>;
