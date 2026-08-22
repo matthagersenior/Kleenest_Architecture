@@ -1,0 +1,4 @@
+import {useEffect,useState} from 'react';
+import {useAppContext} from '../AppContext.jsx';
+import WorkspaceShell from './WorkspaceShell.jsx';
+export default function OwnerAuditPage(){const {profile,services}=useAppContext();const [events,setEvents]=useState(null);const [error,setError]=useState('');useEffect(()=>{let alive=true;services.admin.invoke(profile,'admin_crud_gateway',{p_resource:'activity_events',p_action:'list',p_id:null,p_payload:{limit:100,order:'desc'}}).then(v=>alive&&setEvents(v)).catch(e=>alive&&setError(e.message));return()=>{alive=false}},[profile,services]);return <WorkspaceShell workspace="owner"><section className="page-head"><span className="eyebrow">Platform</span><h1>Audit & activity</h1><p>Inspect platform activity through the owner-authorized data boundary.</p>{error&&<p role="alert">{error}</p>}<pre className="result-card">{events===null?'Loading…':JSON.stringify(events,null,2)}</pre></section></WorkspaceShell>}
