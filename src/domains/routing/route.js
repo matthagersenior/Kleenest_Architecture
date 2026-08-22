@@ -6,7 +6,9 @@ export function createRoutingService(client) {
   return Object.freeze({
     async request({ origin, destination, waypoints = [] } = {}) {
       if (!origin || !destination) throw new Error('Origin and destination are required.');
-      return { origin, destination, waypoints };
+      const route = { origin, destination, waypoints };
+      await live.publish({ type: LIVE_EVENT_TYPES.USER_DIRECTIONS_REQUESTED, payload: { route } });
+      return route;
     },
     async start({ locationId = null, route } = {}) {
       if (!route?.origin || !route?.destination) throw new Error('A valid route is required.');
