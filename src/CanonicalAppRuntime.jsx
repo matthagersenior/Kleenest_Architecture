@@ -5,7 +5,7 @@ import RouteSurface from './runtime/RouteSurface.jsx';
 import VisitSurface from './runtime/VisitSurface.jsx';
 import FamilyPage from './runtime/FamilyPage.jsx';
 import LocationEvidencePage from './runtime/LocationEvidencePage.jsx';
-import EngagementPage from './runtime/EngagementPage.jsx';
+import EngagementSurface from './runtime/EngagementSurface.jsx';
 import AuthPage from './runtime/AuthPage.jsx';
 import ProfilePage from './runtime/ProfilePage.jsx';
 import SupportPage from './runtime/SupportPage.jsx';
@@ -16,7 +16,7 @@ import OwnerControlCenter from './runtime/OwnerControlCenter.jsx';
 import OwnerCrudWorkbench from './runtime/OwnerCrudWorkbench.jsx';
 import OwnerTierPreview from './runtime/OwnerTierPreview.jsx';
 import OwnerAuditPage from './runtime/OwnerAuditPage.jsx';
-import IntelligencePage from './runtime/IntelligencePage.jsx';
+import NetworkIntelligenceSurface from './runtime/NetworkIntelligenceSurface.jsx';
 import BusinessIntelligencePage from './runtime/BusinessIntelligencePage.jsx';
 import BusinessManagePage from './runtime/BusinessManagePage.jsx';
 import FleetOperationsPage from './runtime/FleetOperationsPage.jsx';
@@ -36,7 +36,7 @@ export default function CanonicalAppRuntime(){return <Routes>
 <Route path="/" element={<Home/>}/><Route path="/capabilities" element={<CapabilityHubPage/>}/><Route path="/consumer" element={<Home/>}/>
 <Route path="/integration" element={<IntegrationHub/>}/><Route path="/interactions" element={<VisitSurface/>}/><Route path="/qr" element={<VisitSurface/>}/><Route path="/geofence" element={<VisitSurface/>}/><Route path="/check-in" element={<VisitSurface/>}/>
 <Route path="/auth" element={<AuthPage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/notifications" element={<NotificationPreferencesPage/>}/><Route path="/pricing" element={<PricingPage/>}/><Route path="/support" element={<SupportPage/>}/><Route path="/about" element={<AboutPage/>}/>
-<Route path="/map" element={<MapSurface/>}/><Route path="/route" element={<RouteSurface/>}/><Route path="/activity" element={<ActivitySurface/>}/><Route path="/play" element={<ProgressionPage/>}/><Route path="/play/quest" element={<ProgressionPage/>}/><Route path="/community" element={<SocialPage/>}/><Route path="/family" element={<FamilyPage/>}/><Route path="/evidence" element={<LocationEvidencePage/>}/><Route path="/engage" element={<EngagementPage/>}/><Route path="/intelligence" element={<IntelligencePage/>}/><Route path="/leaderboards" element={<IntelligencePage/>}/>
+<Route path="/map" element={<MapSurface/>}/><Route path="/route" element={<RouteSurface/>}/><Route path="/activity" element={<ActivitySurface/>}/><Route path="/play" element={<ProgressionPage/>}/><Route path="/play/quest" element={<ProgressionPage/>}/><Route path="/community" element={<SocialPage/>}/><Route path="/family" element={<FamilyPage/>}/><Route path="/evidence" element={<LocationEvidencePage/>}/><Route path="/engage" element={<EngagementSurface/>}/><Route path="/intelligence" element={<NetworkIntelligenceSurface/>}/><Route path="/leaderboards" element={<NetworkIntelligenceSurface/>}/>
 <Route path="/business" element={<BusinessManagePage/>}/><Route path="/business/intelligence" element={<BusinessIntelligencePage/>}/><Route path="/business/engage" element={<BusinessManagePage/>}/><Route path="/business/analytics" element={<BusinessIntelligencePage/>}/>
 <Route path="/fleet" element={<FleetOperationsPage/>}/><Route path="/fleet/routes" element={<FleetOperationsPage/>}/><Route path="/fleet/performance" element={<FleetPerformancePage/>}/><Route path="/fleet/opportunities" element={<FleetOperationsPage/>}/><Route path="/fleet/goals" element={<FleetPerformancePage/>}/><Route path="/fleet/intelligence" element={<FleetIntelligenceSurface/>}/>
 <Route path="/enterprise" element={<EnterpriseCommandCenterPage/>}/><Route path="/enterprise/partners" element={<EnterpriseCommandCenterPage/>}/><Route path="/enterprise/campaigns" element={<EnterpriseCommandCenterPage/>}/><Route path="/enterprise/performance" element={<EnterpriseCommandCenterPage/>}/><Route path="/enterprise/fleet" element={<EnterpriseCommandCenterPage/>}/>
