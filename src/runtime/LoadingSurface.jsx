@@ -1,0 +1,1 @@
+export default function LoadingSurface({label='Loading Kleenest…'}){return <div className="loading-surface" role="status" aria-live="polite"><div className="loading-mark" aria-hidden="true">K</div><strong>Kleenest</strong><span>{label}</span><div className="loading-bar" aria-hidden="true" /></div>}
