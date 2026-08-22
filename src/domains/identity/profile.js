@@ -17,16 +17,6 @@ export function createProfileService(client) {
         .maybeSingle();
       if (error) throw error;
       return data;
-    },
-
-    upsert: async (userId, values) => {
-      if (!userId) throw new Error('A user id is required.');
-      const { data, error } = await client.from('profiles')
-        .upsert({ id: userId, ...values }, { onConflict: 'id' })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
     }
   });
 }
