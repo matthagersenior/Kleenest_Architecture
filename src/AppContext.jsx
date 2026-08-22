@@ -4,6 +4,8 @@ import { createIdentityService } from './domains/identity/auth.js';
 import { createProfileService } from './domains/identity/profile.js';
 import { createIdentitySnapshot } from './domains/identity/identity-snapshot.js';
 import { createEntitlementService, evaluateProfileCapabilities } from './domains/entitlements/access.js';
+import { createMapNetworkService } from './domains/maps/network.js';
+import { createLiveNetworkService } from './domains/live/network.js';
 
 const AppContext = createContext(null);
 
@@ -14,6 +16,8 @@ export function AppProvider({ children }) {
       identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }),
       profile: createProfileService(supabase),
       entitlements: createEntitlementService(supabase),
+      maps: createMapNetworkService(supabase),
+      live: createLiveNetworkService(supabase),
     });
   }, []);
 
@@ -34,7 +38,7 @@ export function AppProvider({ children }) {
           return;
         }
         const [profile, entitlements] = await Promise.all([
-          services.profile.getCurrentProfile(),
+          services.profile.get(user.id),
           services.entitlements.getCurrentUserEntitlements(),
         ]);
         const capabilities = evaluateProfileCapabilities(profile, entitlements);
@@ -57,7 +61,13 @@ export function AppProvider({ children }) {
   const value = useMemo(() => ({
     ...state,
     services,
-    identitySnapshot: state.user && state.profile ? createIdentitySnapshot(state.user, state.profile, state.entitlements) : null,
+    identitySnapshot: createIdentitySnapshot({
+      user: state.user,
+      profile: state.profile,
+      entitlements: state.entitlements,
+      loading: state.loading,
+      error: state.error,
+    }),
     configured: Boolean(supabase),
     requireSupabase,
   }), [services, state]);
