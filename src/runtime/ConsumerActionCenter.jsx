@@ -1,41 +1,12 @@
-import { useState } from 'react';
-import { useAppContext } from '../AppContext.jsx';
+import {useState} from 'react';
+import {CheckCircle2,MapPin,QrCode,Star,Trophy} from 'lucide-react';
+import {Link} from 'react-router-dom';
+import {useAppContext} from '../AppContext.jsx';
+import WorkspaceShell from './WorkspaceShell.jsx';
 
-function Result({ value }) {
-  if (value == null) return null;
-  return <pre style={{whiteSpace:'pre-wrap',overflow:'auto',marginTop:12}}>{typeof value === 'string' ? value : JSON.stringify(value,null,2)}</pre>;
-}
-
-export default function ConsumerActionCenter({ locationId = '', placeId = '', qrToken = '' }) {
-  const { services } = useAppContext();
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-
-  async function run(action) {
-    setBusy(true); setError(null);
-    try { setResult(await action()); } catch (e) { setError(e?.message || String(e)); } finally { setBusy(false); }
-  }
-
-  return <section className="capability-panel">
-    <h2>Bathroom service loop</h2>
-    <p>One verified visit can feed check-in, review, evidence, progression, rewards and network intelligence.</p>
-    <div className="action-grid">
-      <button disabled={busy || !placeId || !qrToken} onClick={() => run(() => services.checkins.byQr({placeId,qrToken}))}>Check in with QR</button>
-      <button disabled={busy || !qrToken} onClick={() => run(() => services.qr.redeem(qrToken))}>Redeem QR</button>
-      <button disabled={busy || !locationId} onClick={() => run(() => services.locationEvidence.bathroomStatus(locationId))}>Bathroom trust status</button>
-      <button disabled={busy || !placeId} onClick={() => run(() => services.locationEvidence.restroomIntelligence(placeId))}>Restroom intelligence</button>
-    </div>
-    <div className="form-grid">
-      <label>Rating <input type="number" min="1" max="5" value={rating} onChange={e=>setRating(e.target.value)}/></label>
-      <label>Review <input value={comment} onChange={e=>setComment(e.target.value)} placeholder="What should the next visitor know?"/></label>
-      <button disabled={busy || !locationId} onClick={() => run(() => services.reviews.create({locationId,stars:rating,comment}))}>Rate & review</button>
-      <button disabled={busy || !locationId} onClick={() => run(() => services.locationEvidence.qualityObservation({locationId,stars:rating,feedback:comment}))}>Submit quality signal</button>
-    </div>
-    {error && <p role="alert">{error}</p>}
-    {busy && <p>Working…</p>}
-    <Result value={result}/>
-  </section>;
+export default function ConsumerActionCenter({locationId='',placeId='',qrToken=''}){
+ const {services}=useAppContext(); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [result,setResult]=useState(null); const [rating,setRating]=useState(5); const [comment,setComment]=useState('');
+ async function run(action){setBusy(true);setError('');try{setResult(await action())}catch(e){setError(e?.message||String(e))}finally{setBusy(false)}}
+ const target=placeId||locationId;
+ return <WorkspaceShell><section className="page"><div className="page-header"><div><span className="eyebrow">VISIT CENTER</span><h1>Turn a visit into value</h1><p>Verify the place, contribute trusted information, and carry the result into reviews and progression.</p></div><div className="hero-actions"><Link className="secondary" to="/map"><MapPin size={16}/> Discover</Link><Link className="secondary" to="/play"><Trophy size={16}/> Progression</Link></div></div>{error&&<p className="form-error" role="alert">{error}</p>}{result&&<div className="form-success" role="status"><strong>Action completed</strong><pre style={{whiteSpace:'pre-wrap',overflow:'auto'}}>{typeof result==='string'?result:JSON.stringify(result,null,2)}</pre></div>}<div className="detail-grid"><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">VERIFY</span><h2>Check in</h2></div><QrCode size={22}/></div><p>Use the venue QR or the canonical place identity to establish a verified visit.</p><div className="hero-actions"><button className="primary" disabled={busy||!placeId||!qrToken} onClick={()=>run(()=>services.checkins.byQr({placeId,qrToken}))}><QrCode size={16}/> Check in with QR</button><button className="secondary" disabled={busy||!qrToken} onClick={()=>run(()=>services.qr.redeem(qrToken))}>Redeem QR</button></div></div><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">TRUST</span><h2>Inspect the location</h2></div><CheckCircle2 size={22}/></div><p>Use the evidence surface to report cleanliness, availability, safety, amenities, and other current signals.</p><div className="hero-actions"><Link className="secondary" to={`/evidence${target?`?locationId=${encodeURIComponent(target)}`:''}`}>Open evidence</Link><button className="secondary" disabled={busy||!locationId} onClick={()=>run(()=>services.locationEvidence.bathroomStatus(locationId))}>Bathroom status</button></div></div></div><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">REPUTATION</span><h2>Leave a verified review</h2></div><Star size={22}/></div><div className="form-grid"><label>Rating<select value={rating} onChange={e=>setRating(Number(e.target.value))}><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></label><label>Comment<textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="What should the next visitor know?"/></label></div><button className="primary" disabled={busy||!locationId||!comment.trim()} onClick={()=>run(()=>services.reviews.create({locationId,stars:rating,comment}))}>Submit review</button></div></section></WorkspaceShell>
 }
