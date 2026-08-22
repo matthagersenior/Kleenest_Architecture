@@ -10,11 +10,10 @@ export function createProgressionService(client) {
     contests: (limit = 10) => rpc('home_active_contests', { p_limit: Number(limit) }),
     events: (limit = 10) => rpc('home_active_events', { p_limit: Number(limit) }),
     joinContest: contestId => rpc('join_contest', { p_contest_id: contestId }),
-    challenges: (limit = 25) => rpc('get_active_challenges', { p_limit: Number(limit) }),
-    rewardHistory: (limit = 50) => rpc('get_reward_history', { p_limit: Number(limit) }),
-    reviewReward: reviewId => rpc('reward_review_for_user', { p_review_id: reviewId }),
-    promotionReward: redemptionId => rpc('reward_promotion_redemption', { p_redemption_id: redemptionId }),
-    rewardCatalog: (limit = 50) => rpc('get_reward_catalog', { p_limit: Number(limit) }),
-    redeemReward: rewardId => rpc('redeem_reward', { p_reward_id: rewardId }),
+    completeChallenge: challengeId => rpc('complete_progression_challenge', { p_challenge_id: challengeId }),
+    rewardHistory: (limit = 50) => rpc('user_rewards_history', { p_limit: Number(limit) }),
+    reviewRewards: reviewId => rpc('review_rewards_summary', { p_review_id: reviewId }),
+    promotionRewards: redemptionId => rpc('promotion_redemption_rewards_summary', { p_redemption_id: redemptionId }),
+    checkinRewards: checkinId => rpc('checkin_rewards_summary', { p_checkin_id: checkinId }),
   });
 }
