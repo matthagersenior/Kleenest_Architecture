@@ -1,0 +1,14 @@
+export function createPlatformIntelligenceService(client){
+  if(!client) throw new Error('Supabase client is required.');
+  const rpc=(name,args={})=>client.rpc(name,args).then(({data,error})=>{if(error)throw error;return data;});
+  return Object.freeze({
+    crossTierLeaderboard:(key='consumer_checkins',limit=25)=>rpc('get_cross_tier_leaderboard',{p_leaderboard_key:key,p_limit:Number(limit)}),
+    platformLeaderboard:(key='users:points',limit=20)=>rpc('get_platform_leaderboard',{p_leaderboard_key:key,p_limit:Number(limit)}),
+    fleetNetworkLeaderboard:(metric='stops_completed',limit=20)=>rpc('get_fleet_network_leaderboard',{p_metric:metric,p_limit:Number(limit)}),
+    businessLeaderboard:(metric='check_ins',limit=10)=>rpc('get_business_leaderboard',{p_metric:metric,p_limit:Number(limit)}),
+    recordParticipation:(key,actorId,actorType,value,event,sourceId=null,metadata={})=>rpc('record_network_leaderboard_participation',{p_leaderboard_key:key,p_actor_id:actorId,p_actor_type:actorType,p_metric_value:value,p_source_event:event,p_source_id:sourceId,p_metadata:metadata}),
+    refreshLeaderboards:()=>rpc('refresh_business_metric_leaderboards'),
+    publishLocationEvent:(eventType,locationId,payload={})=>rpc('publish_location_notification',{p_event_type:eventType,p_location_id:locationId,p_payload:payload}),
+    createIntelligenceNotification:(userId,locationId,surface,type,dedupeKey,title,body,data={})=>rpc('create_intelligence_notification',{p_user_id:userId,p_location_id:locationId,p_surface:surface,p_type:type,p_dedupe_key:dedupeKey,p_title:title,p_body:body,p_data:data}),
+  });
+}
