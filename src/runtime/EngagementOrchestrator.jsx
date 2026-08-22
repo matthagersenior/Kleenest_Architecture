@@ -1,21 +1,12 @@
-import { useState } from 'react';
-import { useAppContext } from '../AppContext.jsx';
+import {useState} from 'react';
+import {Link} from 'react-router-dom';
+import {useAppContext} from '../AppContext.jsx';
+import WorkspaceShell from './WorkspaceShell.jsx';
 
-export default function EngagementOrchestrator({ locationId = '', qrCodeId = '', geofenceId = '', questId = '' }) {
-  const { services } = useAppContext();
-  const [eventType,setEventType]=useState('arrival'); const [result,setResult]=useState(null); const [error,setError]=useState(null); const [busy,setBusy]=useState(false);
-  async function run(action){setBusy(true);setError(null);try{setResult(await action())}catch(e){setError(e?.message||String(e))}finally{setBusy(false)}}
-  return <section className="capability-panel">
-    <h2>QR + Geofence + Quest orchestration</h2>
-    <p>Interaction primitives feed the canonical event graph instead of creating parallel engagement systems.</p>
-    <div className="form-grid">
-      <label>Event <select value={eventType} onChange={e=>setEventType(e.target.value)}><option>arrival</option><option>enter</option><option>dwell</option><option>exit</option></select></label>
-      <button disabled={busy||!locationId||!geofenceId} onClick={()=>run(()=>services.geofencing.recordEvent({geofenceId,locationId,eventType,qrCodeId:qrCodeId||null}))}>Record geofence event</button>
-      <button disabled={busy||!locationId||!geofenceId} onClick={()=>run(()=>services.geofencing.triggerQuests({locationId,geofenceEventId:null,eventType}))}>Trigger Quest opportunity</button>
-      <button disabled={busy||!questId} onClick={()=>run(()=>services.quests.start(questId))}>Start Quest</button>
-      <button disabled={busy} onClick={()=>run(()=>services.intelligence.crossTierLeaderboard('consumer_checkins',25))}>Refresh network intelligence</button>
-      <button disabled={busy||!locationId} onClick={()=>run(()=>services.geofencing.notifyNearby(locationId,100,'restroom'))}>Notify nearby users</button>
-    </div>
-    {error&&<p role="alert">{error}</p>}{busy&&<p>Working…</p>}{result&&<pre style={{whiteSpace:'pre-wrap',overflow:'auto'}}>{JSON.stringify(result,null,2)}</pre>}
-  </section>
+function Result({result}){if(!result)return null;const entries=Array.isArray(result)?result:[result];return <div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">RESULT</span><h2>Completed</h2></div></div><div className="detail-grid">{entries.slice(0,8).map((item,i)=><div className="metric-card" key={i}><strong>{typeof item==='object'?item.name||item.title||item.status||item.event_type||`Result ${i+1}`:String(item)}</strong>{typeof item==='object'&&<span>{item.message||item.description||item.id||'Action completed'}</span>}</div>)}</div></div>}
+
+export default function EngagementOrchestrator({locationId='',qrCodeId='',geofenceId='',questId=''}){
+ const {services}=useAppContext(); const [eventType,setEventType]=useState('arrival'); const [result,setResult]=useState(null); const [error,setError]=useState(''); const [busy,setBusy]=useState(false);
+ async function run(action){setBusy(true);setError('');try{setResult(await action())}catch(e){setError(e?.message||String(e))}finally{setBusy(false)}}
+ return <WorkspaceShell><section className="page"><div className="page-header"><div><span className="eyebrow">ENGAGEMENT FLOW</span><h1>Orchestrate a visit</h1><p>Connect location signals, quests, notifications, and network intelligence through the canonical event graph.</p></div><div className="hero-actions"><Link className="secondary" to="/map">Map</Link><Link className="secondary" to="/play">Progression</Link><Link className="secondary" to="/intelligence">Intelligence</Link></div></div>{error&&<p className="form-error" role="alert">{error}</p>}<div className="detail-grid"><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">LOCATION</span><h2>Trigger signal</h2></div></div><label>Event<select value={eventType} onChange={e=>setEventType(e.target.value)}><option>arrival</option><option>enter</option><option>dwell</option><option>exit</option></select></label><button className="primary" disabled={busy||!locationId||!geofenceId} onClick={()=>run(()=>services.geofencing.recordEvent({geofenceId,locationId,eventType,qrCodeId:qrCodeId||null}))}>{busy?'Working…':'Record geofence event'}</button></div><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">OPPORTUNITY</span><h2>Activate engagement</h2></div></div><div className="hero-actions"><button className="primary" disabled={busy||!locationId||!geofenceId} onClick={()=>run(()=>services.geofencing.triggerQuests({locationId,geofenceEventId:null,eventType}))}>Trigger quest</button><button className="secondary" disabled={busy||!questId} onClick={()=>run(()=>services.quests.start(questId))}>Start quest</button><button className="secondary" disabled={busy||!locationId} onClick={()=>run(()=>services.geofencing.notifyNearby(locationId,100,'restroom'))}>Notify nearby</button></div></div><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">NETWORK</span><h2>Refresh intelligence</h2></div></div><p>Use the canonical platform intelligence feed to continue the engagement loop.</p><button className="secondary" disabled={busy} onClick={()=>run(()=>services.intelligence.crossTierLeaderboard('consumer_checkins',25))}>Refresh leaderboard</button></div></div><Result result={result}/></section></WorkspaceShell>
 }
