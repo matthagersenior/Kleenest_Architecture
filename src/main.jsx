@@ -3,14 +3,19 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import CanonicalAppRuntime from './CanonicalAppRuntime.jsx';
 import { AppProvider } from './AppContext.jsx';
+import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import './styles.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root = document.getElementById('root');
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter basename="/Kleenest_Architecture">
-      <AppProvider>
-        <CanonicalAppRuntime />
-      </AppProvider>
+      <RuntimeErrorBoundary>
+        <AppProvider>
+          <CanonicalAppRuntime />
+        </AppProvider>
+      </RuntimeErrorBoundary>
     </BrowserRouter>
   </React.StrictMode>
 );
