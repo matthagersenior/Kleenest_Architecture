@@ -1,38 +1,15 @@
-import { useAppContext } from '../AppContext.jsx';
-import ConsumerActionCenter from './ConsumerActionCenter.jsx';
-import EngagementOrchestrator from './EngagementOrchestrator.jsx';
+import {Link} from 'react-router-dom';
+import {Activity,Building2,Car,Compass,Globe2,ShieldCheck,Sparkles,Users} from 'lucide-react';
+import WorkspaceShell from './WorkspaceShell.jsx';
 
-const surfaces = [
-  ['Consumer', '/consumer', 'Location → check-in → rating → evidence → progression'],
-  ['Play / Quest', '/play', 'Quest → QR/geofence → task → XP → reward'],
-  ['Business', '/business', 'Location → campaign → attribution → conversion → ROI'],
-  ['Fleet', '/fleet', 'Route → stop → service event → metric → scorecard'],
-  ['Enterprise', '/enterprise', 'Network → partner → campaign → outcome → intelligence'],
-  ['Community', '/community', 'Review/evidence → reputation → trusted-source signal'],
-  ['Intelligence', '/intelligence', 'Fact → signal → action → new fact'],
-  ['Admin', '/admin', 'Observe → authorize → resolve → govern'],
+const surfaces=[
+ ['Consumer','/consumer','Location → check-in → rating → evidence → progression',Compass],
+ ['Play / Quest','/play','Quest → QR/geofence → task → XP → reward',Sparkles],
+ ['Business','/business','Location → campaign → attribution → conversion → ROI',Building2],
+ ['Fleet','/fleet','Route → stop → service event → metric → scorecard',Car],
+ ['Enterprise','/enterprise','Network → partner → campaign → outcome → intelligence',Globe2],
+ ['Community','/community','Review/evidence → reputation → trusted-source signal',Users],
+ ['Intelligence','/intelligence','Fact → signal → action → new fact',Activity],
+ ['Admin','/admin','Observe → authorize → resolve → govern',ShieldCheck],
 ];
-
-function SurfaceCard({ name, path, flow }) {
-  return <a href={path} style={{display:'block',padding:16,border:'1px solid #26324f',borderRadius:14,textDecoration:'none',color:'inherit',background:'#0f172a'}}>
-    <strong>{name}</strong><div style={{color:'#94a3b8',fontSize:13,marginTop:6}}>{flow}</div>
-  </a>;
-}
-
-export default function IntegrationHub() {
-  const { services, capabilityRegistry } = useAppContext();
-  return <main className="workspace-shell">
-    <section className="page-heading"><span className="eyebrow">Kleenest</span><h1>Full Wiring Hub</h1><p>Canonical runtime integration surface for the cross-tier event graph.</p></section>
-    <section className="capability-panel">
-      <h2>Canonical surfaces</h2>
-      <div className="action-grid">{surfaces.map(([name,path,flow]) => <SurfaceCard key={path} name={name} path={path} flow={flow}/>)}</div>
-    </section>
-    <ConsumerActionCenter />
-    <EngagementOrchestrator />
-    <section className="capability-panel">
-      <h2>Runtime contract status</h2>
-      <p>Services registered: {services ? Object.keys(services).length : 0}. Capability definitions: {Object.keys(capabilityRegistry || {}).length}.</p>
-      <p>Writes remain behind the authenticated service layer; the static Pages surface remains deployment-safe.</p>
-    </section>
-  </main>;
-}
+export default function IntegrationHub(){return <WorkspaceShell workspace="platform"><section className="page"><div className="page-header"><div><span className="eyebrow">PLATFORM WIRING</span><h1>Integration map</h1><p>Cross-tier navigation into the canonical product surfaces. Product workflows live in their domains; this page only maps the runtime graph.</p></div></div><div className="detail-grid">{surfaces.map(([name,path,flow,Icon])=><Link className="detail-panel" key={path} to={path}><div className="panel-heading"><div><span className="eyebrow">CANONICAL SURFACE</span><h2>{name}</h2></div><Icon size={22}/></div><p>{flow}</p><span className="secondary">Open surface</span></Link>)}</div><div className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">ARCHITECTURE RULE</span><h2>One product surface per domain</h2></div><ShieldCheck size={22}/></div><p>IntegrationHub does not embed ConsumerActionCenter, EngagementOrchestrator, or duplicate domain workflows. Those capabilities are reached through their canonical routes.</p></div></section></WorkspaceShell>}
