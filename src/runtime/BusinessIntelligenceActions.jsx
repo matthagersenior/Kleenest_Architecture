@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAppContext } from '../AppContext.jsx';
 import { CalendarDays, CheckCircle2, MapPinned, Megaphone, Sparkles } from 'lucide-react';
 
 const CONFIG={
@@ -10,7 +11,7 @@ const CONFIG={
 };
 
 export default function BusinessIntelligenceActions({businessId,items=[],locations=[],onComplete}){
-  const {services}=arguments[0]?.context||{};
+  const {services}=useAppContext();
   const [busy,setBusy]=useState(null);
   const [message,setMessage]=useState(null);
   const [error,setError]=useState(null);
