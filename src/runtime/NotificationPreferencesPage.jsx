@@ -1,0 +1,5 @@
+import {useEffect,useState} from 'react';
+import {useAppContext} from '../AppContext.jsx';
+import WorkspaceShell from './WorkspaceShell.jsx';
+const defaults={intelligence:true,rewards:true,community:true,push:true};
+export default function NotificationPreferencesPage(){const {services}=useAppContext();const [prefs,setPrefs]=useState(defaults);const [status,setStatus]=useState('');useEffect(()=>{let alive=true;services.notificationPreferences.get().then(v=>{if(alive&&v)setPrefs({...defaults,...v})}).catch(e=>alive&&setStatus(e.message));return()=>{alive=false}},[services]);const toggle=k=>setPrefs(v=>({...v,[k]:!v[k]}));const save=async()=>{try{await services.notificationPreferences.update(prefs);setStatus('Preferences saved.')}catch(e){setStatus(e.message)}};return <WorkspaceShell><section className="page-head"><span className="eyebrow">Account</span><h1>Notifications</h1>{Object.keys(defaults).map(k=><label key={k}><input type="checkbox" checked={Boolean(prefs[k])} onChange={()=>toggle(k)}/>{k}</label>)}<button className="button primary" onClick={save}>Save preferences</button><span>{status}</span></section></WorkspaceShell>}
