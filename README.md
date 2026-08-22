@@ -45,3 +45,5 @@ The only consistently genuine missing product layer discovered by the reconcilia
 10. Production promotion only after verification.
 
 See `docs/capability-inventory.md`, `docs/consumer-parity-matrix.md`, `docs/architecture/interoperability-dependency-matrix.md`, and the audit files under `docs/audits/`.
+
+<!-- Pages rebuild trigger: 2026-08-22 -->
