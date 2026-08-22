@@ -36,10 +36,57 @@ import { createGeofencingService } from './domains/network/geofencing.js';
 import { createPlatformIntelligenceService } from './domains/intelligence/platform.js';
 import { createPlatformAccountService } from './domains/platform/account.js';
 import { createEntitlementsService } from './domains/platform/entitlements.js';
-const AppContext=createContext(null);
-export function AppProvider({children}){const services=useMemo(()=>!supabase?null:Object.freeze({identity:createIdentityService(supabase,{appUrl:path=>`${window.location.origin}${path}`}),profile:createProfileService(supabase),entitlements:createEntitlementService(supabase),platformEntitlements:createEntitlementsService(supabase),platformAccount:createPlatformAccountService(supabase),billing:createBillingService(supabase),commerce:createCommerceService(supabase),support:createSupportService(supabase),maps:createMapNetworkService(supabase),live:createLiveNetworkService(supabase),routing:createRoutingService(supabase),notifications:createNotificationInboxService(supabase),notificationPreferences:createNotificationPreferencesService(supabase),checkins:createCheckInService(supabase),analytics:createActivityEventService(supabase),offline:createOfflinePackService(supabase),business:createBusinessManagementService(supabase),businessIntelligence:createBusinessIntelligenceService(supabase),fleet:createFleetOperationsService(supabase),fleetMetrics:createFleetMetricService(supabase),fleetIntelligence:createFleetIntelligenceService(supabase),partners:createPartnerProgramService(supabase),favorites:createFavoriteService(supabase),reviews:createReviewService(supabase),locationEvidence:createLocationEvidenceService(supabase),engagement:createConsumerEngagementService(supabase),community:createCommunityInteractionService(supabase),communityMedia:createCommunityMediaService(supabase),qr:createConsumerQrService(supabase),admin:createAdminOperationsService(supabase),progression:createProgressionService(supabase),quests:createQuestService(supabase),family:createFamilyService(supabase),geofencing:createGeofencingService(supabase),intelligence:createPlatformIntelligenceService(supabase)}),[]);
-const [state,setState]=useState({loading:true,user:null,profile:null,entitlements:[],billingEntitlements:[],subscription:null,capabilities:['consumer'],error:null});
-useEffect(()=>{let active=true;if(!services){setState(v=>({...v,loading:false}));return undefined;}const load=async(sessionUser=null)=>{try{const user=sessionUser||await services.identity.getCurrentUser();if(!user){if(active)setState({loading:false,user:null,profile:null,entitlements:[],billingEntitlements:[],subscription:null,capabilities:['consumer'],error:null});return;}const [profile,entitlements,subscription,billingEntitlements]=await Promise.all([services.profile.get(user.id),services.entitlements.getCurrentUserEntitlements(),services.billing.getMySubscription(user.id),services.billing.getMyEntitlements(user.id)]);if(active)setState({loading:false,user,profile,entitlements,billingEntitlements,subscription,capabilities:evaluateProfileCapabilities(profile,[...entitlements,...billingEntitlements]),error:null});}catch(error){if(active)setState(v=>({...v,loading:false,error}));}};void load();const {data}=supabase.auth.onAuthStateChange((_event,session)=>void load(session?.user||null));return()=>{active=false;data.subscription.unsubscribe();};},[services]);
-const value=useMemo(()=>{const owner=isPlatformOwner(state.profile);const requestedPreview=new URLSearchParams(window.location.search).get('preview');const previewTier=owner&&['free','premium','family','business','fleet','enterprise'].includes(requestedPreview)?requestedPreview:null;const effectiveEntitlements=[...state.entitlements,...state.billingEntitlements];const effectiveMembershipTier=getMembershipTier(state.profile,effectiveEntitlements);return {...state,services,membershipTier:effectiveMembershipTier,presentationTier:previewTier||effectiveMembershipTier,showAds:previewTier?previewTier==='free':shouldShowAds(state.profile,effectiveEntitlements),isPlatformOwner:owner,identitySnapshot:createIdentitySnapshot({user:state.user,profile:state.profile,entitlements:effectiveEntitlements,loading:state.loading,error:state.error}),configured:Boolean(supabase),requireSupabase};},[services,state]);
-return <AppContext.Provider value={value}>{children}</AppContext.Provider>}
-export function useAppContext(){const context=useContext(AppContext);if(!context)throw new Error('useAppContext must be used inside AppProvider.');return context;}
+import { CAPABILITY_REGISTRY, getCapabilitiesForWorkspace } from './architecture/capabilityRegistry.js';
+
+const AppContext = createContext(null);
+
+export function AppProvider({ children }) {
+  const services = useMemo(() => !supabase ? null : Object.freeze({
+    identity: createIdentityService(supabase, { appUrl: path => `${window.location.origin}${path}` }),
+    profile: createProfileService(supabase), entitlements: createEntitlementService(supabase),
+    platformEntitlements: createEntitlementsService(supabase), platformAccount: createPlatformAccountService(supabase),
+    billing: createBillingService(supabase), commerce: createCommerceService(supabase), support: createSupportService(supabase),
+    maps: createMapNetworkService(supabase), live: createLiveNetworkService(supabase), routing: createRoutingService(supabase),
+    notifications: createNotificationInboxService(supabase), notificationPreferences: createNotificationPreferencesService(supabase),
+    checkins: createCheckInService(supabase), analytics: createActivityEventService(supabase), offline: createOfflinePackService(supabase),
+    business: createBusinessManagementService(supabase), businessIntelligence: createBusinessIntelligenceService(supabase),
+    fleet: createFleetOperationsService(supabase), fleetMetrics: createFleetMetricService(supabase), fleetIntelligence: createFleetIntelligenceService(supabase),
+    partners: createPartnerProgramService(supabase), favorites: createFavoriteService(supabase), reviews: createReviewService(supabase),
+    locationEvidence: createLocationEvidenceService(supabase), engagement: createConsumerEngagementService(supabase),
+    community: createCommunityInteractionService(supabase), communityMedia: createCommunityMediaService(supabase), qr: createConsumerQrService(supabase),
+    admin: createAdminOperationsService(supabase), progression: createProgressionService(supabase), quests: createQuestService(supabase),
+    family: createFamilyService(supabase), geofencing: createGeofencingService(supabase), intelligence: createPlatformIntelligenceService(supabase),
+  }), []);
+  const [state, setState] = useState({ loading: true, user: null, profile: null, entitlements: [], billingEntitlements: [], subscription: null, capabilities: ['consumer'], error: null });
+  useEffect(() => {
+    let active = true;
+    if (!services) { setState(v => ({ ...v, loading: false })); return undefined; }
+    const load = async (sessionUser = null) => {
+      try {
+        const user = sessionUser || await services.identity.getCurrentUser();
+        if (!user) { if (active) setState({ loading: false, user: null, profile: null, entitlements: [], billingEntitlements: [], subscription: null, capabilities: ['consumer'], error: null }); return; }
+        const [profile, entitlements, subscription, billingEntitlements] = await Promise.all([
+          services.profile.get(user.id), services.entitlements.getCurrentUserEntitlements(), services.billing.getMySubscription(user.id), services.billing.getMyEntitlements(user.id),
+        ]);
+        if (active) setState({ loading: false, user, profile, entitlements, billingEntitlements, subscription, capabilities: evaluateProfileCapabilities(profile, [...entitlements, ...billingEntitlements]), error: null });
+      } catch (error) { if (active) setState(v => ({ ...v, loading: false, error })); }
+    };
+    void load();
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => void load(session?.user || null));
+    return () => { active = false; data.subscription.unsubscribe(); };
+  }, [services]);
+  const value = useMemo(() => {
+    const owner = isPlatformOwner(state.profile);
+    const requestedPreview = new URLSearchParams(window.location.search).get('preview');
+    const previewTier = owner && ['free', 'premium', 'family', 'business', 'fleet', 'enterprise'].includes(requestedPreview) ? requestedPreview : null;
+    const effectiveEntitlements = [...state.entitlements, ...state.billingEntitlements];
+    const effectiveMembershipTier = getMembershipTier(state.profile, effectiveEntitlements);
+    const workspace = state.profile?.workspace || state.profile?.role || 'consumer';
+    return { ...state, services, membershipTier: effectiveMembershipTier, presentationTier: previewTier || effectiveMembershipTier,
+      showAds: previewTier ? previewTier === 'free' : shouldShowAds(state.profile, effectiveEntitlements), isPlatformOwner: owner,
+      identitySnapshot: createIdentitySnapshot({ user: state.user, profile: state.profile, entitlements: effectiveEntitlements, loading: state.loading, error: state.error }),
+      configured: Boolean(supabase), requireSupabase, capabilityRegistry: CAPABILITY_REGISTRY, workspaceCapabilities: getCapabilitiesForWorkspace(workspace) };
+  }, [services, state]);
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+export function useAppContext() { const context = useContext(AppContext); if (!context) throw new Error('useAppContext must be used inside AppProvider.'); return context; }
