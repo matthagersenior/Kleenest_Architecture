@@ -1,0 +1,95 @@
+export function createCommunityInteractionService(client) {
+  if (!client) throw new Error('Supabase client is required.');
+
+  async function requireUser() {
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error) throw error;
+    if (!user) throw new Error('Sign in to continue.');
+    return user;
+  }
+
+  return Object.freeze({
+    favorite: async (locationId) => {
+      await requireUser();
+      const { data, error } = await client.rpc('kleenest_toggle_favorite', { p_location_id: locationId });
+      if (error) throw error;
+      return { ...data, favorited: Boolean(data?.favorite) };
+    },
+
+    interactionState: async (locationId) => {
+      const user = await requireUser();
+      const [favorite, checkIn] = await Promise.all([
+        client.from('favorites').select('location_id').eq('user_id', user.id).eq('location_id', locationId).maybeSingle(),
+        client.from('check_ins').select('id,checked_in_at,points_awarded').eq('user_id', user.id).eq('location_id', locationId).order('checked_in_at', { ascending: false }).limit(1).maybeSingle()
+      ]);
+      if (favorite.error) throw favorite.error;
+      if (checkIn.error) throw checkIn.error;
+      return {
+        favorited: Boolean(favorite.data),
+        checkedIn: Boolean(checkIn.data),
+        latestCheckIn: checkIn.data ?? null
+      };
+    },
+
+    listReviews: async (locationId, { limit = 30 } = {}) => {
+      const { data, error } = await client.from('reviews')
+        .select('id,location_id,user_id,check_in_id,stars,cleanliness_pct,comment,status,business_reply,business_replied_at,created_at,profiles:user_id(display_name,avatar_url),review_photos(id,storage_path,mime_type,width,height,sort_order)')
+        .eq('location_id', locationId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map((review) => ({
+        ...review,
+        rating: review.stars,
+        body: review.comment,
+        photos: review.review_photos ?? []
+      }));
+    },
+
+    createReview: async ({ locationId, checkInId, rating, cleanlinessPct = null, body }) => {
+      await requireUser();
+      const score = Number(rating);
+      if (!Number.isInteger(score) || score < 1 || score > 5) throw new Error('Rating must be between 1 and 5.');
+      if (!String(body ?? '').trim()) throw new Error('Write a review before submitting.');
+      if (!checkInId) throw new Error('A verified check-in is required before leaving a review.');
+      const { data, error } = await client.rpc('create_review', {
+        p_location_id: locationId,
+        p_check_in_id: checkInId,
+        p_stars: score,
+        p_cleanliness_pct: cleanlinessPct,
+        p_comment: String(body).trim()
+      });
+      if (error) throw error;
+      return Array.isArray(data) ? data[0] : data;
+    },
+
+    likeReview: async (reviewId) => {
+      await requireUser();
+      const { data, error } = await client.rpc('toggle_review_like', { p_review_id: reviewId });
+      if (error) throw error;
+      return data;
+    },
+
+    businessReply: async ({ businessId, reviewId, reply }) => {
+      await requireUser();
+      if (!String(reply ?? '').trim()) throw new Error('Reply cannot be empty.');
+      const { data, error } = await client.rpc('business_reply_review', {
+        p_business_id: businessId,
+        p_review_id: reviewId,
+        p_reply: String(reply).trim()
+      });
+      if (error) throw error;
+      return data;
+    },
+
+    observationSummary: async (locationId, { limit = 20 } = {}) => {
+      const { data, error } = await client.from('restroom_observations')
+        .select('id,observation_type,cleanliness_pct,confidence,created_at')
+        .eq('location_id', locationId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    }
+  });
+}
