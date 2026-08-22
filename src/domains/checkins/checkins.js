@@ -16,38 +16,30 @@ export function createCheckInService(client) {
       if (error) throw error;
       return data;
     },
-
     byGps: async ({ latitude, longitude, radiusMeters = 100 }) => {
       await requireUser();
-      const { data, error } = await client.rpc('record_gps_checkin', {
-        p_lat: Number(latitude), p_lng: Number(longitude), p_radius_meters: Number(radiusMeters)
-      });
+      const { data, error } = await client.rpc('record_gps_checkin', { p_lat: Number(latitude), p_lng: Number(longitude), p_radius_meters: Number(radiusMeters) });
       if (error) throw error;
       return data;
     },
-
     fromMap: async ({ locationId, latitude, longitude }) => {
       await requireUser();
-      const { data, error } = await client.rpc('kleenest_map_check_in', {
-        p_location_id: locationId, p_lat: Number(latitude), p_lng: Number(longitude)
-      });
+      const { data, error } = await client.rpc('kleenest_map_check_in', { p_location_id: locationId, p_lat: Number(latitude), p_lng: Number(longitude) });
       if (error) throw error;
       return data;
     },
-
     verifyQr: async ({ qrCode, latitude, longitude }) => {
       await requireUser();
-      const { data, error } = await client.rpc('verify_checkin', {
-        p_qr_code: qrCode, p_lat: Number(latitude), p_lng: Number(longitude)
-      });
+      const { data, error } = await client.rpc('verify_checkin', { p_qr_code: qrCode, p_lat: Number(latitude), p_lng: Number(longitude) });
       if (error) throw error;
       return data;
     },
-
-    rewardsSummary: async (checkInId) => {
+    rewardsSummary: async checkInId => {
       const { data, error } = await client.rpc('checkin_rewards_summary', { p_checkin_id: checkInId });
       if (error) throw error;
       return data;
-    }
+    },
+    leaderboard: (limit = 25) => client.rpc('get_user_leaderboard', { p_limit: Number(limit) }).then(({ data, error }) => { if (error) throw error; return data; }),
+    platformLeaderboard: (leaderboardKey, limit = 25) => client.rpc('get_platform_leaderboard', { p_leaderboard_key: leaderboardKey, p_limit: Number(limit) }).then(({ data, error }) => { if (error) throw error; return data; })
   });
 }
