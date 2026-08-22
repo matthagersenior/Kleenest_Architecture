@@ -4,7 +4,7 @@
 
 ### Follows — BLOCKER
 
-`follow_user(p_user_id)` currently inserts into `public.user_follows(follower_id, followed_id)`. The live schema/index inventory exposes `public.follows(follower_id, following_id)` as the canonical relationship table and no `user_follows` index surface. Do not wire follows until the database function is reconciled with the canonical table or a deliberate compatibility table is restored.
+`follow_user(p_user_id)` currently inserts into `public.user_follows(follower_id, followed_id)`. The live schema exposes `public.follows(follower_id, following_id)` as the canonical relationship table and no `user_follows` table. Do not wire follows until the database function is reconciled with the canonical table.
 
 ### Check-in — BLOCKER
 
@@ -38,6 +38,10 @@ Architecture should pass stable source IDs/idempotency keys rather than inventin
 - `qr_redemptions` has user and QR indexes plus unique per-user redemption, making QR conversion analytics straightforward.
 - `data_feature_events` has location, actor, business, feature, subject, event-type, and deduplication indexes, making it the natural cross-domain telemetry spine.
 - `progression_metric_events` has source and user indexes plus idempotency, making it suitable for derived progression analytics without becoming the source of truth for the underlying activity.
+
+## Current production data safety
+
+The checked production tables currently contain zero rows in `follows`, `check_ins`, `location_bathroom_verifications`, and `qr_redemptions`; `point_transactions` contains 44 rows. This means the discovered conflicts can be resolved without needing to migrate existing follow/check-in/verification/QR records in this environment, but production DDL should still not be used as the test harness.
 
 ## Gate
 
