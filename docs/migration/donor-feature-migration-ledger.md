@@ -10,6 +10,7 @@
 |---|---|---|---|
 | Supabase map + place loading | `711146225f5b9de0c7857be3e3368553c8c04309` | canonical map network + map runtime (`d48c6e8c`, `16b37db7`, `c169e8fc`) | migrated |
 | Universal Supabase discovery | `444cc14cedab0e25fe47ace50b4dfa65ca0bbb3d`, `b2ef337d99513b9bd08c507cb1d4dab4ce0a2cb9` | canonical map/discovery/location graph | migrated |
+| Feature-rich map interaction surface | `703cf22cee86b947db35953bf4e39ed00e9af9a7` | canonical `src/runtime/MapSurface.jsx` + `MapSurface.css`, adapted to `services.maps` and canonical favorites | migrated |
 | Supabase authentication/session | `02cbb13e185d0399e2fd16dd0aa2ab60ac10bf0d`, `e065cd824d2b5fd3b28f8383822fb90f574d89e6` | canonical runtime/auth/profile surfaces (`c0f8db5b`, profile service lineage) | migrated |
 | Supabase profile service + schema alignment | `362417e0aa8726c0780afd158d927ae5872952ce`, `c7b75547ceb23c46d1bf831a4f15e0d6b09cba42` | canonical profile service (`6ac79538`, `bf7390b8`, `b65dc89e`, `2e1c0f5e`) | migrated |
 | Community reviews | `10429d754d2b5fd3b28f8383822fb90f574d89e6` | Community capability/service + verified production RPC reconciliation (`657c27a0`, community parity lineage) | migrated |
