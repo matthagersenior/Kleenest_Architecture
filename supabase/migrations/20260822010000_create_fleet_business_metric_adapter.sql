@@ -31,8 +31,6 @@ create table if not exists public.fleet_metric_definitions (
   constraint fleet_metric_definitions_scoring_method_ck check (scoring_method in ('threshold','linear','binary','banded')),
   constraint fleet_metric_definitions_period_ck check (period in ('day','week','month','quarter','custom')),
   constraint fleet_metric_definitions_max_score_ck check (max_score >= 0),
-  constraint fleet_metric_definitions_goal_ck check (goal is null or isfinite(goal)),
-  constraint fleet_metric_definitions_threshold_ck check (threshold is null or isfinite(threshold)),
   constraint fleet_metric_definitions_scoring_config_object_ck check (jsonb_typeof(scoring_config) = 'object'),
   constraint fleet_metric_definitions_name_ck check (length(trim(name)) > 0),
   constraint fleet_metric_definitions_source_ck check (length(trim(source_dataset)) > 0 and length(trim(source_metric)) > 0)
