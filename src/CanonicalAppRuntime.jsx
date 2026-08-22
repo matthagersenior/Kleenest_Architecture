@@ -2,6 +2,7 @@ import {Navigate,Route,Routes} from 'react-router-dom';
 import Home from './runtime/Home.jsx';
 import MapSurface from './runtime/MapSurface.jsx';
 import RouteSurface from './runtime/RouteSurface.jsx';
+import VisitSurface from './runtime/VisitSurface.jsx';
 import FamilyPage from './runtime/FamilyPage.jsx';
 import LocationEvidencePage from './runtime/LocationEvidencePage.jsx';
 import EngagementPage from './runtime/EngagementPage.jsx';
@@ -25,7 +26,6 @@ import ConsumerActionCenter from './runtime/ConsumerActionCenter.jsx';
 import EngagementOrchestrator from './runtime/EngagementOrchestrator.jsx';
 import IntegrationHub from './runtime/IntegrationHub.jsx';
 import CapabilityHubPage from './runtime/CapabilityHubPage.jsx';
-import InteractionHubPage from './runtime/InteractionHubPage.jsx';
 import AdminMaintenancePage from './runtime/AdminMaintenancePage.jsx';
 import ActivitySurface from './runtime/ActivitySurface.jsx';
 import ProgressionPage from './runtime/ProgressionPage.jsx';
@@ -34,7 +34,7 @@ import EnterpriseCommandCenterPage from './runtime/EnterpriseCommandCenterPage.j
 
 export default function CanonicalAppRuntime(){return <Routes>
 <Route path="/" element={<Home/>}/><Route path="/capabilities" element={<CapabilityHubPage/>}/><Route path="/consumer" element={<Home/>}/>
-<Route path="/integration" element={<IntegrationHub/>}/><Route path="/interactions" element={<InteractionHubPage/>}/><Route path="/qr" element={<InteractionHubPage/>}/><Route path="/geofence" element={<InteractionHubPage/>}/><Route path="/check-in" element={<InteractionHubPage/>}/>
+<Route path="/integration" element={<IntegrationHub/>}/><Route path="/interactions" element={<VisitSurface/>}/><Route path="/qr" element={<VisitSurface/>}/><Route path="/geofence" element={<VisitSurface/>}/><Route path="/check-in" element={<VisitSurface/>}/>
 <Route path="/auth" element={<AuthPage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="/notifications" element={<NotificationPreferencesPage/>}/><Route path="/pricing" element={<PricingPage/>}/><Route path="/support" element={<SupportPage/>}/><Route path="/about" element={<AboutPage/>}/>
 <Route path="/map" element={<MapSurface/>}/><Route path="/route" element={<RouteSurface/>}/><Route path="/activity" element={<ActivitySurface/>}/><Route path="/play" element={<ProgressionPage/>}/><Route path="/play/quest" element={<ProgressionPage/>}/><Route path="/community" element={<SocialPage/>}/><Route path="/family" element={<FamilyPage/>}/><Route path="/evidence" element={<LocationEvidencePage/>}/><Route path="/engage" element={<EngagementPage/>}/><Route path="/intelligence" element={<IntelligencePage/>}/><Route path="/leaderboards" element={<IntelligencePage/>}/>
 <Route path="/business" element={<BusinessManagePage/>}/><Route path="/business/intelligence" element={<BusinessIntelligencePage/>}/><Route path="/business/engage" element={<BusinessManagePage/>}/><Route path="/business/analytics" element={<BusinessIntelligencePage/>}/>
