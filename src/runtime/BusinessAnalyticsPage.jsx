@@ -1,66 +1,24 @@
-import { useEffect, useState } from 'react';
-import { BarChart3, MessageSquare, RefreshCw, TrendingUp } from 'lucide-react';
+import { useEffect,useMemo,useState } from 'react';
+import { BarChart3,MessageSquare,RefreshCw,TrendingUp,Users,Target,QrCode,CalendarDays,Gift,Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
-
-const arr = value => Array.isArray(value) ? value : [];
-const obj = value => value && typeof value === 'object' ? value : {};
-const first = value => arr(value)[0] || null;
-const pretty = value => typeof value === 'number' ? value.toLocaleString() : value == null ? '—' : String(value);
-
-function Stat({ label, value }) { return <div className="reward-stat"><strong>{pretty(value)}</strong><span>{label}</span></div>; }
-
-export default function BusinessAnalyticsPage({ mode = 'analytics' }) {
-  const { services, user } = useAppContext();
-  const [business, setBusiness] = useState(null);
-  const [analytics, setAnalytics] = useState({});
-  const [reviews, setReviews] = useState({});
-  const [growth, setGrowth] = useState({});
-  const [roi, setRoi] = useState({});
-  const [engagement, setEngagement] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [reply, setReply] = useState({});
-  const [message, setMessage] = useState('');
-
-  const load = async () => {
-    setLoading(true); setError('');
-    try {
-      const businesses = arr(await services.business.listBusinesses());
-      const current = businesses[0] || null;
-      setBusiness(current);
-      if (!current) return;
-      const id = current.business_id || current.id;
-      const [a, r, g, ro, e] = await Promise.all([
-        services.business.analytics(id), services.business.reviewAnalytics(id),
-        services.business.growthAnalytics(id), services.business.roiAnalytics(id),
-        services.business.engagementAnalytics(id)
-      ]);
-      setAnalytics(obj(a)); setReviews(obj(r)); setGrowth(obj(g)); setRoi(obj(ro)); setEngagement(obj(e));
-    } catch (e) { setError(e.message || 'Unable to load business analytics.'); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { if (user) void load(); else setLoading(false); }, [user]);
-
-  const sendReply = async reviewId => {
-    const id = business?.business_id || business?.id;
-    const text = String(reply[reviewId] || '').trim();
-    if (!id || !text) return;
-    try { await services.business.replyToReview(id, reviewId, text); setReply(v => ({ ...v, [reviewId]: '' })); setMessage('Review reply saved.'); await load(); }
-    catch (e) { setError(e.message || 'Unable to save review reply.'); }
-  };
-
-  if (!user) return <WorkspaceShell workspace="business"><section className="empty-state"><h2>Sign in to view business analytics</h2><Link className="primary" to="/auth">Sign in</Link></section></WorkspaceShell>;
-  if (loading) return <WorkspaceShell workspace="business"><section className="empty-state">Loading business analytics…</section></WorkspaceShell>;
-  if (!business) return <WorkspaceShell workspace="business"><section className="empty-state"><h2>No business account</h2><Link className="secondary" to="/business/manage">Manage business</Link></section></WorkspaceShell>;
-
-  const reviewRows = arr(reviews.reviews || reviews.items || reviews.data);
-  return <WorkspaceShell workspace="business"><section className="page business-page">
-    <div className="page-header"><div><span className="eyebrow">BUSINESS ANALYTICS</span><h1>{mode === 'reviews' ? 'Reviews & reputation' : 'Performance analytics'}</h1><p>Live production analytics from the canonical Business RPC surface.</p></div><div className="hero-actions"><button className="secondary" onClick={load}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/business/manage">Manage assets</Link></div></div>
-    {error && <p className="form-error" role="alert">{error}</p>}{message && <p className="form-success" role="status">{message}</p>}
-    <section className="reward-stats"><Stat label="Check-ins" value={analytics.check_ins ?? analytics.total_check_ins}/><Stat label="Visitors" value={analytics.visitors ?? analytics.total_visitors}/><Stat label="Reviews" value={reviews.total_reviews ?? reviews.review_count}/><Stat label="Rating" value={reviews.average_rating ?? reviews.avg_rating}/><Stat label="ROI" value={roi.roi ?? roi.return_on_investment}/></section>
-    {mode === 'reviews' ? <section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">REPUTATION</span><h2>Customer reviews</h2></div><MessageSquare size={22}/></div>{reviewRows.length ? reviewRows.map(r => <article className="business-row" key={r.id || r.review_id}><div><strong>{r.rating ? `${r.rating}/5` : 'Review'}</strong><span>{r.comment || r.text || r.content || 'No comment'}</span><small>{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</small></div><div><textarea aria-label="Reply" value={reply[r.id || r.review_id] || ''} onChange={e => setReply(v => ({ ...v, [r.id || r.review_id]: e.target.value }))} placeholder="Reply to customer"/><button className="secondary compact" onClick={() => sendReply(r.id || r.review_id)}>Reply</button></div></article>) : <p className="muted">No review rows were returned by the production analytics contract.</p>}</section> : <><section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">GROWTH</span><h2>Growth performance</h2></div><TrendingUp size={22}/></div><div className="reward-stats"><Stat label="Growth" value={growth.growth_rate ?? growth.growth}/><Stat label="New visitors" value={growth.new_visitors}/><Stat label="Repeat visitors" value={growth.repeat_visitors}/><Stat label="Engagement" value={engagement.engagement_rate ?? engagement.rate}/></div></section><section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">ANALYTICS</span><h2>Operational signals</h2></div><BarChart3 size={22}/></div><pre className="analytics-json">{JSON.stringify({ analytics, roi, engagement }, null, 2)}</pre></section></>}
-  </section></WorkspaceShell>;
+const arr=v=>Array.isArray(v)?v:[]; const obj=v=>v&&typeof v==='object'?v:{}; const pretty=v=>typeof v==='number'?v.toLocaleString():v==null?'—':String(v);
+function Stat({label,value}){return <div className="reward-stat"><strong>{pretty(value)}</strong><span>{label}</span></div>}
+function Panel({icon:Icon,title,children}){return <section className="detail-panel business-card"><div className="panel-heading"><div><span className="eyebrow">BUSINESS PERFORMANCE</span><h2>{title}</h2></div><Icon size={21}/></div>{children}</section>}
+function metric(data,...keys){for(const k of keys){if(data?.[k]!=null)return data[k]}return null}
+export default function BusinessAnalyticsPage({mode='analytics'}){
+ const {services,user}=useAppContext(); const [business,setBusiness]=useState(null); const [data,setData]=useState({}); const [reviews,setReviews]=useState({}); const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [reply,setReply]=useState({}); const [message,setMessage]=useState('');
+ const load=async()=>{setLoading(true);setError('');try{const bs=arr(await services.business.listBusinesses());const b=bs[0]||null;setBusiness(b);if(!b)return;const id=b.business_id||b.id;const [analytics,growth,visitors,roi,engagement,funnel,occupancy,benchmark,campaigns,promotions,qrs,events,rewards,review]=await Promise.all([services.business.analytics(id),services.business.growthAnalytics(id),services.business.visitorAnalytics(id),services.business.roiAnalytics(id),services.business.engagementAnalytics(id),services.business.engagementFunnel(id),services.business.occupancyAnalytics(id),services.business.benchmarkAnalytics(id),services.business.campaignAnalytics(id),services.business.promotionAnalytics(id),services.business.qrAnalytics(id),services.business.eventAnalytics(id),services.business.rewardsAnalytics(id),services.business.reviewAnalytics(id)]);setData({analytics:obj(analytics),growth:obj(growth),visitors:obj(visitors),roi:obj(roi),engagement:obj(engagement),funnel:obj(funnel),occupancy:obj(occupancy),benchmark:obj(benchmark),campaigns:obj(campaigns),promotions:obj(promotions),qrs:obj(qrs),events:obj(events),rewards:obj(rewards)});setReviews(obj(review))}catch(e){setError(e.message||'Unable to load business analytics.')}finally{setLoading(false)}};
+ useEffect(()=>{if(user)void load();else setLoading(false)},[user]);
+ const reviewRows=arr(reviews.reviews||reviews.items||reviews.data); const id=business?.business_id||business?.id;
+ const sendReply=async reviewId=>{const text=String(reply[reviewId]||'').trim();if(!id||!text)return;try{await services.business.replyToReview(id,reviewId,text);setReply(v=>({...v,[reviewId]:''}));setMessage('Review reply saved.');await load()}catch(e){setError(e.message||'Unable to save review reply.')}};
+ const cards=useMemo(()=>[{label:'Visitors',value:metric(data.visitors,'visitors','total_visitors')},{label:'Check-ins',value:metric(data.analytics,'check_ins','total_check_ins')},{label:'Reviews',value:metric(reviews,'total_reviews','review_count')},{label:'Rating',value:metric(reviews,'average_rating','avg_rating')},{label:'ROI',value:metric(data.roi,'roi','return_on_investment')},{label:'Engagement',value:metric(data.engagement,'engagement_rate','rate')}],[data,reviews]);
+ if(!user)return <WorkspaceShell workspace="business"><section className="empty-state"><h2>Sign in to view business analytics</h2><Link className="primary" to="/auth">Sign in</Link></section></WorkspaceShell>;
+ if(loading)return <WorkspaceShell workspace="business"><section className="empty-state">Loading business analytics…</section></WorkspaceShell>;
+ if(!business)return <WorkspaceShell workspace="business"><section className="empty-state"><h2>No business account</h2><Link className="secondary" to="/business/manage">Manage business</Link></section></WorkspaceShell>;
+ return <WorkspaceShell workspace="business"><section className="page business-page"><div className="page-header"><div><span className="eyebrow">BUSINESS ANALYTICS</span><h1>{mode==='reviews'?'Reviews & reputation':business.name||'Performance analytics'}</h1><p>Production-backed operating intelligence across customers, assets, campaigns and engagement.</p></div><div className="hero-actions"><button className="secondary" onClick={load}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/business/manage">Manage assets</Link><Link className="secondary" to="/business/intelligence">Intelligence</Link></div></div>{error&&<p className="form-error" role="alert">{error}</p>}{message&&<p className="form-success" role="status">{message}</p>}
+ <section className="reward-stats">{cards.map(c=><Stat key={c.label} label={c.label} value={c.value}/>)}</section>
+ {mode==='reviews'?<Panel icon={MessageSquare} title="Customer reviews"><div className="business-intelligence-list">{reviewRows.length?reviewRows.map(r=>{const rid=r.id||r.review_id;return <article className="business-row" key={rid}><div><strong>{r.rating?`${r.rating}/5`:'Review'}</strong><span>{r.comment||r.text||r.content||'No comment'}</span><small>{r.created_at?new Date(r.created_at).toLocaleString():''}</small></div><div><textarea aria-label="Reply" value={reply[rid]||''} onChange={e=>setReply(v=>({...v,[rid]:e.target.value}))} placeholder="Reply to customer"/><button className="secondary compact" onClick={()=>sendReply(rid)}>Reply</button></div></article>}) : <p className="muted">No review rows were returned.</p>}</div></Panel>:<><div className="business-manage-grid"><Panel icon={TrendingUp} title="Growth & visitors"><div className="reward-stats"><Stat label="Growth" value={metric(data.growth,'growth_rate','growth')}/><Stat label="New visitors" value={metric(data.growth,'new_visitors')}/><Stat label="Repeat visitors" value={metric(data.growth,'repeat_visitors')}/><Stat label="Occupancy" value={metric(data.occupancy,'occupancy_rate','rate')}/></div></Panel><Panel icon={Users} title="Engagement funnel"><div className="business-intelligence-list">{Object.entries(data.funnel).slice(0,8).map(([k,v])=><div className="business-row" key={k}><strong>{k.replaceAll('_',' ')}</strong><span>{pretty(typeof v==='object'?metric(v,'count','value','total'):v)}</span></div>)}</div></Panel><Panel icon={Target} title="ROI & benchmarks"><div className="reward-stats"><Stat label="ROI" value={metric(data.roi,'roi','return_on_investment')}/><Stat label="Benchmark" value={metric(data.benchmark,'score','benchmark_score','percentile')}/><Stat label="Rewards" value={metric(data.rewards,'redemptions','total_redemptions','earned')}/></div></Panel><Panel icon={QrCode} title="QR performance"><div className="reward-stats"><Stat label="Scans" value={metric(data.qrs,'scans','total_scans')}/><Stat label="Conversions" value={metric(data.qrs,'conversions','total_conversions')}/></div><Link className="secondary" to="/business/manage">Manage QR programs</Link></Panel><Panel icon={CalendarDays} title="Events & campaigns"><div className="reward-stats"><Stat label="Campaigns" value={metric(data.campaigns,'campaigns','total_campaigns')}/><Stat label="Events" value={metric(data.events,'events','total_events')}/><Stat label="Promotions" value={metric(data.promotions,'promotions','total_promotions')}/></div><Link className="secondary" to="/business/manage">Manage campaigns & events</Link></Panel><Panel icon={Activity} title="Engagement signals"><div className="reward-stats"><Stat label="Engagement" value={metric(data.engagement,'engagement_rate','rate')}/><Stat label="Conversion" value={metric(data.engagement,'conversion_rate','conversion')}/></div></Panel></div></>}
+ </section></WorkspaceShell>;
 }
