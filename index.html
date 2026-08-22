@@ -4,10 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111827" />
+    <meta name="description" content="Kleenest Architecture" />
     <title>Kleenest</title>
+    <style>
+      :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e5e7eb;background:#0b1020}
+      body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#172554 0,#0b1020 48%,#050816 100%)}
+      #boot{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+      .boot-card{width:min(760px,100%);padding:32px;border:1px solid #26324f;border-radius:20px;background:rgba(15,23,42,.88);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+      .brand{font-size:32px;font-weight:800;letter-spacing:-.03em;margin:0 0 8px}
+      .sub{color:#94a3b8;margin:0 0 24px;line-height:1.6}
+      .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+      .tile{padding:16px;border:1px solid #26324f;border-radius:14px;background:#111a30;color:#cbd5e1;text-decoration:none}
+      .tile strong{display:block;color:#fff;margin-bottom:5px}
+      .status{margin-top:24px;color:#64748b;font-size:13px}
+      #root:empty + #boot{display:grid}
+    </style>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div id="boot">
+      <section class="boot-card">
+        <h1 class="brand">Kleenest</h1>
+        <p class="sub">Architecture workspace · platform capabilities, intelligence, engagement and operations.</p>
+        <div class="grid">
+          <a class="tile" href="./"><strong>Consumer</strong>Explore the network</a>
+          <a class="tile" href="./business"><strong>Business</strong>Business workspace</a>
+          <a class="tile" href="./fleet"><strong>Fleet</strong>Fleet operations</a>
+          <a class="tile" href="./enterprise"><strong>Enterprise</strong>Partner command</a>
+          <a class="tile" href="./play"><strong>Play</strong>Quests & progression</a>
+          <a class="tile" href="./community"><strong>Community</strong>Reviews & evidence</a>
+        </div>
+        <div class="status">Loading the interactive application…</div>
+      </section>
+    </div>
+    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
