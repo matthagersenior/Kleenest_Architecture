@@ -10,7 +10,6 @@ export function createFleetOperationsService(client) {
     vehicleStatus: (businessId, vehicleId, status) => rpc('fleet_set_vehicle_status', { p_business_id: businessId, p_vehicle_id: vehicleId, p_status: status }),
     routeStatus: (businessId, routeId, status) => rpc('fleet_set_route_status', { p_business_id: businessId, p_route_id: routeId, p_status: status }),
     opportunities: businessId => rpc('fleet_service_opportunities_for_business', { p_business_id: businessId }).then(data => data ?? []),
-    intelligence: businessId => rpc('fleet_intelligence_summary', { p_business_id: businessId }),
-    intelligenceAction: (businessId, opportunityId, actionType) => rpc('fleet_intelligence_action', { p_business_id: businessId, p_opportunity_id: opportunityId, p_action_type: actionType })
+    intelligence: async businessId => Promise.all([rpc('fleet_dashboard_summary_v2', { p_business_id: businessId }), rpc('fleet_service_opportunities_for_business', { p_business_id: businessId })])
   });
 }
