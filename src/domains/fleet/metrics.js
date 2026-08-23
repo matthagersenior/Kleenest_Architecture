@@ -1,6 +1,11 @@
 export function createFleetMetricService(client) {
   if (!client) throw new Error('Supabase client is required.');
   return Object.freeze({
+    capabilities: async businessId => {
+      const { data, error } = await client.rpc('get_fleet_metric_capabilities', { p_business_id: businessId });
+      if (error) throw error;
+      return data ?? { business_id: businessId, measurement_sources: [], shared_primitives: [] };
+    },
     configuration: async businessId => {
       const { data, error } = await client.rpc('get_fleet_metric_configuration', { p_business_id: businessId });
       if (error) throw error;
