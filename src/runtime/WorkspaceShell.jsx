@@ -1,4 +1,4 @@
-import {Navigate,useNavigate} from 'react-router-dom';
+import {Navigate,useNavigate,Link} from 'react-router-dom';
 import {useAppContext} from '../AppContext.jsx';
 import {isPlatformOwner} from '../domains/entitlements/access.js';
 import {getNavigationForWorkspace} from '../domain/workspaces.js';
@@ -24,7 +24,7 @@ export default function WorkspaceShell({children,workspace='consumer'}){
  return <div className={`app workspace-${workspace} membership-${displayedTier}`}>
   <WorkspaceNavigation workspace={effectiveWorkspace} capabilities={capabilities} membershipLabel={workspaceModel?.membershipLabel||displayedTier} availableWorkspaces={availableWorkspaces} onWorkspaceChange={handleWorkspaceChange}/>
   {previewing&&workspace!=='owner'&&<div className="preview-banner">Owner preview · {presentationTier} experience</div>}
-  {owner&&<div className="platform-access"><a href="/owner">Platform controls</a></div>}
+  {owner&&<div className="platform-access"><Link to="/owner">Platform controls</Link></div>}
   <main>{children}</main>
  </div>;
 }
