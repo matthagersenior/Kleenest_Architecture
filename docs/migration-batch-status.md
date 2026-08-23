@@ -14,3 +14,12 @@ The Architecture repository is being migrated in large autonomous batches from t
 8. GitHub Pages deploys the built React application.
 
 The capabilities explorer is reference tooling only; the root application must remain the actual React product.
+
+## Current migration position
+
+- **Batch 8 — Maps / location discovery:** migrated. The canonical MapSurface remains the target and uses `AppContext → services.maps → map_network_nearby_v1/search_locations`; no donor `mapNetwork.js` copy was introduced.
+- **Batch 9 — Connected location interaction chain:** migrated into the canonical runtime boundary. Map-selected locations can now resolve through the canonical location-details service and `/place/:id` surface; Place Detail actions hand off to Visit/check-in, verified review, evidence, Activity, Progression, QR/geofence, rewards, and leaderboard capabilities already present in Architecture.
+
+## Migration rule
+
+Migration is implementation work, not capability-graph or test-lab work. Donor behavior is adapted into Architecture's canonical domains/services and production Supabase contracts. The architecture/interoperability matrix remains authoritative.
