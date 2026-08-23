@@ -16,6 +16,9 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: 20
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,7 +29,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify Node runtime
+        run: node --version && npm --version
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -49,6 +55,8 @@ jobs:
           test -n "$(find dist/assets -type f -name '*.css' -print -quit)"
           cp dist/index.html dist/404.html
           echo "Production bundle verified: $(du -sh dist | cut -f1)"
+          echo "Entry point:"
+          head -c 500 dist/index.html
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
@@ -67,5 +75,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-# Deployment verification trigger after CI repair.
