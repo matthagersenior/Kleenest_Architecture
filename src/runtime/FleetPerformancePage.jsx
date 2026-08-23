@@ -3,6 +3,7 @@ import { BarChart3, RefreshCw, Trophy, Plus, Save, Link2, Database } from 'lucid
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
+import './fleetPerformance.css';
 const arr=v=>Array.isArray(v)?v:[];
 const idOf=v=>v?.id||v?.metric_definition_id||v?.target_id;
 const labelOf=v=>v?.name||v?.metric_name||v?.metric_key||v?.target_name||v?.display_name||idOf(v)||'Metric';
