@@ -3,17 +3,15 @@ import {Link} from 'react-router-dom';
 import {Megaphone,QrCode,RefreshCw,Sparkles} from 'lucide-react';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import {useAppContext} from '../AppContext.jsx';
-
 const Field=({label,...props})=><label className="form-field"><span>{label}</span><input {...props}/></label>;
 const list=v=>Array.isArray(v)?v:[];
-
 export default function BusinessEngagementPage(){
- const {services,user}=useAppContext();
+ const {services,user,isPlatformOwner}=useAppContext();
  const [business,setBusiness]=useState(null),[locations,setLocations]=useState([]),[qrs,setQrs]=useState([]),[programs,setPrograms]=useState([]);
  const [form,setForm]=useState({qrCodeId:'',programType:'check_in_reward',name:'',description:'',triggerCount:1});
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
- const load=async()=>{setLoading(true);setError('');try{const businesses=list(await services.business.listBusinesses());const b=businesses[0]||null;setBusiness(b);if(!b){setLocations([]);setQrs([]);setPrograms([]);return}const id=b.business_id||b.id;const [ls,qs]=await Promise.all([services.business.listLocations(id),services.business.listQrs(id)]);const locationsData=list(ls),qrsData=list(qs);setLocations(locationsData);setQrs(qrsData);const selected=form.qrCodeId&&qrsData.some(q=>String(q.id)===String(form.qrCodeId))?form.qrCodeId:(qrsData[0]?.id||'');setForm(v=>({...v,qrCodeId:selected}));if(selected)setPrograms(list(await services.business.listQrPrograms(selected)));else setPrograms([])}catch(e){setError(e.message||'Unable to load engagement programs.')}finally{setLoading(false)}};
- useEffect(()=>{if(user)void load();else setLoading(false)},[user]);
+ const load=async()=>{setLoading(true);setError('');try{const businesses=list(await services.business.listBusinesses({includeDemo:isPlatformOwner}));const b=businesses[0]||null;setBusiness(b);if(!b){setLocations([]);setQrs([]);setPrograms([]);return}const id=b.business_id||b.id;const [ls,qs]=await Promise.all([services.business.listLocations(id),services.business.listQrs(id)]);const locationsData=list(ls),qrsData=list(qs);setLocations(locationsData);setQrs(qrsData);const selected=form.qrCodeId&&qrsData.some(q=>String(q.id)===String(form.qrCodeId))?form.qrCodeId:(qrsData[0]?.id||'');setForm(v=>({...v,qrCodeId:selected}));if(selected)setPrograms(list(await services.business.listQrPrograms(selected)));else setPrograms([])}catch(e){setError(e.message||'Unable to load engagement programs.')}finally{setLoading(false)}};
+ useEffect(()=>{if(user)void load();else setLoading(false)},[user,isPlatformOwner]);
  useEffect(()=>{if(!form.qrCodeId)return;void services.business.listQrPrograms(form.qrCodeId).then(v=>setPrograms(list(v))).catch(e=>setError(e.message||'Unable to load QR programs.'))},[form.qrCodeId]);
  const create=async e=>{e.preventDefault();if(!form.qrCodeId||!form.name.trim())return;setBusy(true);setError('');setMessage('');try{await services.business.createQrProgram(form.qrCodeId,form.programType,form.name.trim(),form.description.trim()||null,{},Number(form.triggerCount)||1);setMessage('QR engagement program created.');setForm(v=>({...v,name:'',description:''}));setPrograms(list(await services.business.listQrPrograms(form.qrCodeId)))}catch(e){setError(e.message||'Unable to create engagement program.')}finally{setBusy(false)}};
  if(!user)return <WorkspaceShell workspace="business"><section className="empty-state"><h2>Sign in to manage engagement</h2><Link className="primary" to="/auth">Sign in</Link></section></WorkspaceShell>;
