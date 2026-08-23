@@ -6,12 +6,16 @@ export function createProfileService(client){
  return Object.freeze({
   get:async userId=>{
    if(!userId)return null;
+   const {data:authData}=await client.auth.getUser();
+   const {data,error}=await client.from('profiles').select(projection).eq('id',userId).maybeSingle();
+   if(error)throw error;
+   if(data)return {...data,email:authData?.user?.email??null};
    const ensured=await client.rpc('ensure_current_user_profile');
    if(ensured.error)throw ensured.error;
-   const [{data,error},{data:authData}]=await Promise.all([client.from('profiles').select(projection).eq('id',userId).maybeSingle(),client.auth.getUser()]);
-   if(error)throw error;
-   if(!data)return null;
-   return {...data,email:authData?.user?.email??null};
+   const {data:created,error:createdError}=await client.from('profiles').select(projection).eq('id',userId).maybeSingle();
+   if(createdError)throw createdError;
+   if(!created)return null;
+   return {...created,email:authData?.user?.email??null};
   },
   update:async(userId,patch={})=>{
    if(!userId)throw new Error('User is required.');
