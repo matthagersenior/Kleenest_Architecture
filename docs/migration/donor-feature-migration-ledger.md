@@ -24,6 +24,8 @@
 | Supabase capability contract/control center | `65d8bf8f7fb2c7272dad218079ec939e3e37798d`, `af388d127ff21f26db52ef36882afc45407b011d`, `0d6f6e2c5760477dbda1740151885f70feb1725c` | canonical capability registry/hubs and runtime exposure (`e5011f14`, `5c0dfef`, `03376992`, `dc4b03c`) | migrated |
 | Feature navigation / workspace routing | `61f368251344f524fa3218d56c8da6cfed695893`, `b0af3c9ebb3dacc1ddfb8db8e6f8bdcf54322d79`, `c90c49287628f96033390bffbf2a5117e329fcb7` | canonical route/workspace lifecycle and interaction hubs (`ac11abe`, `7ba221f`, `4124d41`, `a7bd765`) | migrated |
 | Live location intelligence on place details | `36229f5b27a98ac577fc4f149c867662e9c7b58d` | canonical location/evidence/intelligence graph (`6c1c23af`, verification read-model lineage) | migrated |
+| Canonical workspace model + membership/navigation rules | `3bdd0d809935b25960a0539389e5640607877d3b` | `src/domain/workspaces.js`, wired into `WorkspaceShell.jsx` and `AppContext.jsx` | migrated |
+| Proven Supabase RPC capability contract catalog | `3bdd0d809935b25960a0539389e5640607877d3b` | `src/architecture/platformCapabilityContracts.js`; execution remains in canonical domain services | migrated |
 
 ## Operating rule
 
