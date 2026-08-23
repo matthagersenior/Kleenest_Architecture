@@ -22,11 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Build Vite application
@@ -34,12 +34,14 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - name: Verify production runtime is shipped
+      - name: Verify production bundle
         run: |
           test -s dist/index.html
           test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
-          grep -R 'RuntimeTestLab' dist/assets
-          grep -R 'Behavior smoke matrix' dist/assets
+          grep -R 'CanonicalAppRuntime' dist/assets
+          grep -R 'MapSurface' dist/assets
+          grep -R 'FleetIntelligenceSurface' dist/assets
+          grep -R 'BusinessIntelligencePage' dist/assets
       - name: Create SPA fallback
         run: cp dist/index.html dist/404.html
       - name: Configure Pages
