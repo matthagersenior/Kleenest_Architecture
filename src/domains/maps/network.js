@@ -17,13 +17,22 @@ export const MAP_CATEGORIES = Object.freeze([
 function normalize(row) {
   return normalizePlace({
     ...row,
-    distance_km: row.distance_meters == null ? undefined : row.distance_meters / 1000,
-    distance_miles: row.distance_meters == null ? undefined : row.distance_meters / 1609.344,
+    distance_km: row.distance_km ?? (row.distance_meters == null ? undefined : row.distance_meters / 1000),
+    distance_miles: row.distance_miles ?? (row.distance_meters == null ? undefined : row.distance_meters / 1609.344),
     amenities: row.amenities ?? [],
     fixtures: row.fixtures ?? {},
     brand: row.brand ?? null,
     operator_name: row.operator_name ?? null,
     osm_tags: row.osm_tags ?? {}
+  });
+}
+
+function normalizePrepared(row) {
+  return normalize({
+    ...row,
+    distance_meters: row.distance_meters == null ? undefined : Number(row.distance_meters),
+    category: row.category ?? row.place_type ?? 'service',
+    is_verified: row.is_verified ?? row.verification_status === 'verified'
   });
 }
 
@@ -46,6 +55,20 @@ export function createMapNetworkService(client) {
     });
     if (error) throw error;
     return (data ?? []).map(normalize);
+  }
+
+  async function prepareNearby({ latitude, longitude, radiusKm = 8 } = {}) {
+    if (latitude == null || longitude == null) return null;
+    const { data: authData } = await client.auth.getUser();
+    if (!authData?.user) return null;
+    const { data, error } = await client.rpc('prepare_universal_location_discovery', {
+      p_lat: latitude,
+      p_lng: longitude,
+      p_radius_m: Math.round(Math.min(Math.max(Number(radiusKm) || 8, 1), 50) * 1000)
+    });
+    if (error) throw error;
+    const locations = Array.isArray(data?.locations) ? data.locations.map(normalizePrepared) : [];
+    return { ...data, locations };
   }
 
   async function discoverNearby({ latitude, longitude, radiusKm = 8 } = {}) {
@@ -72,5 +95,5 @@ export function createMapNetworkService(client) {
       .map(normalize);
   }
 
-  return Object.freeze({ nearby, discoverNearby, search });
+  return Object.freeze({ nearby, prepareNearby, discoverNearby, search });
 }
