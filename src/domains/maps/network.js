@@ -48,6 +48,16 @@ export function createMapNetworkService(client) {
     return (data ?? []).map(normalize);
   }
 
+  async function discoverNearby({ latitude, longitude, radiusKm = 8 } = {}) {
+    if (latitude == null || longitude == null) return null;
+    const radius = Math.min(Math.max(Number(radiusKm) || 8, 1), 50);
+    const { data, error } = await client.functions.invoke('ingest-map-candidates', {
+      body: { latitude, longitude, radius_km: radius }
+    });
+    if (error) throw error;
+    return data ?? null;
+  }
+
   async function search(search, { latitude, longitude, radiusKm = 50, limit = 200 } = {}) {
     const query = String(search ?? '').trim();
     if (!query) return [];
@@ -62,5 +72,5 @@ export function createMapNetworkService(client) {
       .map(normalize);
   }
 
-  return Object.freeze({ nearby, search });
+  return Object.freeze({ nearby, discoverNearby, search });
 }
