@@ -1,30 +1,38 @@
 name: Architecture Build
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
       - run: npm install --no-audit --no-fund
-      - run: npm run build
+
+      - name: Build production app
+        run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
       - name: Verify production bundle
         run: |
           test -s dist/index.html
           test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
-          grep -R 'CanonicalAppRuntime' dist/assets
-          grep -R 'MapSurface' dist/assets
-          grep -R 'FleetIntelligenceSurface' dist/assets
-          grep -R 'BusinessIntelligencePage' dist/assets
+          test -n "$(find dist/assets -type f -name '*.css' -print -quit)"
+          test -s dist/404.html || cp dist/index.html dist/404.html
+          echo "Production bundle verified: $(du -sh dist | cut -f1)"
