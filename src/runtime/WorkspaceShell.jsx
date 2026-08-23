@@ -1,14 +1,12 @@
-import {Link,Navigate,useLocation} from 'react-router-dom';
-import {useState} from 'react';
-import {Menu,X} from 'lucide-react';
+import {Navigate,useNavigate} from 'react-router-dom';
 import {useAppContext} from '../AppContext.jsx';
 import {isPlatformOwner} from '../domains/entitlements/access.js';
 import {getNavigationForWorkspace} from '../domain/workspaces.js';
+import WorkspaceNavigation from './WorkspaceNavigation.jsx';
 
 export default function WorkspaceShell({children,workspace='consumer'}){
- const l=useLocation();
- const {capabilities=[],loading,profile,membershipTier,presentationTier}=useAppContext();
- const [open,setOpen]=useState(false);
+ const navigate=useNavigate();
+ const {capabilities=[],loading,profile,membershipTier,presentationTier,workspaceModel}=useAppContext();
  const owner=isPlatformOwner(profile);
  const effectiveWorkspace=workspace==='owner'?'admin':workspace;
  const previewing=owner&&presentationTier!==membershipTier;
@@ -17,20 +15,16 @@ export default function WorkspaceShell({children,workspace='consumer'}){
  if(loading)return <div>Loading Kleenest…</div>;
  if(!allowed)return <Navigate to="/" replace/>;
  const displayedTier=workspace==='owner'?membershipTier:presentationTier;
- const links=getNavigationForWorkspace(effectiveWorkspace,capabilities);
+ const availableWorkspaces=workspaceModel?.availableWorkspaces||['consumer'];
+ const handleWorkspaceChange=(nextWorkspace)=>{
+  const links=getNavigationForWorkspace(nextWorkspace,capabilities);
+  if(nextWorkspace==='admin'&&!owner)return;
+  if(links[0]?.path)navigate(links[0].path);
+ };
  return <div className={`app workspace-${workspace} membership-${displayedTier}`}>
-  <header className="topbar">
-   <Link className="brand" to="/" onClick={()=>setOpen(false)}>Kleenest</Link>
-   <nav className={`nav${open?' open':''}`} aria-label={`${workspace} navigation`}>
-    {links.map(({id,label,path})=><Link key={`${id}:${path}`} className={l.pathname===path||l.pathname.startsWith(`${path}/`)?'active':''} to={path} onClick={()=>setOpen(false)}>{label}</Link>)}
-   </nav>
-   <div className="top-actions">
-    <span className="membership">{displayedTier}</span>
-    {owner&&<Link className="owner-link" to="/owner" onClick={()=>setOpen(false)}>Platform</Link>}
-    <button className="mobile-menu" type="button" aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} onClick={()=>setOpen(v=>!v)}>{open?<X size={22}/>:<Menu size={22}/>}</button>
-   </div>
-  </header>
+  <WorkspaceNavigation workspace={effectiveWorkspace} capabilities={capabilities} membershipLabel={workspaceModel?.membershipLabel||displayedTier} availableWorkspaces={availableWorkspaces} onWorkspaceChange={handleWorkspaceChange}/>
   {previewing&&workspace!=='owner'&&<div className="preview-banner">Owner preview · {presentationTier} experience</div>}
+  {owner&&<div className="platform-access"><a href="/owner">Platform controls</a></div>}
   <main>{children}</main>
  </div>;
 }
