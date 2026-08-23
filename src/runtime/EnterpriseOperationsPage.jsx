@@ -7,10 +7,11 @@ const arr = v => Array.isArray(v) ? v : [];
 const obj = v => v && typeof v === 'object' ? v : {};
 
 export default function EnterpriseOperationsPage({ mode = 'partners' }) {
-  const { services } = useAppContext();
+  const { services, selectedBusinessId, selectedBusiness } = useAppContext();
   const [programs,setPrograms]=useState([]),[memberships,setMemberships]=useState([]),[networkId,setNetworkId]=useState(''),[campaignName,setCampaignName]=useState(''),[campaignType,setCampaignType]=useState('engagement'),[report,setReport]=useState({}),[campaign,setCampaign]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const load=async()=>{setLoading(true);setError('');try{const[p,m]=await Promise.all([services.partners.list(),services.partners.memberships()]);setPrograms(arr(p));setMemberships(arr(m));}catch(e){setError(e.message||'Unable to load enterprise partner operations.')}finally{setLoading(false)}};
   useEffect(()=>{void load()},[]);
+  useEffect(()=>{const id=selectedBusinessId||selectedBusiness?.business_id||selectedBusiness?.id;if(id&&!networkId)setNetworkId(String(id))},[selectedBusinessId,selectedBusiness,networkId]);
   const createCampaign=async()=>{if(!networkId||!campaignName.trim())return;setError('');try{const result=await services.enterprise.createCampaign(networkId,campaignName.trim(),campaignType,null);setCampaign(result);setMessage('Partner campaign created.');}catch(e){setError(e.message||'Unable to create partner campaign.')}};
   const loadReport=async()=>{if(!networkId)return;setError('');try{const data=mode==='performance'?await services.enterprise.benchmark(networkId):await services.enterprise.get(networkId);setReport(obj(data));}catch(e){setError(e.message||'Unable to load enterprise network data.')}};
   if(loading)return <WorkspaceShell workspace="enterprise"><section className="empty-state">Loading enterprise operations…</section></WorkspaceShell>;
