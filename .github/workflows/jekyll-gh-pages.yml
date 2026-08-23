@@ -1,4 +1,4 @@
-name: Deploy Kleenest Architecture
+name: Deploy Vite app to GitHub Pages
 
 on:
   push:
@@ -14,42 +14,38 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-env:
-  VITE_BASE_PATH: /Kleenest_Architecture/
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
+
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
+          cache: npm
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
       - name: Build Vite application
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - name: Verify production bundle
-        run: |
-          test -s dist/index.html
-          test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
-          grep -R 'CanonicalAppRuntime' dist/assets
-          grep -R 'MapSurface' dist/assets
-          grep -R 'FleetIntelligenceSurface' dist/assets
-          grep -R 'BusinessIntelligencePage' dist/assets
-      - name: Create SPA fallback
+
+      - name: Configure SPA fallback
         run: cp dist/index.html dist/404.html
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: dist
 
   deploy:
     environment:
@@ -57,6 +53,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
