@@ -4,7 +4,7 @@ export function createFavoriteService(client) {
     list: async () => {
       const { data, error } = await client.rpc('my_favorite_locations');
       if (error) throw error;
-      return data;
+      return Array.isArray(data) ? data : [];
     },
     toggle: async locationId => {
       if (!locationId) throw new Error('Location is required.');
