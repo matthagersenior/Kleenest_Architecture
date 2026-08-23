@@ -40,6 +40,17 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Verify required production configuration
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -e
+          test -n "$VITE_SUPABASE_URL" || { echo 'ERROR: VITE_SUPABASE_URL is not configured in GitHub Actions secrets'; exit 1; }
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || { echo 'ERROR: VITE_SUPABASE_PUBLISHABLE_KEY is not configured in GitHub Actions secrets'; exit 1; }
+          echo "Supabase URL configured: ${VITE_SUPABASE_URL:0:32}..."
+          echo "Supabase publishable key configured: yes"
+
       - name: Build production app
         run: npm run build
         env:
@@ -57,14 +68,13 @@ jobs:
             echo 'ERROR: stale capability-graph artifact detected in dist'
             exit 1
           fi
-          if ! grep -q 'src/main.jsx\|/assets/.*\.js' dist/index.html; then
-            echo 'ERROR: dist/index.html does not look like the Vite React entrypoint'
+          if ! grep -q '/assets/.*\.js' dist/index.html; then
+            echo 'ERROR: dist/index.html does not contain a compiled Vite JavaScript bundle'
             cat dist/index.html
             exit 1
           fi
           cp dist/index.html dist/404.html
           echo "Verified React Pages artifact: $(du -sh dist | cut -f1)"
-          echo "Entrypoint:"
           head -c 800 dist/index.html
 
       - name: Upload Pages artifact
