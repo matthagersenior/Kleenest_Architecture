@@ -4,7 +4,19 @@ import { Link } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import { useAppContext } from '../AppContext.jsx';
 const asArray = value => Array.isArray(value) ? value : [];
-const pick = (row, keys, fallback = '—') => keys.map(key => row?.[key]).find(value => value !== undefined && value !== null && value !== '') ?? fallback;
+const displayValue = (value, fallback = '—') => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (Array.isArray(value)) return value.length ? `${value.length} items` : '—';
+  if (typeof value === 'object') return String(value.name || value.title || value.label || value.code || 'Updated');
+  return String(value);
+};
+const pick = (row, keys, fallback = '—') => {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value !== undefined && value !== null && value !== '') return displayValue(value, fallback);
+  }
+  return fallback;
+};
 export default function CommunitySurface() {
   const { services } = useAppContext();
   const [feed, setFeed] = useState([]); const [leaderboard, setLeaderboard] = useState([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
