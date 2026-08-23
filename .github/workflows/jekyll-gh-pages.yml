@@ -27,18 +27,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
       - name: Build Vite application
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - name: Verify runtime test lab is shipped
+      - name: Verify production runtime is shipped
         run: |
           test -s dist/index.html
-          test -s dist/assets/*.js
+          test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
           grep -R 'RuntimeTestLab' dist/assets
           grep -R 'Behavior smoke matrix' dist/assets
       - name: Create SPA fallback
