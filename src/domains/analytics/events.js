@@ -58,6 +58,8 @@ export function createActivityEventService(client) {
     rewardEarned: (points = 0, reason = 'reward', metadata = {}) => record('reward_earned', {
       featureCode: 'rewards', valueNumeric: Number(points) || 0, valueText: String(reason),
       metadata: { ...metadata, points: Number(points) || 0, reason }
-    })
+    }),
+    featureAccess: (featureCode, { outcome = 'allowed', tierCode = null, destination = null, metadata = {} } = {}) =>
+      record('feature_access', { featureCode, valueText: outcome, metadata: { ...metadata, tier_code: tierCode, destination, outcome } })
   });
 }
