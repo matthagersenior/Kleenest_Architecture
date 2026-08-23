@@ -11,6 +11,9 @@ export function createCapabilityCoverageService(client){
       const {data,error}=await client.rpc('record_feature_access',{p_feature_code:featureCode,p_outcome:outcome,p_tier_code:tierCode,p_destination:destination,p_metadata:metadata??{}});
       if(error) throw error;
       return data;
-    }
+    },
+    async recordAllowed(featureCode, options={}){ return this.record({featureCode,outcome:'allowed',...options}); },
+    async recordBlocked(featureCode, options={}){ return this.record({featureCode,outcome:'blocked',...options}); },
+    async recordLocked(featureCode, options={}){ return this.record({featureCode,outcome:'locked',...options}); },
   });
 }
