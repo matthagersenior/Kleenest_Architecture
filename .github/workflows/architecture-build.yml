@@ -46,17 +46,26 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
-      - name: Verify production bundle
+      - name: Verify correct Kleenest React artifact
         run: |
           set -e
           test -s dist/index.html
           test -d dist/assets
           test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
           test -n "$(find dist/assets -type f -name '*.css' -print -quit)"
+          if grep -RniE 'Production capability graph|production-reconciled capability explorer|static deployment safety layer' dist --exclude='*.map'; then
+            echo 'ERROR: stale capability-graph artifact detected in dist'
+            exit 1
+          fi
+          if ! grep -q 'src/main.jsx\|/assets/.*\.js' dist/index.html; then
+            echo 'ERROR: dist/index.html does not look like the Vite React entrypoint'
+            cat dist/index.html
+            exit 1
+          fi
           cp dist/index.html dist/404.html
-          echo "Production bundle verified: $(du -sh dist | cut -f1)"
-          echo "Production entrypoint:"
-          head -c 500 dist/index.html
+          echo "Verified React Pages artifact: $(du -sh dist | cut -f1)"
+          echo "Entrypoint:"
+          head -c 800 dist/index.html
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
