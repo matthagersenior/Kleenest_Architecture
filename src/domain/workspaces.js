@@ -1,0 +1,30 @@
+import {CAPABILITIES,hasCapability} from '../domains/entitlements/access.js';
+import {CAPABILITY_REGISTRY} from '../architecture/capabilityRegistry.js';
+
+export const WORKSPACE_ORDER=Object.freeze(['consumer','business','fleet','enterprise','admin']);
+export const WORKSPACES=Object.freeze({
+ consumer:Object.freeze({id:'consumer',label:'Kleenest',shortLabel:'You'}),
+ business:Object.freeze({id:'business',label:'Business',shortLabel:'Business'}),
+ fleet:Object.freeze({id:'fleet',label:'Fleet',shortLabel:'Fleet'}),
+ enterprise:Object.freeze({id:'enterprise',label:'Enterprise',shortLabel:'Enterprise'}),
+ admin:Object.freeze({id:'admin',label:'Admin',shortLabel:'Admin'}),
+});
+export const WORKSPACE_NAVIGATION=Object.freeze({
+ consumer:Object.freeze([{id:'explore',label:'Explore',path:'/map'},{id:'routes',label:'Routes',path:'/route'},{id:'activity',label:'Activity',path:'/profile'},{id:'play',label:'Play',path:'/games'},{id:'community',label:'Community',path:'/social'}]),
+ business:Object.freeze([{id:'overview',label:'Overview',path:'/business'},{id:'intelligence',label:'Intelligence',path:'/business/intelligence'},{id:'engage',label:'Engage',path:'/business/manage'},{id:'analytics',label:'Analytics',path:'/business/performance'}]),
+ fleet:Object.freeze([{id:'operations',label:'Operations',path:'/fleet'},{id:'routes',label:'Routes',path:'/fleet/routes'},{id:'performance',label:'Performance',path:'/fleet/performance'},{id:'opportunities',label:'Opportunities',path:'/fleet/opportunities'},{id:'goals',label:'Goals',path:'/fleet/goals'}]),
+ enterprise:Object.freeze([{id:'command',label:'Command',path:'/enterprise'},{id:'partners',label:'Partners',path:'/enterprise/partners'},{id:'campaigns',label:'Campaigns',path:'/enterprise/campaigns'},{id:'performance',label:'Performance',path:'/enterprise/performance'},{id:'fleet',label:'Fleet',path:'/enterprise/fleet'}]),
+ admin:Object.freeze([{id:'data',label:'Data',path:'/admin/data'},{id:'crud',label:'Control Room',path:'/admin/crud'},{id:'capabilities',label:'Capabilities',path:'/capabilities'}]),
+});
+const CAPABILITY_FOR_WORKSPACE=Object.freeze({business:CAPABILITIES.BUSINESS,fleet:CAPABILITIES.FLEET,enterprise:CAPABILITIES.ENTERPRISE,admin:'owner'});
+export function canUseWorkspace(capabilities=[],workspace='consumer'){if(workspace==='consumer')return true;const required=CAPABILITY_FOR_WORKSPACE[workspace];return Boolean(required&&hasCapability(capabilities,required));}
+export function getAvailableWorkspaces(capabilities=[]){return WORKSPACE_ORDER.filter(workspace=>canUseWorkspace(capabilities,workspace));}
+export function normalizeMembership(raw={}){const source=raw?.data||raw?.entitlement||raw?.entitlements||raw;const tier=String(source?.membership_tier||source?.product_tier||source?.tier||source?.service_tier||source?.plan||'free').toLowerCase().replace(/[-\s]/g,'_');if(tier.includes('admin'))return'admin';if(tier.includes('fleet'))return'fleet';if(tier.includes('enterprise'))return tier.includes('business')?'business_enterprise':'enterprise';if(tier.includes('growth'))return'business_growth';if(tier.includes('standard')&&tier.includes('business'))return'business_standard';if(tier.includes('family'))return'family';if(tier.includes('premium')||tier.includes('pro'))return'premium';return'free';}
+export const MEMBERSHIP_UI=Object.freeze({free:Object.freeze({label:'Free',ads:true,workspace:'consumer'}),premium:Object.freeze({label:'Premium',ads:false,workspace:'consumer'}),family:Object.freeze({label:'Family',ads:false,workspace:'consumer'}),business_standard:Object.freeze({label:'Business Standard',ads:false,workspace:'business'}),business_growth:Object.freeze({label:'Business Growth',ads:false,workspace:'business'}),business_enterprise:Object.freeze({label:'Business Enterprise',ads:false,workspace:'enterprise'}),enterprise:Object.freeze({label:'Enterprise',ads:false,workspace:'enterprise'}),fleet:Object.freeze({label:'Fleet',ads:false,workspace:'fleet'}),admin:Object.freeze({label:'Admin',ads:false,workspace:'admin'})});
+export function getWorkspaceForMembership(membership){return MEMBERSHIP_UI[membership]?.workspace||'consumer';}
+export function getWorkspace(id='consumer'){return WORKSPACES[id]||WORKSPACES.consumer;}
+export function resolveWorkspace(pathname='/',capabilities=[]){const path=String(pathname||'/');const candidate=path.startsWith('/admin')?'admin':path.startsWith('/owner')?'admin':path.startsWith('/enterprise')?'enterprise':path.startsWith('/fleet')?'fleet':path.startsWith('/business')?'business':'consumer';return canUseWorkspace(capabilities,candidate)?candidate:'consumer';}
+export function resolveMembership(rawMembership,capabilities=[]){const parsed=normalizeMembership({tier:rawMembership});if(parsed!=='free')return parsed;if(hasCapability(capabilities,'owner'))return'admin';if(hasCapability(capabilities,CAPABILITIES.FLEET))return'fleet';if(hasCapability(capabilities,CAPABILITIES.ENTERPRISE))return'enterprise';if(hasCapability(capabilities,CAPABILITIES.BUSINESS))return'business_standard';return parsed;}
+export function getWorkspaceModel({membership='free',workspace,businessId=null,capabilities=[]}={}){const resolvedMembership=resolveMembership(membership,capabilities);const requestedWorkspace=workspace||getWorkspaceForMembership(resolvedMembership);const resolvedWorkspace=canUseWorkspace(capabilities,requestedWorkspace)?requestedWorkspace:'consumer';return Object.freeze({membership:resolvedMembership,membershipLabel:MEMBERSHIP_UI[resolvedMembership]?.label||'Free',adsEnabled:MEMBERSHIP_UI[resolvedMembership]?.ads??true,workspace:getWorkspace(resolvedWorkspace),businessId,availableWorkspaces:getAvailableWorkspaces(capabilities)});}
+export function getNavigationForWorkspace(workspace,capabilities=[]){return canUseWorkspace(capabilities,workspace)?(WORKSPACE_NAVIGATION[workspace]||[]):[];}
+export function getCapabilityDomainsForWorkspace(workspace){return Object.keys(CAPABILITY_REGISTRY).filter(domain=>CAPABILITY_REGISTRY[domain]?.ui?.includes(workspace)||CAPABILITY_REGISTRY[domain]?.ui?.includes('all'));}
