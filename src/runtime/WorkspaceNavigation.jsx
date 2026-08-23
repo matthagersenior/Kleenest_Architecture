@@ -1,25 +1,3 @@
-import {Bell,ChevronDown,Shield,Sparkles,Users,Truck,Building2} from 'lucide-react';
-import {Link,useLocation} from 'react-router-dom';
-import {getWorkspace,getNavigationForWorkspace} from '../domain/workspaces.js';
-
+import {Bell,ChevronDown,Shield,Sparkles,Users,Truck,Building2} from 'lucide-react';import {useLocation} from 'react-router-dom';import {getWorkspace,getNavigationForWorkspace} from '../domain/workspaces.js';
 const icons={consumer:Sparkles,business:Building2,fleet:Truck,enterprise:Users,admin:Shield};
-
-export default function WorkspaceNavigation({workspace='consumer',capabilities=[],membershipLabel='Free',availableWorkspaces=[],onWorkspaceChange}){
- const location=useLocation();
- const current=getWorkspace(workspace);
- const Icon=icons[current.id]||Sparkles;
- const links=getNavigationForWorkspace(current.id,capabilities);
- return <header className="workspace-shell" data-workspace={current.id} data-membership={membershipLabel}>
-  <div className="workspace-brand">
-   <Link to="/" className="brand-mark" aria-label="Kleenest home">K</Link>
-   <div className="workspace-identity"><span className="brand-name">Kleenest</span><span className="membership-badge"><Icon size={13}/>{membershipLabel}</span></div>
-  </div>
-  <nav className="workspace-nav" aria-label={`${current.label} navigation`}>
-   {links.map(({id,label,path})=><Link key={`${id}:${path}`} to={path} className={location.pathname===path||location.pathname.startsWith(`${path}/`)?'workspace-nav-link active':'workspace-nav-link'}>{label}</Link>)}
-  </nav>
-  <div className="workspace-actions">
-   {availableWorkspaces.length>1&&<label className="workspace-switcher"><span className="sr-only">Switch workspace</span><select value={current.id} onChange={event=>onWorkspaceChange?.(event.target.value)}>{availableWorkspaces.map(id=><option key={id} value={id}>{getWorkspace(id).label}</option>)}</select><ChevronDown size={15} aria-hidden="true"/></label>}
-   <Link to="/notifications" className="workspace-icon-action" aria-label="Notifications"><Bell size={18}/></Link>
-  </div>
- </header>;
-}
+export default function WorkspaceNavigation({workspace='consumer',capabilities=[],membershipLabel='Free',availableWorkspaces=[],onWorkspaceChange}){const location=useLocation();const current=getWorkspace(workspace);const Icon=icons[current.id]||Sparkles;const links=getNavigationForWorkspace(current.id,capabilities);return <header className="workspace-shell" data-workspace={current.id} data-membership={membershipLabel}><div className="workspace-brand"><a href="#/" className="brand-mark" aria-label="Kleenest home">K</a><div className="workspace-identity"><span className="brand-name">Kleenest</span><span className="membership-badge"><Icon size={13}/>{membershipLabel}</span></div></div><nav className="workspace-nav" aria-label={`${current.label} navigation`}>{links.map(({id,label,path})=><a key={`${id}:${path}`} href={`#${path}`} className={location.pathname===path||location.pathname.startsWith(`${path}/`)?'workspace-nav-link active':'workspace-nav-link'}>{label}</a>)}</nav><div className="workspace-actions">{availableWorkspaces.length>1&&<label className="workspace-switcher"><span className="sr-only">Switch workspace</span><select value={current.id} onChange={event=>onWorkspaceChange?.(event.target.value)}>{availableWorkspaces.map(id=><option key={id} value={id}>{getWorkspace(id).label}</option>)}</select><ChevronDown size={15} aria-hidden="true"/></label>}<a href="#/notifications" className="workspace-icon-action" aria-label="Notifications"><Bell size={18}/></a></div></header>}
