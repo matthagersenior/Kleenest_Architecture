@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import { LocateFixed, Search, SlidersHorizontal, Navigation, Heart, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Heart, LocateFixed, Navigation, Search, SlidersHorizontal } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
@@ -9,67 +9,217 @@ import { MAP_CATEGORIES } from '../domains/maps/network.js';
 import './MapSurface.css';
 
 const DEFAULT_CENTER = [38.627, -90.199];
+const RADIUS_OPTIONS = [2, 5, 8, 15, 30, 100];
 const AMENITIES = ['accessible', 'changing_table', 'baby_changing', 'handwashing', 'drinking_water', 'shower', 'parking', 'ev_charging', 'wifi', 'food', 'outdoor', 'pet_friendly'];
 const AMENITY_LABELS = { accessible: 'Accessible', changing_table: 'Changing table', baby_changing: 'Baby/family', handwashing: 'Handwashing', drinking_water: 'Drinking water', shower: 'Showers', parking: 'Parking', ev_charging: 'EV charging', wifi: 'Wi-Fi', food: 'Food & drink', outdoor: 'Outdoor', pet_friendly: 'Pet friendly' };
 const CATEGORY_GLYPHS = { restroom: '🚻', restaurant: '🍽', cafe: '☕', gas_station: '⛽', shopping: '🛍', park: '🌳', service: '✦', health: '⚕', public_safety: '🛡', cooling_center: '❄' };
+
+function storedRadius() {
+  try {
+    const value = Number(window.localStorage.getItem('kleenest.map.radiusKm'));
+    return RADIUS_OPTIONS.includes(value) ? value : 8;
+  } catch { return 8; }
+}
+function normalizePlaces(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(value?.locations)) return value.locations.filter(Boolean);
+  if (Array.isArray(value?.data)) return value.data.filter(Boolean);
+  if (Array.isArray(value?.results)) return value.results.filter(Boolean);
+  return [];
+}
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[c])); }
-function placeAmenities(place) { const raw = place.amenities || place.amenity_names || place.amenity_labels || []; if (Array.isArray(raw)) return raw.map(v => String(v).toLowerCase().replaceAll(' ', '_')); if (typeof raw === 'string') return raw.split(',').map(v => v.trim().toLowerCase().replaceAll(' ', '_')).filter(Boolean); return AMENITIES.filter(k => place[k] === true || place[`has_${k}`] === true); }
-function bathroomStatus(place) { const raw = String(place.bathroom_verification_status || place.bathroom_status || '').toLowerCase(); if (place.is_verified === true || raw === 'verified') return { key: 'verified', label: 'Verified bathroom' }; if (place.category === 'restroom' || place.has_bathroom === true || place.has_restroom === true || raw || place.bathroom_reported === true) return { key: 'reported', label: 'Community reported' }; return { key: 'unknown', label: 'Location signal' }; }
-function distanceLabel(place) { const d = Number(place.distance_meters ?? place.distance); if (!Number.isFinite(d)) return ''; return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`; }
 function locationKey(place) { return String(place.location_id || place.id || ''); }
-function markerIcon(place, selected, favorite) { const status = bathroomStatus(place); const glyph = CATEGORY_GLYPHS[place.category] || '✦'; return L.divIcon({ className: 'kleenest-marker-wrapper', html: `<div class="map-marker ${status.key} ${selected ? 'selected' : ''} ${favorite ? 'favorite' : ''}" aria-label="${escapeHtml(place.name || 'Kleenest location')}"><span>${glyph}</span></div>`, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -36] }); }
+function amenitiesFor(place) {
+  const raw = place.amenities || place.amenity_names || place.amenity_labels;
+  if (Array.isArray(raw)) return raw.map(v => String(v).toLowerCase().replaceAll(' ', '_'));
+  if (typeof raw === 'string') return raw.split(',').map(v => v.trim().toLowerCase().replaceAll(' ', '_')).filter(Boolean);
+  return AMENITIES.filter(key => place[key] === true || place[`has_${key}`] === true);
+}
+function statusFor(place) {
+  const raw = String(place.bathroom_verification_status || place.bathroom_status || '').toLowerCase();
+  if (place.is_verified === true || raw === 'verified') return { key: 'verified', label: 'Verified bathroom' };
+  if (place.category === 'restroom' || place.has_bathroom === true || place.has_restroom === true || raw || place.bathroom_reported === true) return { key: 'reported', label: 'Community reported' };
+  return { key: 'unknown', label: 'Location signal' };
+}
+function distanceLabel(place) {
+  const meters = Number(place.distance_meters ?? place.distance);
+  if (!Number.isFinite(meters)) return '';
+  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
+}
+function markerIcon(place, selected, favorite) {
+  const status = statusFor(place);
+  const glyph = CATEGORY_GLYPHS[place.category] || '✦';
+  return L.divIcon({ className: 'kleenest-marker-wrapper', html: `<div class="map-marker ${status.key} ${selected ? 'selected' : ''} ${favorite ? 'favorite' : ''}" aria-label="${escapeHtml(place.name || 'Kleenest location')}"><span>${glyph}</span></div>`, iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -36] });
+}
+
 export default function MapSurface() {
   const navigate = useNavigate();
-  const { services, configured, user } = useAppContext(); const nodeRef = useRef(null); const mapRef = useRef(null); const markerLayerRef = useRef(null);
-  const [places, setPlaces] = useState([]); const [favorites, setFavorites] = useState(new Set()); const [selectedId, setSelectedId] = useState(null); const [category, setCategory] = useState('all'); const [search, setSearch] = useState(''); const [amenity, setAmenity] = useState(''); const [radius, setRadius] = useState(8); const [verifiedOnly, setVerifiedOnly] = useState(false); const [favoritesOnly, setFavoritesOnly] = useState(false); const [status, setStatus] = useState('Finding your location…'); const [busy, setBusy] = useState(false); const [userPosition, setUserPosition] = useState(null);
-  const filteredPlaces = useMemo(() => places.filter(place => { if (category !== 'all' && String(place.category || '') !== category) return false; if (amenity && !placeAmenities(place).includes(amenity)) return false; if (verifiedOnly && bathroomStatus(place).key !== 'verified') return false; if (favoritesOnly && !favorites.has(locationKey(place))) return false; const q = search.trim().toLowerCase(); if (q) { const hay = [place.name, place.brand, place.operator_name, place.address, place.city, place.state, place.category, ...placeAmenities(place)].filter(Boolean).join(' ').toLowerCase(); if (!hay.includes(q)) return false; } const d = Number(place.distance_km ?? (Number(place.distance_meters) / 1000)); return !Number.isFinite(d) || d <= radius; }), [places, category, amenity, verifiedOnly, favoritesOnly, favorites, search, radius]);
-  const loadFavorites = async () => { if (!configured) return; try { const rows = await services.favorites.list(); const ids = (Array.isArray(rows) ? rows : []).map(row => String(row.location_id || row.id || '')).filter(Boolean); setFavorites(new Set(ids)); } catch { /* optional while signed out */ } };
+  const { services, configured, user } = useAppContext();
+  const nodeRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerLayerRef = useRef(null);
+  const [places, setPlaces] = useState([]);
+  const [favorites, setFavorites] = useState(new Set());
+  const [selectedId, setSelectedId] = useState(null);
+  const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
+  const [amenity, setAmenity] = useState('');
+  const [radius, setRadius] = useState(storedRadius);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [status, setStatus] = useState('Finding your location…');
+  const [busy, setBusy] = useState(false);
+  const [userPosition, setUserPosition] = useState(null);
+
+  const filteredPlaces = useMemo(() => places.filter(place => {
+    if (category !== 'all' && String(place.category || '') !== category) return false;
+    if (amenity && !amenitiesFor(place).includes(amenity)) return false;
+    if (verifiedOnly && statusFor(place).key !== 'verified') return false;
+    if (favoritesOnly && !favorites.has(locationKey(place))) return false;
+    const query = search.trim().toLowerCase();
+    if (query) {
+      const haystack = [place.name, place.brand, place.operator_name, place.address, place.city, place.state, place.category, ...amenitiesFor(place)].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    const distanceKm = Number(place.distance_km ?? (Number(place.distance_meters) / 1000));
+    return !Number.isFinite(distanceKm) || distanceKm <= radius;
+  }), [places, category, amenity, verifiedOnly, favoritesOnly, favorites, search, radius]);
+
+  const loadFavorites = async () => {
+    if (!configured || !services?.favorites) return;
+    try {
+      const rows = await services.favorites.list();
+      setFavorites(new Set((Array.isArray(rows) ? rows : []).map(row => String(row.location_id || row.id || '')).filter(Boolean)));
+    } catch { /* favorites are optional for signed-out users */ }
+  };
+
   const loadNearby = async (latitude, longitude, options = {}) => {
-    setBusy(true); setStatus('Loading nearby Kleenest locations…'); setUserPosition([latitude, longitude]);
-    const requestedRadius = Number(options.radiusKm ?? radius) || 8;
+    const requestedRadius = RADIUS_OPTIONS.includes(Number(options.radiusKm)) ? Number(options.radiusKm) : radius;
     const requestedCategory = options.category ?? category;
     const requestedSearch = options.search ?? '';
+    setBusy(true);
+    setStatus(`Loading locations within ${requestedRadius} km…`);
+    setUserPosition([latitude, longitude]);
     try {
-      let data = await services.maps.nearby({ latitude, longitude, radiusKm: requestedRadius, category: requestedCategory, search: requestedSearch });
+      let data = normalizePlaces(await services.maps.nearby({ latitude, longitude, radiusKm: requestedRadius, category: requestedCategory, search: requestedSearch }));
       let prepared = null;
       let discoveryError = null;
       if (!data.length && services.maps.prepareNearby) {
-        setStatus('Checking your authenticated location session…');
+        setStatus('Checking the authenticated Supabase location network…');
         try {
           prepared = await services.maps.prepareNearby({ latitude, longitude, radiusKm: requestedRadius });
-          if (prepared?.locations?.length) data = prepared.locations;
+          data = normalizePlaces(prepared);
         } catch (error) { discoveryError = error; }
       }
       let discovered = false;
-      if (!data.length && options.allowDiscovery !== false && services.maps.discoverNearby) {
-        setStatus('Refreshing the local location network…');
+      if (!data.length && services.maps.discoverNearby) {
+        setStatus('Refreshing nearby locations from the live network…');
         try {
           await services.maps.discoverNearby({ latitude, longitude, radiusKm: Math.min(Math.max(requestedRadius, 8), 50) });
           discovered = true;
-          data = await services.maps.nearby({ latitude, longitude, radiusKm: requestedRadius, category: requestedCategory, search: requestedSearch });
+          data = normalizePlaces(await services.maps.nearby({ latitude, longitude, radiusKm: requestedRadius, category: requestedCategory, search: requestedSearch }));
           if (!data.length && services.maps.prepareNearby) {
             prepared = await services.maps.prepareNearby({ latitude, longitude, radiusKm: requestedRadius });
-            if (prepared?.locations?.length) data = prepared.locations;
+            data = normalizePlaces(prepared);
           }
         } catch (error) { discoveryError = error; }
       }
       setPlaces(data);
       if (!data.length) {
         const detail = discoveryError?.message ? ` ${discoveryError.message}` : '';
-        setStatus(`No locations found within ${requestedRadius} km${discovered ? ' after refreshing the live network.' : '.'}${detail}`);
+        setStatus(`No locations found within ${requestedRadius} km.${detail}`);
       } else {
-        const source = prepared?.locations?.length && !discovered ? 'authenticated location network' : 'Supabase location network';
-        setStatus(`${data.length} nearby locations found within ${requestedRadius} km · ${source}.`);
+        setStatus(`${data.length} nearby locations found within ${requestedRadius} km · Supabase network.`);
       }
-      if (mapRef.current) mapRef.current.setView([latitude, longitude], data.length ? 11 : 13);
-    } catch (error) { setStatus(error.message || 'The live location network could not be loaded.'); }
+      if (mapRef.current) mapRef.current.setView([latitude, longitude], data.length ? 13 : 13);
+    } catch (error) {
+      setPlaces([]);
+      setStatus(error?.message || 'The live location network could not be loaded.');
+    } finally { setBusy(false); }
+  };
+
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setStatus('GPS is unavailable. Showing the St. Louis network.');
+      void loadNearby(DEFAULT_CENTER[0], DEFAULT_CENTER[1], { radiusKm: radius });
+      return;
+    }
+    setStatus('Getting your GPS position…');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => void loadNearby(coords.latitude, coords.longitude, { radiusKm: radius }),
+      () => {
+        setStatus('GPS permission was unavailable. Showing the St. Louis network instead.');
+        void loadNearby(DEFAULT_CENTER[0], DEFAULT_CENTER[1], { radiusKm: radius });
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 }
+    );
+  };
+
+  const changeRadius = next => {
+    const value = RADIUS_OPTIONS.includes(Number(next)) ? Number(next) : 8;
+    setRadius(value);
+    try { window.localStorage.setItem('kleenest.map.radiusKm', String(value)); } catch { /* storage may be unavailable */ }
+    const center = userPosition || DEFAULT_CENTER;
+    void loadNearby(center[0], center[1], { radiusKm: value, category, search: search.trim() });
+  };
+
+  const searchPlaces = async () => {
+    const center = userPosition || DEFAULT_CENTER;
+    if (!search.trim()) return loadNearby(center[0], center[1], { radiusKm: radius });
+    setBusy(true);
+    setStatus('Searching the nearby location network…');
+    try {
+      const data = normalizePlaces(await services.maps.search(search.trim(), { latitude: center[0], longitude: center[1], radiusKm: radius, limit: 200 }));
+      setPlaces(data);
+      setStatus(`${data.length} nearby matches found within ${radius} km.`);
+    } catch (error) { setStatus(error?.message || 'Search failed.'); }
     finally { setBusy(false); }
   };
-  const locate = () => { if (!navigator.geolocation) { setStatus('GPS is unavailable. Showing the St. Louis network.'); void loadNearby(DEFAULT_CENTER[0], DEFAULT_CENTER[1], { radiusKm: radius }); return; } setStatus('Getting your GPS position…'); navigator.geolocation.getCurrentPosition(({ coords }) => { void loadNearby(coords.latitude, coords.longitude, { radiusKm: radius }); }, () => { setStatus('GPS permission was unavailable. Showing the St. Louis network instead.'); void loadNearby(DEFAULT_CENTER[0], DEFAULT_CENTER[1], { radiusKm: radius }); }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 }); };
-  const searchPlaces = async () => { if (!search.trim()) { const center = userPosition || DEFAULT_CENTER; await loadNearby(center[0], center[1], { radiusKm: radius }); return; } setBusy(true); setStatus('Searching the nearby location network…'); try { const center = userPosition || DEFAULT_CENTER; const data = await services.maps.search(search, { latitude: center[0], longitude: center[1], radiusKm: radius, limit: 200 }); setPlaces(data); setStatus(`${data.length} nearby matches found within ${radius} km.`); } catch (error) { setStatus(error.message || 'Search failed.'); } finally { setBusy(false); } };
-  const toggleFavorite = async place => { const id = locationKey(place); if (!id) { setStatus('This result has no canonical location ID.'); return; } try { await services.favorites.toggle(id); await loadFavorites(); } catch (error) { setStatus(error.message || 'Favorite could not be updated. Sign in to save favorites.'); } };
+
+  const toggleFavorite = async place => {
+    const id = locationKey(place);
+    if (!id) return setStatus('This result has no canonical location ID.');
+    try { await services.favorites.toggle(id); await loadFavorites(); }
+    catch (error) { setStatus(error?.message || 'Sign in to save favorites.'); }
+  };
+
   useEffect(() => { void loadFavorites(); if (configured) locate(); }, [configured, user?.id]);
-  useEffect(() => { if (!nodeRef.current || mapRef.current) return; const map = L.map(nodeRef.current, { zoomControl: false }).setView(DEFAULT_CENTER, 11); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map); L.control.zoom({ position: 'bottomright' }).addTo(map); markerLayerRef.current = L.layerGroup().addTo(map); mapRef.current = map; setTimeout(() => map.invalidateSize(), 0); return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null; }; }, []);
-  useEffect(() => { const map = mapRef.current; const layer = markerLayerRef.current; if (!map || !layer) return; layer.clearLayers(); filteredPlaces.forEach(place => { const lat = Number(place.latitude), lng = Number(place.longitude); if (!Number.isFinite(lat) || !Number.isFinite(lng)) return; const favorite = favorites.has(locationKey(place)); const marker = L.marker([lat, lng], { icon: markerIcon(place, String(place.id) === String(selectedId), favorite) }).addTo(layer); const statusInfo = bathroomStatus(place); const amenities = placeAmenities(place); marker.bindPopup(`<div class="map-popup"><strong>${escapeHtml(place.name || place.brand || 'Kleenest location')}</strong><div>${escapeHtml(statusInfo.label)}${distanceLabel(place) ? ` · ${escapeHtml(distanceLabel(place))} away` : ''}</div>${amenities.length ? `<div>${amenities.slice(0, 5).map(a => escapeHtml(AMENITY_LABELS[a] || a)).join(' · ')}</div>` : ''}<div class="map-popup-actions"><button data-map-action="details">Details</button><button data-map-action="favorite">${favorite ? '♥ Remove favorite' : '♡ Favorite'}</button><button data-map-action="route">Route</button><button data-map-action="verify">Verify</button></div></div>`); marker.on('click', () => setSelectedId(place.id)); marker.on('popupopen', event => { const root = event.popup.getElement(); root?.querySelector('[data-map-action="details"]')?.addEventListener('click', () => navigate(`/place/${encodeURIComponent(place.id)}`)); root?.querySelector('[data-map-action="favorite"]')?.addEventListener('click', () => void toggleFavorite(place)); root?.querySelector('[data-map-action="route"]')?.addEventListener('click', () => navigate(`/route?destination=${encodeURIComponent(place.name || '')}&locationId=${encodeURIComponent(place.location_id || '')}`)); root?.querySelector('[data-map-action="verify"]')?.addEventListener('click', () => navigate(`/evidence?locationId=${encodeURIComponent(place.location_id || '')}`)); }); }); if (userPosition) L.circleMarker(userPosition, { radius: 8, color: '#111827', fillColor: '#ffffff', fillOpacity: 1, weight: 3 }).addTo(layer).bindTooltip('You are here'); if (filteredPlaces.length) map.fitBounds(L.latLngBounds(filteredPlaces.map(p => [Number(p.latitude), Number(p.longitude)])), { padding: [45, 45], maxZoom: 14 }); else if (userPosition) map.setView(userPosition, 13); }, [filteredPlaces, favorites, selectedId, navigate, userPosition]);
-  return <WorkspaceShell><section className="page-head map-surface"><span className="eyebrow">Explore</span><h1>Map & location intelligence</h1><p>Live Supabase locations, centered on your GPS position, with nearby discovery, verified signals, favorites, routing, and evidence.</p><div className="map-toolbar"><input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && void searchPlaces()} placeholder="Search nearby places, brands, amenities…"/><select value={category} onChange={e => { const next = e.target.value; setCategory(next); const center = userPosition || DEFAULT_CENTER; void loadNearby(center[0], center[1], { radiusKm: radius, category: next, search: search.trim() }); }}>{MAP_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select><button className="button" disabled={!configured || busy} onClick={() => void searchPlaces()}><Search size={16}/> Search</button><button className="button primary" disabled={!configured || busy} onClick={locate}><LocateFixed size={16}/> Use my location</button></div><div className="map-filters"><button className={`map-chip ${verifiedOnly ? 'active' : ''}`} onClick={() => setVerifiedOnly(v => !v)}><CheckCircle2 size={15}/> Verified only</button><button className={`map-chip ${favoritesOnly ? 'active' : ''}`} onClick={() => setFavoritesOnly(v => !v)}><Heart size={15}/> Favorites</button><label className="map-chip"><SlidersHorizontal size={15}/> Radius <select value={radius} onChange={e => { const next = Number(e.target.value); setRadius(next); const center = userPosition || DEFAULT_CENTER; void loadNearby(center[0], center[1], { radiusKm: next, category, search: search.trim() }); }}><option value="2">2 km</option><option value="5">5 km</option><option value="8">8 km</option><option value="15">15 km</option><option value="30">30 km</option><option value="100">100 km</option></select></label><label className="map-chip">Amenity <select value={amenity} onChange={e => setAmenity(e.target.value)}><option value="">Any</option>{AMENITIES.map(a => <option key={a} value={a}>{AMENITY_LABELS[a]}</option>)}</select></label></div><div className="map-status">{busy ? 'Working…' : status}</div><div className="map-grid"><div className="map-canvas" ref={nodeRef}/><div className="map-results">{filteredPlaces.slice(0, 50).map(place => { const id = String(place.id); const favorite = favorites.has(locationKey(place)); const statusInfo = bathroomStatus(place); return <article className={`map-card ${id === String(selectedId) ? 'selected' : ''}`} key={id} onClick={() => { setSelectedId(place.id); if (mapRef.current) mapRef.current.setView([Number(place.latitude), Number(place.longitude)], 15); }}><div className="map-card-head"><strong>{place.name || place.brand || 'Unnamed location'}</strong><button className="button" onClick={e => { e.stopPropagation(); void toggleFavorite(place); }}>{favorite ? '♥' : '♡'}</button></div><div className="map-card-meta"><span>{place.category || 'Location'}</span><span>{statusInfo.label}</span>{distanceLabel(place) && <span>{distanceLabel(place)}</span>}</div><div className="map-card-actions"><button className="button" onClick={e => { e.stopPropagation(); navigate(`/place/${encodeURIComponent(place.id)}`); }}>Details</button><button className="button" onClick={e => { e.stopPropagation(); navigate(`/route?destination=${encodeURIComponent(place.name || '')}&locationId=${encodeURIComponent(place.location_id || '')}`); }}><Navigation size={15}/> Route</button><button className="button" onClick={e => { e.stopPropagation(); navigate(`/evidence?locationId=${encodeURIComponent(place.location_id || '')}`); }}>Verify</button></div></article>; })}{!filteredPlaces.length && <div className="map-empty">{busy ? 'Loading the live location network…' : `No locations match the current ${radius} km radius. Try a wider radius or another category.`}</div>}</div></div><div className="map-legend"><span>📍 Your GPS position</span><span>🚻 Bathroom signal</span><span>✓ Verified</span><span>♥ Favorite</span><span>Supabase nearby network</span></div></div></section></WorkspaceShell>;
+  useEffect(() => {
+    if (!nodeRef.current || mapRef.current) return;
+    const map = L.map(nodeRef.current, { zoomControl: false }).setView(DEFAULT_CENTER, 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    markerLayerRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
+    setTimeout(() => map.invalidateSize(), 0);
+    return () => { map.remove(); mapRef.current = null; markerLayerRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = markerLayerRef.current;
+    if (!map || !layer) return;
+    layer.clearLayers();
+    filteredPlaces.forEach(place => {
+      const lat = Number(place.latitude), lng = Number(place.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const favorite = favorites.has(locationKey(place));
+      const marker = L.marker([lat, lng], { icon: markerIcon(place, String(place.id) === String(selectedId), favorite) }).addTo(layer);
+      const info = statusFor(place);
+      const amenityLabels = amenitiesFor(place).slice(0, 5).map(a => escapeHtml(AMENITY_LABELS[a] || a)).join(' · ');
+      marker.bindPopup(`<div class="map-popup"><strong>${escapeHtml(place.name || place.brand || 'Kleenest location')}</strong><div>${escapeHtml(info.label)}${distanceLabel(place) ? ` · ${escapeHtml(distanceLabel(place))} away` : ''}</div>${amenityLabels ? `<div>${amenityLabels}</div>` : ''}<div class="map-popup-actions"><button data-map-action="details">Details</button><button data-map-action="favorite">${favorite ? '♥ Remove favorite' : '♡ Favorite'}</button><button data-map-action="route">Route</button><button data-map-action="verify">Verify</button></div></div>`);
+      marker.on('click', () => setSelectedId(place.id));
+      marker.on('popupopen', event => {
+        const root = event.popup.getElement();
+        root?.querySelector('[data-map-action="details"]')?.addEventListener('click', () => navigate(`/place/${encodeURIComponent(place.id)}`));
+        root?.querySelector('[data-map-action="favorite"]')?.addEventListener('click', () => void toggleFavorite(place));
+        root?.querySelector('[data-map-action="route"]')?.addEventListener('click', () => navigate(`/route?destination=${encodeURIComponent(place.name || '')}&locationId=${encodeURIComponent(place.location_id || place.id || '')}`));
+        root?.querySelector('[data-map-action="verify"]')?.addEventListener('click', () => navigate(`/evidence?locationId=${encodeURIComponent(place.location_id || place.id || '')}`));
+      });
+    });
+    if (userPosition) L.circleMarker(userPosition, { radius: 8, color: '#111827', fillColor: '#ffffff', fillOpacity: 1, weight: 3 }).addTo(layer).bindTooltip('You are here');
+    if (userPosition) map.setView(userPosition, filteredPlaces.length ? 13 : 13);
+  }, [filteredPlaces, favorites, selectedId, navigate, userPosition]);
+
+  return <WorkspaceShell><section className="page-head map-surface"><span className="eyebrow">Explore</span><h1>Map & location intelligence</h1><p>Live Supabase locations centered on your GPS position, with nearby discovery, verification, favorites, routing, and evidence.</p><div className="map-toolbar"><input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && void searchPlaces()} placeholder="Search nearby places, brands, amenities…"/><select value={category} onChange={e => { const next = e.target.value; setCategory(next); const center = userPosition || DEFAULT_CENTER; void loadNearby(center[0], center[1], { radiusKm: radius, category: next, search: search.trim() }); }}>{MAP_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select><button className="button" disabled={!configured || busy} onClick={() => void searchPlaces()}><Search size={16}/> Search</button><button className="button primary" disabled={!configured || busy} onClick={locate}><LocateFixed size={16}/> Use my location</button></div><div className="map-filters"><button className={`map-chip ${verifiedOnly ? 'active' : ''}`} onClick={() => setVerifiedOnly(value => !value)}><CheckCircle2 size={15}/> Verified only</button><button className={`map-chip ${favoritesOnly ? 'active' : ''}`} onClick={() => setFavoritesOnly(value => !value)}><Heart size={15}/> Favorites</button><label className="map-chip"><SlidersHorizontal size={15}/> Radius <select value={radius} onChange={e => changeRadius(e.target.value)}>{RADIUS_OPTIONS.map(value => <option key={value} value={value}>{value} km</option>)}</select></label><label className="map-chip">Amenity <select value={amenity} onChange={e => setAmenity(e.target.value)}><option value="">Any</option>{AMENITIES.map(value => <option key={value} value={value}>{AMENITY_LABELS[value]}</option>)}</select></label></div><div className="map-status">{busy ? 'Working…' : status}</div><div className="map-grid"><div className="map-canvas" ref={nodeRef}/><div className="map-results">{filteredPlaces.slice(0, 50).map(place => { const id = String(place.id || place.location_id); const favorite = favorites.has(locationKey(place)); const info = statusFor(place); return <article className={`map-card ${id === String(selectedId) ? 'selected' : ''}`} key={id} onClick={() => { setSelectedId(place.id); if (mapRef.current) mapRef.current.setView([Number(place.latitude), Number(place.longitude)], 15); }}><div className="map-card-head"><strong>{place.name || place.brand || 'Unnamed location'}</strong><button className="button" onClick={event => { event.stopPropagation(); void toggleFavorite(place); }}>{favorite ? '♥' : '♡'}</button></div><div className="map-card-meta"><span>{place.category || 'Location'}</span><span>{info.label}</span>{distanceLabel(place) && <span>{distanceLabel(place)}</span>}</div><div className="map-card-actions"><button className="button" onClick={event => { event.stopPropagation(); navigate(`/place/${encodeURIComponent(place.id || place.location_id)}`); }}>Details</button><button className="button" onClick={event => { event.stopPropagation(); navigate(`/route?destination=${encodeURIComponent(place.name || '')}&locationId=${encodeURIComponent(place.location_id || place.id || '')}`); }}><Navigation size={15}/> Route</button><button className="button" onClick={event => { event.stopPropagation(); navigate(`/evidence?locationId=${encodeURIComponent(place.location_id || place.id || '')}`); }}>Verify</button></div></article>; })}{!filteredPlaces.length && <div className="map-empty">{busy ? 'Loading the live location network…' : `No locations match the current ${radius} km radius. Try a wider radius or another category.`}</div>}</div></div><div className="map-legend"><span>📍 Your GPS position</span><span>🚻 Bathroom signal</span><span>✓ Verified</span><span>♥ Favorite</span><span>Supabase nearby network</span></div></div></section></WorkspaceShell>;
 }
