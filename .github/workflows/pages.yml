@@ -39,16 +39,22 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
-      - name: Verify production artifact
+      - name: Verify canonical production artifact
         run: |
+          set -e
           test -s dist/index.html
-          test -s dist/404.html || cp dist/index.html dist/404.html
-          grep -q "Kleenest" dist/index.html
           test -d dist/assets
-          echo "Production Vite artifact verified: $(du -sh dist | cut -f1)"
-
-      - name: SPA fallback
-        run: cp dist/index.html dist/404.html
+          cp dist/index.html dist/404.html
+          grep -q "Kleenest" dist/index.html
+          if grep -R -q "Canonical Capability Hub" dist; then
+            echo "ERROR: legacy capability graph leaked into the production artifact"
+            exit 1
+          fi
+          if ! grep -R -q "KLEENEST NETWORK" dist/assets; then
+            echo "ERROR: canonical Kleenest runtime was not present in the production bundle"
+            exit 1
+          fi
+          echo "Canonical Kleenest production artifact verified: $(du -sh dist | cut -f1)"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
