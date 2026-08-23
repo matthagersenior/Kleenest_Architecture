@@ -26,6 +26,7 @@
 | Live location intelligence on place details | `36229f5b27a98ac577fc4f149c867662e9c7b58d` | canonical location/evidence/intelligence graph (`6c1c23af`, verification read-model lineage) | migrated |
 | Canonical workspace model + membership/navigation rules | `3bdd0d809935b25960a0539389e5640607877d3b` | `src/domain/workspaces.js`, wired into `WorkspaceShell.jsx` and `AppContext.jsx` | migrated |
 | Proven Supabase RPC capability contract catalog | `3bdd0d809935b25960a0539389e5640607877d3b` | `src/architecture/platformCapabilityContracts.js`; execution remains in canonical domain services | migrated |
+| Proven donor feature-parity contract | `3bdd0d809935b25960a0539389e5640607877d3b` | `src/architecture/featureParity.js`; parity metadata kept separate from runtime services | migrated |
 
 ## Operating rule
 
