@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: 20
+  NODE_VERSION: 22
 
 jobs:
   build:
@@ -55,7 +55,7 @@ jobs:
           test -n "$(find dist/assets -type f -name '*.css' -print -quit)"
           cp dist/index.html dist/404.html
           echo "Production bundle verified: $(du -sh dist | cut -f1)"
-          echo "Entry point:"
+          echo "Production entrypoint:"
           head -c 500 dist/index.html
 
       - name: Upload Pages artifact
