@@ -1,4 +1,4 @@
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, BarChart3, Database, Map, Megaphone, Navigation, ShieldCheck, Sparkles, Truck, Users, Wrench, X } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 import { isPlatformOwner } from '../domains/entitlements/access.js';
@@ -9,13 +9,14 @@ const WORKSPACE_ACTIONS={consumer:[{label:'Find nearby',path:'/map',icon:Map,pri
 const PREVIEW_TIERS=['free','premium','family','fleet','enterprise','business_standard','business_growth','business_fleet','business_enterprise'];
 const PREVIEW_WORKSPACE={free:'consumer',premium:'consumer',family:'consumer',fleet:'fleet',enterprise:'enterprise',business_standard:'business',business_growth:'business',business_fleet:'fleet',business_enterprise:'enterprise'};
 const PREVIEW_LABEL={free:'Free',premium:'Premium',family:'Family',fleet:'Fleet User',enterprise:'Enterprise User',business_standard:'Business Standard',business_growth:'Business Growth',business_fleet:'Business Fleet',business_enterprise:'Business Enterprise'};
-function readPreview(){if(typeof window==='undefined')return null;const query=new URLSearchParams(window.location.search).get('preview');if(query&&PREVIEW_TIERS.includes(query)){try{window.sessionStorage.setItem('kleenest.ownerPreview',query)}catch{}return query}try{const saved=window.sessionStorage.getItem('kleenest.ownerPreview');return PREVIEW_TIERS.includes(saved)?saved:null}catch{return null}}
+function readPreview(routePreview){if(typeof window==='undefined')return null;if(routePreview&&PREVIEW_TIERS.includes(routePreview)){try{window.sessionStorage.setItem('kleenest.ownerPreview',routePreview)}catch{}return routePreview}try{const saved=window.sessionStorage.getItem('kleenest.ownerPreview');return PREVIEW_TIERS.includes(saved)?saved:null}catch{return null}}
 function clearPreview(){try{window.sessionStorage.removeItem('kleenest.ownerPreview')}catch{}}
 function previewPath(path,preview){if(!preview)return path;const [base,hash]=String(path).split('#');const join=base.includes('?')?'&':'?';return `${base}${join}preview=${encodeURIComponent(preview)}${hash?`#${hash}`:''}`}
 export default function WorkspaceShell({children,workspace='consumer'}){
   const{capabilities=[],loading,profile,user,membershipTier,presentationTier,workspaceModel,isPlatformOwner:contextOwner}=useAppContext();
+  const[searchParams]=useSearchParams();
   const owner=Boolean(contextOwner||isPlatformOwner(profile));
-  const previewTier=owner&&workspace!=='owner'?readPreview():null;
+  const previewTier=owner&&workspace!=='owner'?readPreview(searchParams.get('preview')):null;
   const previewProduct=previewTier?getProductTier(previewTier):null;
   const effectiveWorkspace=previewTier?(PREVIEW_WORKSPACE[previewTier]||'consumer'):(workspace==='owner'?'admin':workspace);
   const previewCapabilities=previewProduct?.capabilities||[];
