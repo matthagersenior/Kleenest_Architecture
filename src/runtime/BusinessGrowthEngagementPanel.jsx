@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 
 export default function BusinessGrowthEngagementPanel({ business, locations = [], campaigns = [], promotions = [], events = [], contests = [], qrs = [] }) {
   const locationCount = locations.length;
-  const tier = String(business?.tier || business?.plan || business?.membership_tier || '').toLowerCase();
-  const growthEnabled = tier.includes('growth') || tier.includes('enterprise') || tier.includes('premium') || locationCount <= 5;
+  const tier = String(business?.tier || business?.plan || business?.membership_tier || business?.service_tier || '').toLowerCase();
+  const isGrowth = tier === 'growth' || tier === 'business_growth' || tier.includes('business growth');
+  const growthEnabled = isGrowth && locationCount <= 5;
+  const overCap = isGrowth && locationCount > 5;
   const stats = useMemo(() => [
     ['Locations', locationCount],
     ['QR', qrs.length],
@@ -26,6 +28,7 @@ export default function BusinessGrowthEngagementPanel({ business, locations = []
       {growthEnabled && <Link className="secondary" to="/business/manage"><Gift size={16}/> Promotions</Link>}
       {growthEnabled && <Link className="secondary" to="/business/manage"><Trophy size={16}/> Contests</Link>}
     </div>
-    {!growthEnabled && <p className="form-note">Growth/Enterprise engagement controls remain entitlement-gated. Upgrade the business tier to activate the extended engagement network.</p>}
+    {!growthEnabled && !overCap && <p className="form-note">Growth/Enterprise engagement controls remain entitlement-gated. Upgrade the business tier to activate the extended engagement network.</p>}
+    {overCap && <p className="form-note">Business Growth includes Enterprise engagement for up to 5 managed locations. This business currently has {locationCount}; reduce the managed location count or move to the appropriate Enterprise tier.</p>}
   </section>;
 }
