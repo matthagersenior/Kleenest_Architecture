@@ -3,7 +3,7 @@ returns uuid language plpgsql security invoker set search_path=public,pg_temp as
 declare v_id uuid; v_target uuid; v_priority text:=case when lower(p_priority) in ('urgent','high','normal','low') then lower(p_priority) else 'normal' end; v_data jsonb;
 begin
  if nullif(trim(p_message),'') is null then raise exception 'Notification message is required'; end if;
- if p_target is not null and p_target<>'fleet-network' then begin v_target:=p_target::uuid; exception when invalid_text_representation then v_target:=null; end if; end if;
+ if p_target is not null and p_target<>'fleet-network' then begin v_target:=p_target::uuid; exception when invalid_text_representation then v_target:=null; end; end if;
  if v_target is null then v_target:=auth.uid(); end if;
  v_data:=coalesce(p_metadata,'{}'::jsonb)||jsonb_build_object('scope',p_scope,'business_id',p_business_id,'priority',v_priority,'authorized_sender',auth.uid());
  insert into public.notifications(user_id,type,title,body,data,created_at) values(v_target,'fleet_operational',p_title,p_message,v_data,now()) returning id into v_id;
