@@ -53,5 +53,14 @@ Do not create duplicate data sources when an authoritative Supabase dataset/RPC 
 
 - The canonical platform entitlement service is registered as `services.platformEntitlements` alongside the legacy-compatible entitlement service.
 - `CapabilityGate` provides a reusable runtime authorization boundary for Business engagement, QR, Enterprise, Fleet, Fleet metrics, and quest-creator capabilities.
-- Business engagement now uses the canonical platform entitlement RPCs for engagement authorization and location caps before rendering its gated program builder.
+- Business engagement uses the canonical platform entitlement RPCs for engagement authorization and location caps before rendering its gated program builder.
+- Business Intelligence actions are capability-gated and emit feature-access telemetry through the canonical capability coverage service.
+- Enterprise Command Center is authorization-gated through the canonical Enterprise entitlement contract.
+- Enterprise operations expose the verified partner agreement, campaign lifecycle, campaign outcome, network metric, ROI and benchmark contracts.
 - Platform notification bulk-read and browser push registration are wired into the runtime; Fleet route notification publishing remains owned by the Fleet status service.
+- Fleet operational broadcast controls prefer the canonical Fleet route-notification publisher instead of treating generic notifications as the primary Fleet contract.
+- Offline Journey automatically attempts queued-event replay when connectivity returns, then refreshes cached-pack and pending-event state and emits the shared offline-sync event.
+
+## Remaining verification rule
+
+When a capability contract cannot be located in the Architecture repository, do not invent a service method or authorization name. Classify the capability as an implementation gap, locate the authoritative Supabase contract first, then wire the UI against that contract.
