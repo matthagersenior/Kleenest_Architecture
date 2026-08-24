@@ -71,16 +71,15 @@ export default function OwnerMembershipControls(){
       setFleetEnabled(Boolean(access.fleet_enabled));
       setEnterpriseEnabled(Boolean(access.enterprise_enabled));
     }catch(e){
-      setFleetEnabled(String(b.business_tier||'').toLowerCase() in {fleet:true,enterprise:true});
-      setEnterpriseEnabled(String(b.business_tier||'').toLowerCase()==='enterprise');
+      const raw=String(b.business_tier||'').toLowerCase().replace('business_','');
+      setFleetEnabled(['fleet','enterprise'].includes(raw));
+      setEnterpriseEnabled(raw==='enterprise');
       setError(e.message||'Unable to load business access details.');
     }finally{setLoadingAccess(false)}
   };
 
   const saveBusiness=async()=>{
     const id=selectedBusiness?.id;if(!id)return;
-    if(businessTier==='enterprise')setEnterpriseEnabled(true);
-    if(businessTier==='fleet')setFleetEnabled(true);
     const nextFleet=businessTier==='enterprise'||businessTier==='fleet'||fleetEnabled;
     const nextEnterprise=businessTier==='enterprise'||enterpriseEnabled;
     if(!window.confirm(`Set ${selectedBusiness.name||selectedBusiness.business_name||id} to ${BUSINESS_TIERS.find(([v])=>v===businessTier)?.[1]||businessTier} with Fleet ${nextFleet?'enabled':'disabled'} and Enterprise ${nextEnterprise?'enabled':'disabled'}?`))return;
