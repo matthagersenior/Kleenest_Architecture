@@ -1,3 +1,95 @@
-import{useEffect,useState}from'react';import{Navigation,LocateFixed,MapPin,Play,CheckCircle2,Clock3,Route as RouteIcon,Sparkles,Plus,Trash2,Trophy}from'lucide-react';import{useSearchParams,Link}from'react-router-dom';importWorkspaceShellfrom'./WorkspaceShell.jsx';import{useAppContext}from'../AppContext.jsx';
-const formatDistance=r=>r?.distanceKm!=null?`${Number(r.distanceKm).toFixed(1)} km`:r?.distanceMeters!=null?`${(r.distanceMeters/1609.344).toFixed(1)} mi`:'—';const formatDuration=r=>r?.durationMinutes!=null?`${Math.round(r.durationMinutes)} min`:r?.durationSeconds!=null?`${Math.max(1,Math.round(r.durationSeconds/60))} min`:'—';
-export default function RouteSurface(){const{services,configured,user}=useAppContext();const[params]=useSearchParams();const[origin,setOrigin]=useState(params.get('origin')||''),[destination,setDestination]=useState(params.get('destination')||''),[locationId,setLocationId]=useState(params.get('locationId')||''),[stops,setStops]=useState([]),[route,setRoute]=useState(null),[status,setStatus]=useState('Start with where you are going.'),[busy,setBusy]=useState('');useEffect(()=>{if(origin||!navigator.geolocation)return;let active=true;navigator.geolocation.getCurrentPosition(({coords})=>active&&setOrigin(`${coords.latitude},${coords.longitude}`),()=>{}, {enableHighAccuracy:true,timeout:10000,maximumAge:120000});return()=>{active=false}},[origin]);const useGps=()=>{if(!navigator.geolocation)return setStatus('GPS is unavailable on this device.');setBusy('gps');navigator.geolocation.getCurrentPosition(({coords})=>{setOrigin(`${coords.latitude},${coords.longitude}`);setStatus('Starting point updated.');setBusy('')},()=>{setStatus('Location permission was unavailable. Enter an address instead.');setBusy('')},{enableHighAccuracy:true,timeout:12000,maximumAge:120000})};const addStop=()=>{if(locationId.trim()&&!stops.includes(locationId.trim())){setStops(v=>[...v,locationId.trim()]);setLocationId('')}};const removeStop=s=>setStops(v=>v.filter(x=>x!==s));const request=async()=>{setBusy('route');try{setStatus('Building a route with your planned restroom stops…');const data=await services.routing.request({origin:origin.trim(),destination:destination.trim(),locationId:stops[0]||null,stopLocationIds:stops});setRoute(data);setStatus('Route ready.');window.dispatchEvent(new CustomEvent('kleenest:route-updated',{detail:{locationId:data?.locationId||stops[0]||null,route:data}}))}catch(e){setRoute(null);setStatus(e?.message||'We could not build that route.')}finally{setBusy('')}};const lifecycle=async(action,label)=>{if(!user)return setStatus('Sign in to share route progress.');setBusy(action);try{await services.routing[action]({locationId:route?.locationId||stops[0]||null,route:route?{...route,stopLocationIds:stops}:route});setStatus(label);window.dispatchEvent(new CustomEvent('kleenest:route-updated',{detail:{action,route}}))}catch(e){setStatus(e?.message||`Unable to ${action} route.`)}finally{setBusy('')}};return <WorkspaceShell workspace="consumer"><main className="page route-page"><div className="page-header"><div><span className="eyebrow">SMART ROUTES</span><h1>Plan the trip, not just the destination.</h1><p>Build a route around where you are going and the restroom stops that make the trip easier.</p></div><button className="secondary" onClick={useGps} disabled={busy!==''}><LocateFixed size={16}/>Use my location</button></div><section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">PLAN</span><h2>Where are you starting and going?</h2></div><Navigation size={21}/></div><div className="detail-grid"><label>Starting point<input value={origin} onChange={e=>setOrigin(e.target.value)} placeholder="Current location or address"/></label><label>Destination<input value={destination} onChange={e=>setDestination(e.target.value)} placeholder="Where are you going?"/></label></div><div className="stop-builder"><label>Restroom stop<input value={locationId} onChange={e=>setLocationId(e.target.value)} placeholder="Paste a location ID from a saved place or map"/></label><button className="secondary" onClick={addStop} disabled={!locationId.trim()}><Plus size={15}/>Add stop</button></div>{stops.length>0&&<div className="route-stop-list">{stops.map((s,i)=><div className="route-stop" key={s}><span>{i+1}</span><strong>Restroom stop</strong><code>{s}</code><button className="text-link" onClick={()=>removeStop(s)} aria-label="Remove stop"><Trash2 size={15}/></button></div>)}</div>}<div className="button-row"><button className="primary" disabled={!configured||busy!==''||!origin.trim()||!destination.trim()} onClick={request}><Navigation size={16}/>{busy==='route'?'Building route…':'Build my route'}</button><Link className="button secondary" to="/map"><MapPin size={15}/>Explore stops</Link></div><div className="state" role="status"><Sparkles size={16}/>{status}</div></section>{route&&<><section className="detail-panel route-result"><div className="panel-heading"><div><span className="eyebrow">ROUTE READY</span><h2>{route.origin||origin} → {route.destination||destination}</h2></div><RouteIcon size={22}/></div><div className="detail-grid"><div className="metric-card"><strong>{formatDistance(route)}</strong><span>distance</span></div><div className="metric-card"><strong>{formatDuration(route)}</strong><span>estimated time</span></div><div className="metric-card"><strong>{stops.length}</strong><span>planned restroom stops</span></div></div><div className="button-row"><button className="button" onClick={()=>lifecycle('start','Route started.')}><Play size={15}/>Start route</button><button className="button" onClick={()=>lifecycle('approaching','You are approaching your destination.')}><MapPin size={15}/>Approaching</button><button className="button" onClick={()=>lifecycle('arrived','Arrival recorded.')}><CheckCircle2 size={15}/>Arrived</button><Link className="button secondary" to="/play/quest"><Trophy size={15}/>Trust Quests</Link></div></section>{Array.isArray(route.steps)&&route.steps.length>0&&<section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">YOUR TRIP</span><h2>Turn-by-turn</h2></div><Clock3 size={21}/></div><ol className="route-steps">{route.steps.slice(0,30).map((s,i)=><li key={`${i}-${s.instruction}`}><strong>{i+1}</strong><div><span>{s.instruction}</span><small>{s.distanceMeters!=null?`${Math.round(s.distanceMeters)} m`:''}{s.durationSeconds!=null?` · ${Math.max(1,Math.round(s.durationSeconds/60))} min`:''}</small></div></li>)}</ol></section>}</>}</main></WorkspaceShell>}
+import { useEffect, useState } from 'react';
+import { Navigation, LocateFixed, MapPin, Play, CheckCircle2, Clock3, Route as RouteIcon, Sparkles, Plus, Trash2, Trophy } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import WorkspaceShell from './WorkspaceShell.jsx';
+import { useAppContext } from '../AppContext.jsx';
+
+const formatDistance = (r) => r?.distanceKm != null ? `${Number(r.distanceKm).toFixed(1)} km` : r?.distanceMeters != null ? `${(r.distanceMeters / 1609.344).toFixed(1)} mi` : '—';
+const formatDuration = (r) => r?.durationMinutes != null ? `${Math.round(r.durationMinutes)} min` : r?.durationSeconds != null ? `${Math.max(1, Math.round(r.durationSeconds / 60))} min` : '—';
+
+export default function RouteSurface() {
+  const { services, configured, user } = useAppContext();
+  const [params] = useSearchParams();
+  const [origin, setOrigin] = useState(params.get('origin') || '');
+  const [destination, setDestination] = useState(params.get('destination') || '');
+  const [locationId, setLocationId] = useState(params.get('locationId') || '');
+  const [stops, setStops] = useState([]);
+  const [route, setRoute] = useState(null);
+  const [status, setStatus] = useState('Start with where you are going.');
+  const [busy, setBusy] = useState('');
+
+  useEffect(() => {
+    if (origin || !navigator.geolocation) return undefined;
+    let active = true;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => active && setOrigin(`${coords.latitude},${coords.longitude}`),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 },
+    );
+    return () => { active = false; };
+  }, [origin]);
+
+  const useGps = () => {
+    if (!navigator.geolocation) return setStatus('GPS is unavailable on this device.');
+    setBusy('gps');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => { setOrigin(`${coords.latitude},${coords.longitude}`); setStatus('Starting point updated.'); setBusy(''); },
+      () => { setStatus('Location permission was unavailable. Enter an address instead.'); setBusy(''); },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 },
+    );
+  };
+
+  const addStop = () => {
+    const value = locationId.trim();
+    if (value && !stops.includes(value)) { setStops((v) => [...v, value]); setLocationId(''); }
+  };
+  const removeStop = (stop) => setStops((v) => v.filter((x) => x !== stop));
+
+  const request = async () => {
+    setBusy('route');
+    try {
+      setStatus('Building a route with your planned restroom stops…');
+      const data = await services.routing.request({ origin: origin.trim(), destination: destination.trim(), locationId: stops[0] || null, stopLocationIds: stops });
+      setRoute(data);
+      setStatus('Route ready.');
+      window.dispatchEvent(new CustomEvent('kleenest:route-updated', { detail: { locationId: data?.locationId || stops[0] || null, route: data } }));
+    } catch (e) {
+      setRoute(null);
+      setStatus(e?.message || 'We could not build that route.');
+    } finally { setBusy(''); }
+  };
+
+  const lifecycle = async (action, label) => {
+    if (!user) return setStatus('Sign in to share route progress.');
+    setBusy(action);
+    try {
+      await services.routing[action]({ locationId: route?.locationId || stops[0] || null, route: route ? { ...route, stopLocationIds: stops } : route });
+      setStatus(label);
+      window.dispatchEvent(new CustomEvent('kleenest:route-updated', { detail: { action, route } }));
+    } catch (e) { setStatus(e?.message || `Unable to ${action} route.`); }
+    finally { setBusy(''); }
+  };
+
+  return (
+    <WorkspaceShell workspace="consumer">
+      <main className="page route-page">
+        <div className="page-header">
+          <div><span className="eyebrow">SMART ROUTES</span><h1>Plan the trip, not just the destination.</h1><p>Build a route around where you are going and the restroom stops that make the trip easier.</p></div>
+          <button className="secondary" onClick={useGps} disabled={busy !== ''}><LocateFixed size={16} />Use my location</button>
+        </div>
+        <section className="detail-panel">
+          <div className="panel-heading"><div><span className="eyebrow">PLAN</span><h2>Where are you starting and going?</h2></div><Navigation size={21} /></div>
+          <div className="detail-grid"><label>Starting point<input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Current location or address" /></label><label>Destination<input value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Where are you going?" /></label></div>
+          <div className="stop-builder"><label>Restroom stop<input value={locationId} onChange={(e) => setLocationId(e.target.value)} placeholder="Paste a location ID from a saved place or map" /></label><button className="secondary" onClick={addStop} disabled={!locationId.trim()}><Plus size={15} />Add stop</button></div>
+          {stops.length > 0 && <div className="route-stop-list">{stops.map((s, i) => <div className="route-stop" key={s}><span>{i + 1}</span><strong>Restroom stop</strong><code>{s}</code><button className="text-link" onClick={() => removeStop(s)} aria-label="Remove stop"><Trash2 size={15} /></button></div>)}</div>}
+          <div className="button-row"><button className="primary" disabled={!configured || busy !== '' || !origin.trim() || !destination.trim()} onClick={request}><Navigation size={16} />{busy === 'route' ? 'Building route…' : 'Build my route'}</button><Link className="button secondary" to="/map"><MapPin size={15} />Explore stops</Link></div>
+          <div className="state" role="status"><Sparkles size={16} />{status}</div>
+        </section>
+        {route && <>
+          <section className="detail-panel route-result"><div className="panel-heading"><div><span className="eyebrow">ROUTE READY</span><h2>{route.origin || origin} → {route.destination || destination}</h2></div><RouteIcon size={22} /></div><div className="detail-grid"><div className="metric-card"><strong>{formatDistance(route)}</strong><span>distance</span></div><div className="metric-card"><strong>{formatDuration(route)}</strong><span>estimated time</span></div><div className="metric-card"><strong>{stops.length}</strong><span>planned restroom stops</span></div></div><div className="button-row"><button className="button" onClick={() => lifecycle('start', 'Route started.')}><Play size={15} />Start route</button><button className="button" onClick={() => lifecycle('approaching', 'You are approaching your destination.')}><MapPin size={15} />Approaching</button><button className="button" onClick={() => lifecycle('arrived', 'Arrival recorded.')}><CheckCircle2 size={15} />Arrived</button><Link className="button secondary" to="/play/quest"><Trophy size={15} />Trust Quests</Link></div></section>
+          {Array.isArray(route.steps) && route.steps.length > 0 && <section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">YOUR TRIP</span><h2>Turn-by-turn</h2></div><Clock3 size={21} /></div><ol className="route-steps">{route.steps.slice(0, 30).map((s, i) => <li key={`${i}-${s.instruction}`}><strong>{i + 1}</strong><div><span>{s.instruction}</span><small>{s.distanceMeters != null ? `${Math.round(s.distanceMeters)} m` : ''}{s.durationSeconds != null ? ` · ${Math.max(1, Math.round(s.durationSeconds / 60))} min` : ''}</small></div></li>)}</ol></section>}
+        </>}
+      </main>
+    </WorkspaceShell>
+  );
+}
