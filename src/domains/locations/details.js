@@ -54,7 +54,26 @@ export function createLocationDetailsService(client) {
       .order('created_at', { ascending: false })
       .limit(Math.min(Math.max(Number(limit) || 30, 1), 100));
     if (error) throw error;
-    return (data || []).map(row => ({ ...row, rating: row.stars, body: row.comment, photos: row.review_photos || [] }));
+
+    const rows = data || [];
+    const userIds = [...new Set(rows.map(row => row.user_id).filter(Boolean))];
+    let reputationByUser = new Map();
+    if (userIds.length) {
+      const { data: reputationRows, error: reputationError } = await client.from('contributor_reputation')
+        .select('user_id,reputation_score,verification_level,verified_checkins_count,confirmed_observations_count')
+        .in('user_id', userIds);
+      if (reputationError) throw reputationError;
+      reputationByUser = new Map((reputationRows || []).map(row => [row.user_id, row]));
+    }
+
+    return rows.map(row => ({
+      ...row,
+      rating: row.stars,
+      body: row.comment,
+      photos: row.review_photos || [],
+      verified: Boolean(row.check_in_id),
+      reputation: reputationByUser.get(row.user_id) || null
+    }));
   }
 
   async function interactionState(locationId) {
