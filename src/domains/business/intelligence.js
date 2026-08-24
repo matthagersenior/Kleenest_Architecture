@@ -1,1 +1,180 @@
-export function createBusinessIntelligenceService(client,{capabilityCoverage=null}={}){if(!client)throw new Error('Supabase client is required.');const rpc=(name,args={})=>client.rpc(name,args).then(({data,error})=>{if(error)throw error;return data;});const requireUser=async()=>{const{data:{user},error}=await client.auth.getUser();if(error)throw error;if(!user)throw new Error('Sign in to continue.');return user;};const windowArgs=(businessId,start,end)=>({p_business_id:businessId,p_start:start,p_end:end});const rows=value=>{if(Array.isArray(value))return value;if(!value||typeof value!=='object')return[];for(const key of ['rows','locations','intelligence','items','data'])if(Array.isArray(value[key]))return value[key];return Object.values(value).filter(v=>v&&typeof v==='object'&&!Array.isArray(v));};const assertManagedLocation=async(businessId,locationId)=>{if(!locationId)throw new Error('Select a managed location before completing this action.');await requireUser();const{data,error}=await client.rpc('business_list_locations',{p_business_id:businessId});if(error)throw error;const match=rows(data).find(x=>String(x?.id??x?.location_id)===String(locationId));if(!match)throw new Error('This location is not managed by the selected business.');return match;};const outcome=async(featureCode,result,metadata={})=>{try{return await capabilityCoverage?.record({featureCode,outcome:result,tierCode:'business',destination:'business_intelligence',metadata})}catch{return null}};const executeAction=async(businessId,{action,locationId,title,description,name,goal,discount,startsAt,endsAt,eventDate,eventTime,type='general',status='draft'}={})=>{const canonical=String(action).replaceAll('_','-');if(!canonical)throw new Error('This intelligence signal has no available action.');const featureCode=`business.intelligence.${canonical}`;const metadata={businessId,locationId,action:canonical};try{let result;if(canonical==='create-promotion'||canonical==='extend-offer'){await assertManagedLocation(businessId,locationId);result=await rpc('business_create_promotion',{p_business_id:businessId,p_title:title||'Demand opportunity promotion',p_description:description||'Promotion created from a Kleenest demand signal.',p_discount:discount??null,p_location_id:locationId,p_starts_at:startsAt??undefined,p_ends_at:endsAt??undefined});}else if(canonical==='create-campaign'||canonical==='extend-campaign'){result=await rpc('business_manage_campaign',{p_business_id:businessId,p_campaign_id:null,p_action:'create',p_name:name||'Quality improvement campaign',p_campaign_type:type,p_goal:goal||'Improve community engagement and customer outcomes.',p_status:status});}else if(canonical==='create-event'){await assertManagedLocation(businessId,locationId);result=await rpc('business_manage_event',{p_business_id:businessId,p_event_id:null,p_action:'create',p_payload:{location_id:locationId,title:title||'Community activity event',description:description||'Event created from a Kleenest activity signal.',event_date:eventDate??null,event_time:eventTime??null}});}else if(canonical==='create-contest'){result=await rpc('business_manage_contest',{p_business_id:businessId,p_contest_id:null,p_action:'create',p_payload:{name:name||'Kleenest community contest',description:description||'Contest created from a Kleenest engagement signal.',goal:goal||'Increase community participation.',status}});}else throw new Error(`Unsupported intelligence action: ${action}`);await outcome(featureCode,'allowed',metadata);if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('kleenest:intelligence-action-completed',{detail:{businessId,action:canonical,locationId,result}}));return result}catch(error){await outcome(featureCode,'blocked',{...metadata,error:error?.message});throw error;}};return Object.freeze({dashboard:(businessId,start,end)=>rpc('business_dashboard_secure_summary',windowArgs(businessId,start,end)),summary:(businessId,start,end)=>rpc('business_summary_analytics',windowArgs(businessId,start,end)),engagement:(businessId,start,end)=>rpc('business_engagement_analytics',windowArgs(businessId,start,end)),funnel:(businessId,start,end)=>rpc('get_business_engagement_funnel',windowArgs(businessId,start,end)),growth:(businessId,start,end)=>rpc('business_growth_analytics',windowArgs(businessId,start,end)),visitors:(businessId,start,end)=>rpc('business_visitors_analytics',windowArgs(businessId,start,end)),location:(businessId,start,end)=>rpc('business_location_analytics',windowArgs(businessId,start,end)),locationIntelligence:(businessId,start,end)=>rpc('business_location_intelligence',windowArgs(businessId,start,end)),occupancy:(businessId,start,end)=>rpc('business_occupancy_analytics',windowArgs(businessId,start,end)),reviews:(businessId,start,end)=>rpc('business_review_analytics',windowArgs(businessId,start,end)),amenities:(businessId,locationId,start,end)=>rpc('business_amenity_feedback_analytics',{...windowArgs(businessId,start,end),p_location_id:locationId}),campaigns:(businessId,start,end)=>rpc('business_campaign_analytics',windowArgs(businessId,start,end)),promotions:(businessId,start,end)=>rpc('business_promotion_analytics',windowArgs(businessId,start,end)),qr:(businessId,start,end)=>rpc('business_qr_analytics',windowArgs(businessId,start,end)),media:(businessId,start,end)=>rpc('business_media_analytics',windowArgs(businessId,start,end)),events:(businessId,start,end)=>rpc('business_event_analytics',windowArgs(businessId,start,end)),partners:(businessId,start,end)=>rpc('business_partner_analytics',windowArgs(businessId,start,end)),rewards:(businessId,start,end)=>rpc('business_rewards_analytics',windowArgs(businessId,start,end)),roi:(businessId,start,end)=>rpc('business_roi_analytics',windowArgs(businessId,start,end)),benchmark:(businessId,start,end)=>rpc('business_benchmark_analytics',windowArgs(businessId,start,end)),actionLinks:async(businessId,{limit=50}={})=>{await requireUser();const{data,error}=await client.from('intelligence_action_links').select('id,location_id,business_id,surface,signal_type,action_type,status,metadata,created_at,updated_at').eq('business_id',businessId).eq('surface','business').order('created_at',{ascending:false}).limit(Math.min(Math.max(Number(limit)||50,1),100));if(error)throw error;return Array.isArray(data)?data:[];},executeAction});}
+export function createBusinessIntelligenceService(client, { capabilityCoverage = null } = {}) {
+  if (!client) throw new Error('Supabase client is required.');
+
+  const rpc = (name, args = {}) => client.rpc(name, args).then(({ data, error }) => {
+    if (error) throw error;
+    return data;
+  });
+
+  const requireUser = async () => {
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error) throw error;
+    if (!user) throw new Error('Sign in to continue.');
+    return user;
+  };
+
+  const windowArgs = (businessId, start, end) => ({
+    p_business_id: businessId,
+    p_start: start,
+    p_end: end,
+  });
+
+  const rows = (value) => {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object') return [];
+    for (const key of ['rows', 'locations', 'intelligence', 'items', 'data']) {
+      if (Array.isArray(value[key])) return value[key];
+    }
+    return Object.values(value).filter((v) => v && typeof v === 'object' && !Array.isArray(v));
+  };
+
+  const assertManagedLocation = async (businessId, locationId) => {
+    if (!locationId) throw new Error('Select a managed location before completing this action.');
+    await requireUser();
+    const { data, error } = await client.rpc('business_list_locations', {
+      p_business_id: businessId,
+    });
+    if (error) throw error;
+    const match = rows(data).find((x) => String(x?.id ?? x?.location_id) === String(locationId));
+    if (!match) throw new Error('This location is not managed by the selected business.');
+    return match;
+  };
+
+  const outcome = async (featureCode, result, metadata = {}) => {
+    try {
+      return await capabilityCoverage?.record({
+        featureCode,
+        outcome: result,
+        tierCode: 'business',
+        destination: 'business_intelligence',
+        metadata,
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const executeAction = async (businessId, {
+    action,
+    locationId,
+    title,
+    description,
+    name,
+    goal,
+    discount,
+    startsAt,
+    endsAt,
+    eventDate,
+    eventTime,
+    type = 'general',
+    status = 'draft',
+  } = {}) => {
+    const canonical = String(action).replaceAll('_', '-');
+    if (!canonical) throw new Error('This intelligence signal has no available action.');
+
+    const featureCode = `business.intelligence.${canonical}`;
+    const metadata = { businessId, locationId, action: canonical };
+
+    try {
+      let result;
+
+      if (canonical === 'create-promotion' || canonical === 'extend-offer') {
+        await assertManagedLocation(businessId, locationId);
+        result = await rpc('business_create_promotion', {
+          p_business_id: businessId,
+          p_title: title || 'Demand opportunity promotion',
+          p_description: description || 'Promotion created from a Kleenest demand signal.',
+          p_discount: discount ?? null,
+          p_location_id: locationId,
+          p_starts_at: startsAt ?? undefined,
+          p_ends_at: endsAt ?? undefined,
+        });
+      } else if (canonical === 'create-campaign' || canonical === 'extend-campaign') {
+        result = await rpc('business_manage_campaign', {
+          p_business_id: businessId,
+          p_campaign_id: null,
+          p_action: 'create',
+          p_name: name || 'Quality improvement campaign',
+          p_campaign_type: type,
+          p_goal: goal || 'Improve community engagement and customer outcomes.',
+          p_status: status,
+        });
+      } else if (canonical === 'create-event') {
+        await assertManagedLocation(businessId, locationId);
+        result = await rpc('business_manage_event', {
+          p_business_id: businessId,
+          p_event_id: null,
+          p_action: 'create',
+          p_payload: {
+            location_id: locationId,
+            title: title || 'Community activity event',
+            description: description || 'Event created from a Kleenest activity signal.',
+            event_date: eventDate ?? null,
+            event_time: eventTime ?? null,
+          },
+        });
+      } else if (canonical === 'create-contest') {
+        result = await rpc('business_manage_contest', {
+          p_business_id: businessId,
+          p_contest_id: null,
+          p_action: 'create',
+          p_payload: {
+            name: name || 'Kleenest community contest',
+            description: description || 'Contest created from a Kleenest engagement signal.',
+            goal: goal || 'Increase community participation.',
+            status,
+          },
+        });
+      } else {
+        throw new Error(`Unsupported intelligence action: ${action}`);
+      }
+
+      await outcome(featureCode, 'allowed', metadata);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kleenest:intelligence-action-completed', {
+          detail: { businessId, action: canonical, locationId, result },
+        }));
+      }
+      return result;
+    } catch (error) {
+      await outcome(featureCode, 'blocked', { ...metadata, error: error?.message });
+      throw error;
+    }
+  };
+
+  return Object.freeze({
+    dashboard: (businessId, start, end) => rpc('business_dashboard_secure_summary', windowArgs(businessId, start, end)),
+    summary: (businessId, start, end) => rpc('business_summary_analytics', windowArgs(businessId, start, end)),
+    engagement: (businessId, start, end) => rpc('business_engagement_analytics', windowArgs(businessId, start, end)),
+    funnel: (businessId, start, end) => rpc('get_business_engagement_funnel', windowArgs(businessId, start, end)),
+    growth: (businessId, start, end) => rpc('business_growth_analytics', windowArgs(businessId, start, end)),
+    visitors: (businessId, start, end) => rpc('business_visitors_analytics', windowArgs(businessId, start, end)),
+    location: (businessId, start, end) => rpc('business_location_analytics', windowArgs(businessId, start, end)),
+    locationIntelligence: (businessId, start, end) => rpc('business_location_intelligence', windowArgs(businessId, start, end)),
+    occupancy: (businessId, start, end) => rpc('business_occupancy_analytics', windowArgs(businessId, start, end)),
+    reviews: (businessId, start, end) => rpc('business_review_analytics', windowArgs(businessId, start, end)),
+    amenities: (businessId, locationId, start, end) => rpc('business_amenity_feedback_analytics', { ...windowArgs(businessId, start, end), p_location_id: locationId }),
+    campaigns: (businessId, start, end) => rpc('business_campaign_analytics', windowArgs(businessId, start, end)),
+    promotions: (businessId, start, end) => rpc('business_promotion_analytics', windowArgs(businessId, start, end)),
+    qr: (businessId, start, end) => rpc('business_qr_analytics', windowArgs(businessId, start, end)),
+    media: (businessId, start, end) => rpc('business_media_analytics', windowArgs(businessId, start, end)),
+    events: (businessId, start, end) => rpc('business_event_analytics', windowArgs(businessId, start, end)),
+    partners: (businessId, start, end) => rpc('business_partner_analytics', windowArgs(businessId, start, end)),
+    rewards: (businessId, start, end) => rpc('business_rewards_analytics', windowArgs(businessId, start, end)),
+    roi: (businessId, start, end) => rpc('business_roi_analytics', windowArgs(businessId, start, end)),
+    benchmark: (businessId, start, end) => rpc('business_benchmark_analytics', windowArgs(businessId, start, end)),
+    actionLinks: async (businessId, { limit = 50 } = {}) => {
+      await requireUser();
+      const { data, error } = await client
+        .from('intelligence_action_links')
+        .select('id,location_id,business_id,surface,signal_type,action_type,status,metadata,created_at,updated_at')
+        .eq('business_id', businessId)
+        .eq('surface', 'business')
+        .order('created_at', { ascending: false })
+        .limit(Math.min(Math.max(Number(limit) || 50, 1), 100));
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    },
+    executeAction,
+  });
+}
