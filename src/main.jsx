@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import CanonicalAppRuntime from './CanonicalAppRuntime.jsx';
 import { AppProvider } from './AppContext.jsx';
 import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
+import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.jsx';
 import './styles.css';
 
 const root = document.getElementById('root');
@@ -13,6 +14,7 @@ ReactDOM.createRoot(root).render(
     <HashRouter>
       <RuntimeErrorBoundary>
         <AppProvider>
+          <UniversalDiscoveryBootstrap />
           <CanonicalAppRuntime />
         </AppProvider>
       </RuntimeErrorBoundary>
