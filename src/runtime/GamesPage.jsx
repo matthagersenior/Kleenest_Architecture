@@ -3,6 +3,7 @@ import {ArrowLeft,Brain,Clock3,Gamepad2,RotateCcw,Trophy,Zap,Grid3X3,Target,Shuf
 import {Link} from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import {useAppContext} from '../AppContext.jsx';
+import './GamesPage.css';
 
 const games=[
 {id:'tap',title:'Clean Sweep',tag:'Quick tap',icon:Zap,description:'Find the clean tiles and build a streak.'},
