@@ -14,7 +14,7 @@
 - Fleet — Growth + Fleet operations
 - Enterprise — advanced analytics + Fleet capability
 
-The runtime now normalizes legacy `business` / `service_tier` values into the canonical Business model and normalizes consumer membership values into the canonical User model.
+The runtime normalizes legacy `business` / `service_tier` values into the canonical Business model and normalizes consumer membership values into the canonical User model.
 
 ## Supabase capability clusters verified
 
@@ -43,8 +43,15 @@ Backend-only capabilities remain explicitly classified as UI gaps instead of bei
 
 ## CRUD contract
 
-The Owner CRUD surface consumes the governed backend capability catalogue rather than maintaining an independent list of database resources. Business management now exposes lifecycle controls for active business assets and links deeper editing to governed CRUD.
+The Owner CRUD surface consumes the governed backend capability catalogue rather than maintaining an independent list of database resources. Business management exposes lifecycle controls for active business assets and links deeper editing to governed CRUD.
 
 ## Interoperability rule
 
 Do not create duplicate data sources when an authoritative Supabase dataset/RPC already exists. New UI features must consume the canonical domain service and emit the shared telemetry/event model.
+
+## 2026-08-24 wiring additions
+
+- The canonical platform entitlement service is registered as `services.platformEntitlements` alongside the legacy-compatible entitlement service.
+- `CapabilityGate` provides a reusable runtime authorization boundary for Business engagement, QR, Enterprise, Fleet, Fleet metrics, and quest-creator capabilities.
+- Business engagement now uses the canonical platform entitlement RPCs for engagement authorization and location caps before rendering its gated program builder.
+- Platform notification bulk-read and browser push registration are wired into the runtime; Fleet route notification publishing remains owned by the Fleet status service.
