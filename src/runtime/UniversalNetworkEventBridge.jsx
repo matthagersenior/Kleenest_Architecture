@@ -1,25 +1,38 @@
 import { useEffect } from 'react';
 import { useAppContext } from '../AppContext.jsx';
 
-const CHANNEL = 'kleenest-universal-network';
+const EVENT_NAME = 'kleenest:network-event';
 
 export default function UniversalNetworkEventBridge() {
   const { configured, services } = useAppContext();
+
   useEffect(() => {
-    if (!configured || !services?.liveNetwork?.subscribe) return undefined;
-    const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+    if (!configured || typeof services?.live?.subscribe !== 'function') return undefined;
+
     let active = true;
-    const unsubscribe = services.liveNetwork.subscribe(event => {
-      if (!active || !event) return;
-      emit('kleenest:network-event', event);
-      if (event.type === 'notification' || event.notification_id || event.notification) emit('kleenest:notification', event);
-      if (event.user_id || event.location_id || event.latitude != null) emit('kleenest:location-signal', event);
-      if (String(event.type || '').startsWith('FLEET_')) emit('kleenest:fleet-event', event);
-      if (String(event.type || '').startsWith('BUSINESS_') || event.campaign_id || event.promotion_id) emit('kleenest:business-event', event);
-      if (event.enterprise_id || event.network_id || event.outcome_id) emit('kleenest:enterprise-event', event);
+    const emit = (name, detail) => {
+      if (typeof window === 'undefined' || !active) return;
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    };
+
+    const unsubscribe = services.live.subscribe({
+      onEvent: ({ eventType, new: event } = {}) => {
+        if (!active || !event) return;
+        const detail = { ...event, type: event.event_type || eventType || event.type };
+        emit(EVENT_NAME, detail);
+        if (detail.notification_id || detail.notification) emit('kleenest:notification', detail);
+        if (detail.user_id || detail.location_id || detail.latitude != null) emit('kleenest:location-signal', detail);
+        if (String(detail.type || '').startsWith('fleet.')) emit('kleenest:fleet-event', detail);
+        if (String(detail.type || '').startsWith('business.')) emit('kleenest:business-event', detail);
+        if (detail.enterprise_id || detail.network_id || detail.outcome_id) emit('kleenest:enterprise-event', detail);
+      }
     });
-    const channel = services.liveNetwork.broadcastChannel?.(CHANNEL);
-    return () => { active = false; if (typeof unsubscribe === 'function') unsubscribe(); channel?.unsubscribe?.(); };
+
+    return () => {
+      active = false;
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [configured, services]);
+
   return null;
 }
