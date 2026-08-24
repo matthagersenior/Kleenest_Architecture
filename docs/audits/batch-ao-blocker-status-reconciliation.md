@@ -63,3 +63,27 @@ These are isolated capability review items, not generalized architecture blocker
 ## Updated implementation gate
 
 Broad implementation is no longer blocked by the original A–H correctness set or the previously identified partner benchmark / SECURITY DEFINER security findings. Continue capability-by-capability verification and do not promote a worker/internal primitive to a browser capability without a verified caller contract.
+
+## Review-gate contract requirements
+
+The remaining review items are governed by the following non-negotiable boundaries:
+
+### Live-event mutation authority
+
+Live Network remains a read/event-stream projection. Domain commands own source state; Live Network may publish or materialize a domain event only through an explicitly authorized product or worker boundary. A browser command must not write the Live Network projection as if it were source state.
+
+### Enterprise engagement mutation semantics
+
+Enterprise engagement is a business/enterprise-domain event. Mutations must carry the authenticated actor/business/network authorization context and a canonical source entity when applicable. The client must not manufacture ownership, network identity, or source facts. If the operation is an internal projection/materialization path, classify it as `worker` rather than a browser capability.
+
+### Notification mark-all mutation
+
+Mark-all is user notification read-state mutation, not notification publication. It must be authenticated and user-scoped; it must never accept an arbitrary recipient/user identifier from an untrusted browser as the authorization basis. Publication, materialization, recipient resolution, and delivery remain worker/internal infrastructure.
+
+### Review-to-verification event semantics
+
+A review does not itself establish verification. Verified-check-in/location evidence remains the authority. Review mutation may consume or reference verified evidence and may emit review telemetry, but it must not synthesize verification status or duplicate verification/reward events already owned by the verification/check-in path.
+
+### Fleet Business Metric Configuration
+
+Fleet Business Metric Configuration remains a thin, business-scoped configuration adapter over existing measurements. It may define metric selection, goals, thresholds, scoring, and scope. It must not create a second telemetry/measurement engine or write operational facts. `Observe` ≠ `Configure` ≠ `Operate`; `has_fleet_access` alone is not sufficient authorization for configuration.
