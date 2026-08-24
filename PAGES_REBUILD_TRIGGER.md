@@ -1,3 +1,3 @@
 # Pages rebuild trigger
 
-Temporary deployment verification marker. Updated 2026-08-24 after the GPS-first map discovery, route live-network publication, progression Play wiring, and membership workspace UX batch. This file exists only to create a main-branch push event so the Pages workflow rebuilds the current tree.
+Temporary deployment verification marker. Updated 2026-08-24 after canonical runtime repair, GPS-first discovery, real routing geometry, saved-location routing, progression wiring, and membership workspace UX. The main entry now delegates to the actual runtime router under `src/runtime/`, eliminating the stale/broken duplicate router path.
