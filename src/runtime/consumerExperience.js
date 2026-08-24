@@ -1,26 +1,4 @@
-export const consumerExperience = {
-  principles: [
-    'Free and Premium share the complete consumer capability set.',
-    'Free is monetized by advertising; Premium removes advertising.',
-    'Every consumer action should lead naturally to discovery, trust, utility, contribution, or progression.',
-    'Technical identifiers never belong in the consumer interaction model.',
-  ],
-  journeys: {
-    discovery: ['/','/map','/place/:id'],
-    trust: ['/check-in','/evidence','/place/:id'],
-    utility: ['/route','/map'],
-    engagement: ['/play/quest','/games','/activity'],
-    community: ['/community','/profile'],
-  },
-};
-
-export const consumerActionLabels = {
-  discover: 'Find a restroom',
-  verify: 'Verify a visit',
-  evidence: 'Add evidence',
-  review: 'Share your experience',
-  route: 'Plan a route',
-  quest: 'Explore Trust Quests',
-  games: 'Open Game Center',
-  community: 'Join the community',
-};
+export const consumerExperience={principles:['Free and Premium share the complete consumer capability set.','Free is monetized by advertising; Premium removes advertising.','Every consumer action should naturally produce a useful next action and propagate through progression, activity, rewards, and notifications when applicable.','Technical identifiers never belong in the consumer interaction model.','The same verified source of truth should drive map, place, route, trust, quests, games, community, rewards, and activity surfaces.'],journeys:{discovery:{label:'Discover',routes:['/','/map','/place/:id'],next:['/check-in','/route']},trust:{label:'Build trust',routes:['/check-in','/evidence','/place/:id'],next:['/play/quest','/activity']},utility:{label:'Get somewhere',routes:['/route','/map'],next:['/check-in','/activity']},engagement:{label:'Progress',routes:['/play/quest','/games','/activity','/rewards'],next:['/community','/leaderboard']},community:{label:'Contribute together',routes:['/community','/profile'],next:['/map','/play/quest']},growth:{label:'Keep coming back',routes:['/notifications','/rewards','/leaderboard'],next:['/map','/check-in']}},actionFlow:{discover:{label:'Find a restroom',path:'/map',icon:'map'},verify:{label:'Verify a visit',path:'/check-in',icon:'shield'},evidence:{label:'Add evidence',path:'/evidence',icon:'camera'},review:{label:'Share your experience',path:'/place/:id',icon:'star'},route:{label:'Plan a route',path:'/route',icon:'route'},quest:{label:'Explore Trust Quests',path:'/play/quest',icon:'trophy'},games:{label:'Open Game Center',path:'/games',icon:'gamepad'},community:{label:'Join the community',path:'/community',icon:'users'},rewards:{label:'See rewards',path:'/rewards',icon:'gift'},activity:{label:'See your activity',path:'/activity',icon:'activity'}},eventRefreshMap:{'check-in-completed':['activity','rewards','progression','quests','notifications','community'],'evidence-submitted':['activity','rewards','progression','quests','notifications','community'],'review-submitted':['activity','rewards','progression','quests','notifications','community'],'game-completed':['activity','rewards','progression','notifications','leaderboard'],'challenge-completed':['activity','rewards','progression','notifications','leaderboard','community'],'route-updated':['activity']}};
+export const consumerActionLabels=Object.fromEntries(Object.entries(consumerExperience.actionFlow).map(([key,value])=>[key,value.label]));
+export const consumerJourneyFor=path=>Object.values(consumerExperience.journeys).find(j=>j.routes.some(route=>path===route||route.includes(':')&&path.startsWith(route.split('/:')[0])))||consumerExperience.journeys.discovery;
+export const consumerRefreshTargets=event=>consumerExperience.eventRefreshMap[event]||[];
