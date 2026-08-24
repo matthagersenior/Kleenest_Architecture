@@ -4,7 +4,7 @@
 
 The GitHub ↔ Supabase ↔ Architecture ↔ donor audit is sufficiently complete to switch from discovery-driven migration to commit-oriented bulk reconciliation.
 
-The live Supabase capability graph is materially richer than the visible shell, but the major hidden-capability archaeology is now classified. Most capabilities are already backed by canonical RPCs/tables/services; the remaining work is primarily runtime consumer wiring, cross-domain bridges, telemetry/value closure, and security hardening.
+The live Supabase capability graph is materially richer than the visible shell, but the major hidden-capability archaeology is now classified. Most capabilities are already backed by canonical RPCs/tables/services; the remaining work is primarily runtime consumer wiring, cross-domain bridges, telemetry/value closure, and targeted security hardening.
 
 ## Source reconciliation
 
@@ -108,13 +108,15 @@ This must be a thin adapter over existing Fleet measurements/progression, not a 
 
 ## Security gates
 
-The audit retains the following blockers for privileged promotion:
+The previously identified security gates have been actively reconciled where the production contract was unambiguous:
 
-1. `get_partner_network_benchmark()` requires owner-business authorization equivalent to neighboring partner analytics functions.
-2. SECURITY DEFINER search paths must be hardened.
-3. SECURITY DEFINER grants must be explicitly classified as public-safe, authenticated, worker, or admin.
-4. RLS-enabled tables without appropriate policies must remain gated.
-5. Leaked-password protection remains a security configuration gate.
+- `get_partner_network_benchmark()` already enforces owner-business membership authorization and remains classified as authenticated/privileged analytics.
+- All current `public` SECURITY DEFINER functions are now pinned to a trusted explicit search path (`public, auth, extensions, pg_temp`). Production verification reports **0** SECURITY DEFINER functions without a configured search path.
+- Anonymous execution has been revoked for the admin capability catalogs/authorization gateway and the internal intelligence/notification command functions. Production verification reports **0** anonymous grants for that protected set.
+- RLS-enabled tables with no policies remain intentionally gated by default-deny RLS and require a verified domain policy before exposure; no blanket permissive policy was added.
+- Leaked-password protection remains a Supabase Auth configuration gate and is not represented as a database migration.
+
+The hardening migration is recorded in `supabase/migrations/20260824133000_security_definer_and_anon_grants_hardening.sql`.
 
 ## Telemetry model
 
