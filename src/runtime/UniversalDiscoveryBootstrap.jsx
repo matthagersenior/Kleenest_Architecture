@@ -10,9 +10,12 @@ export default function UniversalDiscoveryBootstrap() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async ({ coords }) => {
       try {
+        await services.maps.discoverNearby({ latitude: coords.latitude, longitude: coords.longitude, radiusKm: 8, userId: user?.id ?? null });
+      } catch {}
+      try {
         await services.maps.prepareNearby({ latitude: coords.latitude, longitude: coords.longitude, radiusKm: 8, userId: user?.id ?? null });
       } catch {}
-    }, () => {}, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    }, () => {}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
   }, [configured, services, user?.id]);
   return null;
 }
