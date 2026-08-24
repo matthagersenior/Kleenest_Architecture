@@ -1,0 +1,15 @@
+alter function public.quest_start(uuid) set search_path=public,pg_temp;
+alter function public.quest_record_step(uuid,uuid) set search_path=public,pg_temp;
+alter function public.quest_leaderboard(text,integer) set search_path=public,pg_temp;
+alter function public.quest_trigger_geofence(uuid,uuid,uuid,text) set search_path=public,pg_temp;
+alter function public.quest_trigger_qr(uuid,uuid,uuid,text) set search_path=public,pg_temp;
+alter function public.map_location_category(uuid) set search_path=public,pg_temp;
+alter function public.consume_single_use_qr(text) set search_path=public,pg_temp;
+alter function public.award_business_progression_perk(uuid,text) set search_path=public,pg_temp;
+alter function public.location_favorite_counts(uuid) set search_path=public,pg_temp;
+alter function public.my_favorite_locations() set search_path=public,pg_temp;
+alter function public.refresh_location_feature_summary(uuid) set search_path=public,pg_temp;
+alter function public.get_favorite_locations() set search_path=public,pg_temp;
+alter function public.record_favorite_route_event(uuid,text,jsonb) set search_path=public,pg_temp;
+alter function public.location_engagement_metrics(uuid,timestamptz,timestamptz) set search_path=public,pg_temp;
+alter function public.fleet_metric_source_allowed(uuid,text) set search_path=public,pg_temp;
