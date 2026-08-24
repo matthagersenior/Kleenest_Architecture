@@ -1,6 +1,6 @@
 # Batch AO — Blocker Status Reconciliation
 
-Date: 2026-08-22
+Date: 2026-08-24
 
 This is the authoritative status addendum to `batch-ao-full-architecture-audit.md`. The original audit preserves the point-in-time blocker snapshot; this document records later commits and current Production verification that changed those statuses.
 
@@ -8,7 +8,7 @@ This is the authoritative status addendum to `batch-ao-full-architecture-audit.m
 
 ### A — follows
 
-Resolved by current Production verification. `follow_user(p_user_id uuid)` now inserts into `public.follows(follower_id, following_id)` with conflict protection and awards follow progression only for a new relationship. The application may therefore use `follow_user()` for creation while reads/deletion remain against the same canonical `follows` store. No second follow store is required.
+Resolved by current Production verification. `follow_user(p_user_id uuid)` now inserts into `public.follows(follower_id, following_id)` with conflict protection and awards follow progression only for a new relationship. The application may therefore use `follow_user()` for creation while reads/deletion remain against the same canonical `follows` store.
 
 ### B — favorites
 
@@ -20,39 +20,46 @@ Resolved by current Production verification plus the `dedupe_checkin_feature_eve
 
 ### D — QR/check-in authority
 
-Resolved at the architecture-contract level by:
-
-- `9f368e89bbf83638897c6bd40ba84faceb65c171` — establish server-authoritative check-in capability.
-- `cf8bd898ce72828cee3101aeb449de648fb53f43` — wire QR geofence and check-in routes.
-- `24a5c803e35bef14aac95152876b3b67f291ba49` — align QR and cross-tier leaderboard RPC signatures.
-
-The implementation must preserve the single authoritative check-in/reward path.
+Resolved at the architecture-contract level. `redeem_qr_code()` delegates check-in creation to `create_check_in()`, while `verify_checkin()` also delegates to the same command after QR/location/geofence validation. QR redemption records attribution separately and does not create a second check-in authority.
 
 ### E — bathroom verification authority
 
-Resolved by `86f93fa6f3dfa9f7c2a0fd7d15fb3fb738110714` (`fix: consolidate bathroom verification authority`). The migration establishes verification rows as the event authority, `process_bathroom_verification()` as the location projection/state authority, and `gamification_activity_trigger()` as the reward authority.
+Resolved. `record_bathroom_verification()` writes the verification event; `process_bathroom_verification()` owns the location projection; and the gamification trigger remains the reward authority. The trusted verification command no longer directly awards profile points.
 
 ### F — contest progression
 
-Resolved at the contract/capability level by `c5ffb4511fc4f22dcda259ead0a2fc209e7bae05` plus progression contract reconciliation in `4abd881cc1d5e3ca6e3794ea59162c0d28e2ac7d` and `b82019eeb2ba184d0a7d7ba0427bd6795dd12000`.
+Resolved at the contract/capability level. `join_contest()` owns membership only and explicitly delegates contest-entry reward ownership to the AFTER INSERT gamification trigger. Contest scoring reads authoritative progression/point state rather than creating a second reward path.
 
 ### H — canonical location normalization/evidence path
 
-Resolved for the canonical adapter path by:
+Resolved for the canonical adapter path. Mutations requiring canonical `locations.id` continue to fail closed when canonical resolution is unavailable.
 
-- `d2c909639dbe219b5e2c70f738fe477b9b36f41b` — canonical location/place contract.
-- `16b37db73134aa4f5072226503a0b716337af1e0` — map surface wired to canonical location network.
-- `601bfee883626617999fe89dadc58be0338cd925` — canonical location evidence adapter.
-- `36d1aae5faaa031e945bcdc235e9ed9bb699f7cd` — validate location evidence inputs.
+## Security gates — current Production verification
 
-Mutations requiring canonical `locations.id` must still fail closed when resolution is unavailable.
+### Partner benchmark authorization — resolved
 
-## Remaining security/review gates
+`get_partner_network_benchmark(uuid,date,date)` is `SECURITY DEFINER`, pins its search path to trusted schemas, and now scopes results through the network's `owner_business_id` against the authenticated user's `business_members` membership. Anonymous execution is disabled; authenticated execution remains available.
 
-The Partner benchmark authorization finding and SECURITY DEFINER classification work remain separate security gates until explicitly verified.
+### SECURITY DEFINER search paths — resolved
 
-Live-event mutation authority, enterprise engagement mutation semantics, notification mark-all mutation, and review-to-verification event semantics remain review items from the interoperability matrix; they do not block unrelated implementation batches.
+Production verification confirms all 323 public `SECURITY DEFINER` functions have an explicit search path. No public SECURITY DEFINER function remains unpinned.
+
+### Anonymous SECURITY DEFINER execution — classified
+
+Eight remaining SECURITY DEFINER functions are intentionally anonymous/public read capabilities: amenities catalog, cross-tier leaderboard, active contests, active events, QR engagement-program listing, map-nearby, nearby restrooms, and public data-catalog search. Privileged/admin/intelligence/notification command functions no longer have anonymous execution.
+
+## Remaining review gates
+
+The remaining interoperability review items are:
+
+- live-event mutation authority;
+- enterprise engagement mutation semantics;
+- notification mark-all mutation;
+- review-to-verification event semantics;
+- Fleet Business Metric Configuration, which remains a genuine new model and must be implemented as a thin business-scoped adapter over existing Fleet measurements.
+
+These are isolated capability review items, not generalized architecture blockers.
 
 ## Updated implementation gate
 
-Broad implementation is no longer blocked by A, B, C, D, E, F, or H. Security findings and the remaining review items are isolated gates and should be resolved when their corresponding capability is reached.
+Broad implementation is no longer blocked by the original A–H correctness set or the previously identified partner benchmark / SECURITY DEFINER security findings. Continue capability-by-capability verification and do not promote a worker/internal primitive to a browser capability without a verified caller contract.
