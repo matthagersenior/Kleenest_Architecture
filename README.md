@@ -81,7 +81,17 @@ The current audit standard explicitly includes:
 12. Duplicate retirement, visual QA, capability coverage verification, and end-to-end verification.
 13. Production promotion only after verification.
 
-Work is performed in large cross-domain batches. A batch may span runtime, domain services, UI, backend contracts, events, UX, and verification together; the requirement is traceability, not artificial single-goal isolation.
+## 2026-08-24 batch status
+
+The current production batch closed three concrete user-visible wiring gaps and upgraded workspace chrome:
+
+- **Maps:** successful GPS acquisition now drives external nearby discovery first, then the canonical Supabase nearby read. Bootstrap discovery follows the same GPS-first path. Permission denial is surfaced instead of silently presenting the St. Louis default as if it were the user's area.
+- **Routes:** `publish_live_network_event` is now a security-definer authenticated publication contract so route lifecycle actions can insert through the protected `live_network_events` boundary without weakening table RLS.
+- **Play:** the progression service now implements the methods already consumed by `ProgressionPage`, using the existing gamification/progression RPCs and governed tables.
+- **Workspace UI:** Consumer, Business, Fleet, Enterprise, and Owner Control now expose a membership-aware quick-action rail; Owner Control explicitly highlights **Platform CRUD**.
+- **Privacy:** the active public live-network delay is **1 hour**.
+
+Remaining work is still batch-oriented: action-by-action verification of Platform CRUD, Fleet metric helper privilege closure where the platform safety layer permits it, deeper Enterprise network read/write reconciliation, and full button→service→Supabase→refresh→telemetry verification.
 
 ## UX implementation requirements
 
