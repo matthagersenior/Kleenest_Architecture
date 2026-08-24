@@ -17,4 +17,4 @@ begin
  if p_user_ids is null or cardinality(p_user_ids)=0 then raise exception 'At least one target user is required'; end if;
  foreach v_user in array p_user_ids loop perform public.send_prioritized_notification('fleet',p_business_id,v_user::text,p_title,p_message,p_priority,p_metadata);v_count:=v_count+1;end loop;return v_count;
 end; $$;
-grant execute on function public.send_prioritized_notification_batch(uuid,uuid[],text,text,text,text,jsonb) to authenticated;
+grant execute on function public.send_prioritized_notification_batch(uuid,uuid[],text,text,text,jsonb) to authenticated;
