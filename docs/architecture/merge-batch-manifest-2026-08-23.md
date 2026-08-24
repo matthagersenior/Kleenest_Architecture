@@ -14,7 +14,7 @@ This is the execution manifest for bulk migration from known Architecture commit
 
 ## Merge rule
 
-A donor commit/file is mergeable when its behavior can be mapped to an existing canonical Architecture service and Supabase authority. Prefer cherry-pick/port of the smallest proven behavior set, then reconcile imports, workspace boundaries, entitlements, realtime/offline handling and telemetry. Never merge duplicate services, direct client writes that bypass canonical RPCs, or donor-owned state models.
+A donor commit/file is mergeable when its behavior can be mapped to an existing canonical Architecture service and Supabase authority. Prefer port of the smallest proven behavior set, then reconcile imports, workspace boundaries, entitlements, realtime/offline handling and telemetry. Never merge duplicate services, direct client writes that bypass canonical RPCs, or donor-owned state models.
 
 ## Canonical completion chain
 
@@ -126,6 +126,20 @@ Known required remediation before promoting privileged capability to fully wired
 - RLS policy coverage for tables currently lacking policies.
 - leaked-password protection.
 
+### K — Cross-product Supabase capability merge
+
+**Completed in main:**
+
+- Added canonical `enterpriseIntelligence` service over the existing Enterprise network/campaign/metric/outcome RPCs.
+- Exposed that service through `AppContext`, so Enterprise UI uses the same service container as Business/Fleet/Consumer/Admin.
+- Enterprise Command Center now consumes canonical Business QR analytics alongside locations, reviews, partner usage, and intelligence signals.
+- Enterprise Command Center now exposes the QR engagement surface directly, making QR activity part of enterprise network utilization rather than a detached Business feature.
+- Confirmed existing Fleet operations already consume `fleet_dashboard_summary_v2`, Fleet service opportunities, Fleet leaderboards, and operational controls through the canonical Fleet service.
+- Confirmed existing Business management already exposes the production QR lifecycle and `business_qr_analytics` RPC.
+- Audited donor repositories: `Kleenest_App/main` is the primary behavioral donor; `KleenestApp/main` is an earlier donor; `Kleenest` and `Kleenest-` are legacy archaeology sources. Their strongest proven behaviors are already represented in the donor ledger and canonical Architecture services.
+
+**Status:** merged/reconciled for Enterprise intelligence + QR utilization; remaining matrix gaps continue as separate capability clusters.
+
 ## Known commits already identified as useful merge anchors
 
 | Commit | Use |
@@ -135,6 +149,9 @@ Known required remediation before promoting privileged capability to fully wired
 | `88675abc` | reputation runtime exposure |
 | `91eaf64d` | capability registry/runtime reconciliation |
 | `5679064c` | Fleet/partner/notification reconciliation baseline |
+| `886111d` | Enterprise intelligence Supabase contract service |
+| `15a2d94` | AppContext Enterprise intelligence exposure |
+| `bd58d76` | Enterprise Command Center QR/intelligence integration |
 
 If a commit is already an ancestor of `main`, do not cherry-pick it again; use it as provenance evidence and merge only its still-missing descendant behavior.
 
@@ -150,6 +167,8 @@ If a commit is already an ancestor of `main`, do not cherry-pick it again; use i
 - Fleet operational/performance events
 - Fleet dashboard/scorecard projections
 - Enterprise partner analytics
+- Enterprise campaign/allocation/outcome contracts
+- QR creation/customization/redemption/attribution/engagement programs
 - notification event/materialization/delivery
 - offline canonical mutation replay
 - external ingestion jobs
