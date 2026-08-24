@@ -5,6 +5,7 @@ import CanonicalAppRuntime from './CanonicalAppRuntime.jsx';
 import { AppProvider } from './AppContext.jsx';
 import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.jsx';
+import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
 import './styles.css';
 
 const root = document.getElementById('root');
@@ -15,6 +16,7 @@ ReactDOM.createRoot(root).render(
       <RuntimeErrorBoundary>
         <AppProvider>
           <UniversalDiscoveryBootstrap />
+          <UniversalNetworkEventBridge />
           <CanonicalAppRuntime />
         </AppProvider>
       </RuntimeErrorBoundary>
