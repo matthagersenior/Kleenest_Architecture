@@ -17,6 +17,13 @@ export function createProgressionService(client) {
     return data ?? [];
   }
 
+  async function rewardHistory(limit = 50) {
+    await requireUser();
+    const { data, error } = await client.rpc('user_rewards_history', { p_limit: Math.min(Math.max(Number(limit) || 50, 1), 100) });
+    if (error) throw error;
+    return data;
+  }
+
   return Object.freeze({
     dashboard: async () => {
       await requireUser();
@@ -47,30 +54,19 @@ export function createProgressionService(client) {
     },
 
     events: async (limit = 10) => {
-      await requireUser();
-      // Business events are governed by business membership RLS. Keep the consumer
-      // surface safe and useful by exposing RSVP history instead of bypassing it.
+      const user = await requireUser();
       const { data, error } = await client
         .from('event_rsvps')
         .select('event_id,created_at')
-        .eq('user_id', (await client.auth.getUser()).data.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(Math.min(Math.max(Number(limit) || 10, 1), 25));
       if (error) throw error;
       return (data ?? []).map(row => ({ id: row.event_id, title: 'Event RSVP', created_at: row.created_at }));
     },
 
-    history: async (limit = 50) => {
-      await requireUser();
-      const { data, error } = await client.rpc('user_rewards_history', { p_limit: Math.min(Math.max(Number(limit) || 50, 1), 100) });
-      if (error) throw error;
-      return data;
-    },
-
-    rewardHistory: async (limit = 50) => {
-      const data = await this.history(limit);
-      return data;
-    },
+    history: rewardHistory,
+    rewardHistory,
 
     challenges: async (limit = 25) => selectRows('progression_challenges', 'id,code,name,description,challenge_type,target,reward_points,reward_badge_code,period,enabled,created_at,metrics_config', query => query.eq('enabled', true).order('created_at', { ascending: false }).limit(Math.min(Math.max(Number(limit) || 25, 1), 50))),
 
