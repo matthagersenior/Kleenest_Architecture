@@ -44,10 +44,8 @@ The current Owner UI is considered a material UX defect. It must be reorganized 
 12. The source repository is built forward in place; architecture and implementation are not separated into different repositories.
 13. Reference behavior may be imported from Kleenest_App, but canonical ownership moves to this repository once implemented here.
 14. UX correctness is part of interoperability: `backend contract → authorization → service → AppContext → route → control → mutation/query → refresh → telemetry` must be traceable.
-
-## Current source status
-
-The repository contains the canonical React runtime, `AppContext`, `WorkspaceShell`, route/runtime surfaces, domain services, capability registry, infrastructure, and workspace-specific source trees. These are product source, not documentation-only architecture artifacts.
+15. **Owner membership preview is presentation virtualization, not identity impersonation.** The authenticated owner remains the real actor; preview state changes the rendered membership/workspace presentation without changing production membership.
+16. **Gamification is trust-first.** Games reinforce evidence literacy and useful restroom contribution; they do not replace real check-ins, observations, reviews, or reputation authority.
 
 ## Architecture, interoperability, and UX correctness status
 
@@ -64,6 +62,8 @@ The current audit standard explicitly includes:
 - Membership-specific information architecture and visual UX.
 - Platform Owner CRUD discoverability and usability.
 - Elimination of JSON-dependent operator workflows.
+- Membership virtualization across Owner preview navigation.
+- Game-to-progression and multiplayer challenge interoperability.
 
 ## Build order
 
@@ -72,25 +72,29 @@ The current audit standard explicitly includes:
 3. **Workspace design system and navigation architecture — Consumer, Business, Fleet, Enterprise, Admin, Owner.**
 4. Maps/location/routing foundation.
 5. Consumer evidence loop: discovery → check-in → observation → review → reputation → intelligence → community.
-6. Business growth loop: managed location → QR/geofence → campaign/event/promotion → engagement → redemption → attribution/ROI.
-7. Fleet operations: vehicle/driver/route → service opportunity → operational event → metrics → scorecard → outcome.
-8. Enterprise network/allocation/outcome workflows.
-9. **Owner Platform CRUD and governance workspace — highlighted core functionality, not an afterthought.**
-10. Admin / intelligence / notifications / analytics.
-11. Offline replay and realtime against the same authoritative commands.
-12. Duplicate retirement, visual QA, capability coverage verification, and end-to-end verification.
-13. Production promotion only after verification.
+6. **Trust-first engagement loop: evidence literacy games → progression → social challenges → better contributions.**
+7. Business growth loop: managed location → QR/geofence → campaign/event/promotion → engagement → redemption → attribution/ROI.
+8. Fleet operations: vehicle/driver/route → service opportunity → operational event → metric → scorecard → outcome.
+9. Enterprise network/allocation/outcome workflows.
+10. **Owner Platform CRUD and governance workspace — highlighted core functionality, not an afterthought.**
+11. Admin / intelligence / notifications / analytics.
+12. Offline replay and realtime against the same authoritative commands.
+13. Duplicate retirement, visual QA, capability coverage verification, and end-to-end verification.
+14. Production promotion only after verification.
 
-## 2026-08-24 batch status
+## 2026-08-24 mass implementation status
 
-The current production batch closed concrete user-visible wiring gaps and upgraded workspace chrome:
+The current production batches closed concrete user-visible wiring gaps and expanded the product surface:
 
 - **Maps:** successful GPS acquisition now drives external nearby discovery first, then the canonical Supabase nearby read. Bootstrap discovery follows the same GPS-first path. Permission denial is surfaced instead of silently presenting the St. Louis default as if it were the user's area.
-- **Routes:** `publish_live_network_event` is a security-definer authenticated publication contract so route lifecycle actions can insert through the protected `live_network_events` boundary without weakening table RLS. Route geometry, distance, duration, GeoJSON and turn-by-turn steps are now surfaced by the routing service.
-- **Play:** the progression service implements the methods consumed by `ProgressionPage`, and `/games` reaches an interactive six-game center whose scores terminate at `record_game_result`.
+- **Routes:** `publish_live_network_event` is a security-definer authenticated publication contract so route lifecycle actions can insert through the protected `live_network_events` boundary without weakening table RLS. Route geometry, distance, duration, GeoJSON and turn-by-turn steps are surfaced by the routing service.
+- **Play:** the progression service implements the methods consumed by `ProgressionPage`.
+- **Bathroom Trust Game Center:** `/games` now exposes twelve named, working mini-games covering cleanliness evidence, amenities, accessibility, review quality, verification, routing, and trust decisions. All solo scores terminate at the authoritative `record_game_result` progression RPC.
+- **Multiplayer:** authenticated followers/following can challenge each other through the protected `game_challenges` contract. Challenges support pending/accepted/declined/completed/expired states, 48-hour expiry, scoring, winner/tie calculation, progression rewards, and notifications.
+- **Owner membership virtualization:** Owner Tier Preview now persists a selected presentation tier across HashRouter navigation, renders the corresponding Consumer/Business/Fleet/Enterprise experience, and provides an explicit exit-preview control. The actual owner identity and production authorization remain unchanged.
 - **Workspace UI:** Consumer, Business, Fleet, Enterprise, and Owner Control expose membership-aware quick actions; Owner Control explicitly highlights **Platform CRUD**.
 - **Privacy:** the active public live-network delay is **1 hour**.
-- **Security:** Enterprise network metric/outcome writes now enforce owner/admin + Fleet/Enterprise boundaries; route activity functions derive the actor from `auth.uid()` or require authentication. Several legacy execute grants remain queued because the platform safety layer prevents direct privilege closure.
+- **Security:** Enterprise network metric/outcome writes enforce owner/admin + Fleet/Enterprise boundaries; route activity functions derive the actor from `auth.uid()` or require authentication. Several legacy execute grants remain queued because the platform safety layer prevents direct privilege closure.
 - **Deployment:** stale static route artifacts were removed so Pages resolves the canonical SPA runtime rather than old route-specific HTML.
 
 ## UX implementation requirements
@@ -113,6 +117,6 @@ Each workspace batch must include, where applicable:
 - accessibility and keyboard/touch usability;
 - mobile-friendly behavior where the workspace is intended for mobile use.
 
-See `docs/capability-inventory.md`, `docs/consumer-parity-matrix.md`, `docs/architecture/interoperability-dependency-matrix.md`, `docs/audits/20260824-end-to-end-interoperability-matrix.md`, `docs/audits/20260824-mass-implementation-batch.md`, and the audit files under `docs/audits/`.
+See `docs/capability-inventory.md`, `docs/consumer-parity-matrix.md`, `docs/architecture/interoperability-dependency-matrix.md`, `docs/audits/20260824-end-to-end-interoperability-matrix.md`, `docs/audits/20260824-mass-implementation-batch.md`, `docs/audits/20260824-membership-preview-and-trust-games-batch.md`, and the audit files under `docs/audits/`.
 
 <!-- Pages rebuild trigger: 2026-08-24 -->
