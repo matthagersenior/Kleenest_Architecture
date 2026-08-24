@@ -5,10 +5,11 @@
 Sources reconciled in this pass:
 
 - `Kleenest_Architecture/main`
-- `Kleenest_App/main` architecture notes and route inventory
+- `Kleenest_App/main` legacy/reference implementation and route inventory
 - Production Supabase project `Kleenest Production`
-- Current Supabase schema, functions, RLS policies, feature catalog, capability coverage rollup, and production row counts
+- Current Supabase schema, functions, RLS policies, grants, feature catalog, capability coverage rollup, and production row counts
 - Current runtime services, route registration, button/action handlers, offline replay, live-network bridge, and capability telemetry
+- Current mobile/browser behavior reported from the deployed Pages surface
 
 The governing test is:
 
@@ -16,32 +17,37 @@ The governing test is:
 
 ## Immediate mass fixes completed
 
-1. Community review publication delay changed from 24 hours to **1 hour** at the canonical community service boundary.
+1. Community review publication delay is **1 hour** at the canonical community/public live-network boundary.
 2. Community surface stopped consuming `live_network_events`; it now consumes the canonical published-review service with contributor reputation/provenance.
 3. `fleet_metric_source_allowed(text,text)` is no longer executable by `anon` or `authenticated`; it remains an internal helper.
 4. Capability-gate telemetry now uses the governed `capabilityCoverage` service instead of only the generic data-feature event stream.
 5. Capability-gate feature codes were formalized in `feature_catalog` so access telemetry has a valid taxonomy.
-6. Live-network publishing contract was restored in Production because the runtime called an RPC that did not exist in the active database.
-7. Global live-network reads were restricted to delayed, non-presence event types; a security-definer public read RPC now exposes only event id/type/time and only events older than one hour.
+6. Live-network publishing is now an authenticated production RPC contract backed by the existing `live_network_events` table.
+7. Global live-network reads are restricted to delayed, non-presence event types; a security-definer public read RPC exposes only safe event fields and only events older than one hour.
 8. The global network-event bridge was aligned with the actual subscription callback shape and restricted to the safe event set.
 9. Offline replay was corrected to match Production RPC signatures, including check-in, restroom observation, route/live events, and Fleet operational events.
 10. Unsupported offline event types now fail and remain pending instead of being silently marked synced.
-11. Production Fleet operational-event replay contract was created against the **actual Production table schema**, which differs materially from the stale donor migration in the repo.
+11. Production Fleet operational-event replay contract was created against the actual Production table schema, which differs materially from the stale donor migration in the repo.
 12. New runtime contracts were explicitly revoked from `public`/`anon` and granted only to `authenticated`.
+13. Route/live publication was further hardened: `publish_live_network_event` is now `SECURITY DEFINER`, uses `auth.uid()` as the effective actor, has `authenticated` execute only, and is compatible with the route lifecycle service.
+14. Map startup is now explicitly GPS-first: successful user coordinates trigger external nearby discovery before the canonical Supabase nearby read. Permission denial is surfaced instead of silently treating the St. Louis default as the user's location.
+15. The universal discovery bootstrap now runs the same GPS-driven external discovery before the cached/universal discovery read.
+16. `ProgressionPage`'s previously missing progression-service methods are now implemented against the existing authoritative gamification/progression RPCs and governed tables.
+17. Workspace chrome now exposes membership-aware quick actions for Consumer, Business, Fleet, Enterprise, and Owner Control. Owner Control explicitly highlights Platform CRUD.
 
 ## Interoperability matrix
 
 | Capability | Production authority | Runtime service | UI termination | Action/mutation | Telemetry | Offline/realtime | Status |
 |---|---|---|---|---|---|---|---|
-| Location discovery | `locations`, `places`, discovery RPCs | maps + universalDiscovery | Map/Discover | search/filter/details | data-feature events | cache/live read | **wired** |
+| Location discovery | `locations`, `places`, discovery RPCs + external ingest | maps + universalDiscovery | Map/Discover | GPS → external ingest → nearby/prepare | data-feature/discovery events | cache/live read | **GPS-driven wired** |
 | Place details | location/intelligence facts | locations | Place | contribution/navigation actions | location/review events | partial | **wired/partial** |
 | Check-in | `check_ins` + `create_check_in` | checkins/engagement | Visit/Check-in | `create_check_in` | check-in event | offline replay repaired | **wired** |
 | Reviews | `reviews` + `create_review` | reviews/community | Place/Community | `create_review` | review event | offline replay requires canonical contract | **wired** |
 | Community feed | `reviews` + reputation | community | Community | none | coverage/review telemetry | 1h publication delay | **fixed** |
 | Reputation | `contributor_reputation` | reputation/progression | Community/Profile | server-authoritative | derived | backend/read-model | **partial** |
 | Favorites | `favorites` / `location_favorites` | favorites/community | Map/Place | favorite RPC | favorite event | partial | **partial** |
-| Routing | route plans/events + live events | routing/live | Route | route lifecycle | route/live events | replay repaired | **wired/partial** |
-| Live network | `live_network_events` | live | Activity/bridge | publish RPC | network event | safe delayed public read | **repaired** |
+| Routing | route plans/events + `live_network_events` | routing/live | Route | route request + lifecycle publication | route/live events | replay repaired | **RLS/publication fixed; routing geometry still partial** |
+| Live network | `live_network_events` | live | Activity/bridge/Route | authenticated publish RPC | network event | safe delayed public read | **repaired/hardened** |
 | Offline packs | offline pack tables | offline | Offline/Business | create pack | offline replay telemetry | IndexedDB + replay | **partial, replay repaired** |
 | Business operations | businesses/assets/campaigns/events/promotions | business | Business Manage | canonical business RPCs | business action events | offline pack | **wired/partial** |
 | Business intelligence | analytics/intelligence tables/RPCs | businessIntelligence | Business Intelligence | intelligence actions | capability/action coverage | partial | **partial** |
@@ -53,45 +59,51 @@ The governing test is:
 | General analytics | `data_feature_events` | analytics | cross-surface | event recording | event stream | none | **wired/partial** |
 | Notifications | notifications/push/delivery tables | notifications/platformNotifications | Activity/Notification | read/send/publish | notification events | partial | **partial** |
 | QR | QR/check-in/attribution tables | qr/qrAttribution | Business/Visit | QR creation/redemption | QR intelligence | partial | **partial** |
-| Progression | points/badges/challenges/games/quests | progression/quests/reputation | Play/Profile/Community | progression RPCs | progression metrics | partial | **partial** |
+| Progression | points/badges/challenges/games/quests | progression/quests/reputation | Play/Profile/Community | progression RPCs + governed reads | progression metrics | partial | **service/UI wiring fixed; game-depth partial** |
+| Workspace UX | membership/workspace model | AppContext + WorkspaceShell | all workspaces | quick actions/navigation | action telemetry where implemented | n/a | **navigation layer upgraded** |
+| Owner Platform CRUD | admin CRUD gateway/schema | admin operations | Owner Control | governed CRUD actions | audit/capability telemetry | n/a | **highlighted; action-by-action audit continues** |
 
 ## Hidden capability/data findings
 
 ### 1. Feature catalog was ahead of actual access telemetry
 
-Production has 22 original enabled features and the capability coverage rollup showed zero grants and zero access events. The runtime already had a capability-coverage service, but `CapabilityGate` was sending its access signal through the generic `data_feature_events` path instead of the governed `record_feature_access` path. The gate taxonomy also lacked feature-catalog entries for several gate kinds. This created a false appearance of an unused metrics system.
+Production has enabled features while the capability coverage rollup initially showed zero grants/access events. The runtime already had a capability-coverage service, but `CapabilityGate` was sending its access signal through the generic `data_feature_events` path instead of the governed `record_feature_access` path. The gate taxonomy also lacked feature-catalog entries for several gate kinds. This created a false appearance of an unused metrics system.
 
 Fixed by formalizing the gate taxonomy and routing gate outcomes through `capabilityCoverage`.
 
 ### 2. Community had been reading the wrong dataset
 
-The Community surface was reading `live_network_events`, while the canonical community service already had `listRecentReviews`. Production live-network rows were route/directions events with route origins/destinations in their payloads. This was both semantically incorrect and a physical-presence/privacy risk.
+The Community surface was reading `live_network_events`, while the canonical community service already had `listRecentReviews`. Production live-network rows included route/directions events. This was both semantically incorrect and a physical-presence/privacy risk.
 
 Fixed by wiring Community directly to reviews and contributor reputation with a one-hour publication delay.
 
-### 3. Live-network runtime contract drift
+### 3. Live-network route publication had an RLS/security-mode mismatch
 
-The runtime called `publish_live_network_event`, but the Production function did not exist even though the table existed and the service treated the RPC as authoritative. This made route/live publishing a hidden runtime failure.
+The route service was correctly calling the canonical publication RPC, but the active function executed as the invoker while the target table enforced authenticated actor ownership. The user-visible symptom was `new row violates row-level security policy for table "live_network_events"` during route actions.
 
-Fixed with a production-compatible invoker function and explicit grants.
+Fixed in Production with `harden_live_network_route_publication`: the RPC is `SECURITY DEFINER`, uses `auth.uid()` as the effective actor, and is executable only by `authenticated`. Table RLS remains in force.
 
-### 4. Live-network read policy was too broad
+### 4. Map discovery was technically location-aware but operationally ingestion-lagged
 
-Production originally allowed authenticated users to select all `live_network_events`. That dataset contained route origins/destinations and user route-start events. The global bridge also subscribed to the table and emitted location/network signals without an authorization boundary.
+The map already acquired GPS and queried nearby Supabase rows, but the external `ingest-map-candidates` path was only used as a fallback when existing data was empty. That meant a location with stale/partial ingested data could appear populated without triggering fresh user-location discovery.
 
-Fixed by restricting public reads to delayed non-presence event classes and aligning the bridge with the safe event set.
+Fixed by making startup explicitly GPS-first and running external nearby discovery before the canonical nearby read. This preserves the canonical location model while closing the missing propagation step: `user coordinates → external discovery → canonical locations → nearby query → markers`.
 
-### 5. Offline replay had multiple contract mismatches
+### 5. Play had a client/service contract mismatch
 
-The offline service called a restroom-observation signature that did not exist, called `record_location_route_event` with parameters that did not match Production, called a Fleet RPC absent from Production, and silently treated unknown event types as successful no-ops.
+`ProgressionPage` called dashboard, summary, leaderboard, contest, challenge, badge, milestone, reward-history, contest-join, and badge-evaluation methods that were absent from `createProgressionService`. The page therefore had a reachable UI route but a dead service boundary.
 
-Fixed by aligning replay with Production contracts and making unknown events fail closed.
+Fixed by implementing those methods against existing Supabase RPCs and governed tables. No parallel progression authority was created.
 
-### 6. Repository/Production migration drift
+### 6. Workspace UX was under-surfaced relative to backend capability
 
-The repository's `20260823210000_fleet_operational_telemetry.sql` describes a Fleet operational-event table with `actor_id`, `payload`, and `created_at`. Production instead has `vehicle_id`, `driver_id`, `route_id`, `event_value`, `unit`, latitude/longitude, `occurred_at`, and `metadata`. This is a concrete schema-drift boundary and explains why simply applying the donor migration would have been unsafe.
+The domain model already contained role-specific navigation for Consumer, Business, Fleet, Enterprise, and Owner, but high-value actions were distributed across route pages and technical sections. This made the deployed product appear to have fewer features than the backend actually exposed.
 
-The new repair migration targets the actual Production schema rather than replacing it.
+Fixed at the workspace shell layer with membership-aware quick actions and an explicit Owner Platform CRUD entry. This is a navigation/termination improvement, not a replacement for action-level verification.
+
+### 7. Owner Platform CRUD remains a product-level priority
+
+The owner backend and CRUD gateway exist, but the definition of done is not satisfied by route reachability alone. Every entity resource still needs verified create/read/update/delete controls, validation, authorization feedback, refresh, and audit context. JSON may remain an advanced diagnostic representation but is not an acceptable operator workflow.
 
 ## Current production signals
 
@@ -120,7 +132,7 @@ Audit every button in these surfaces against the canonical RPC and verify the re
 
 `verified behavior -> points -> badges/streaks -> challenges/games/quests -> contests -> leaderboard/rewards`
 
-Classify every backend-only progression table as either intentionally backend-only or requiring a UI termination.
+The progression service contract is now repaired; next verify each game/quest/challenge action and activate any backend-only progression capability that is intended to be user-facing.
 
 ### Batch 3 — Business growth loop
 
@@ -140,11 +152,17 @@ Reconcile all Fleet RPC signatures against Production before adding UI controls.
 
 Continue the owner/admin + Fleet/Enterprise authorization audit across every Enterprise read/write RPC.
 
-### Batch 6 — Offline/realtime contract sweep
+### Batch 6 — Owner Platform CRUD completion
+
+`Owner → resource catalog → list/search → create/edit → validation → authorization → mutation → refresh → audit`
+
+Treat Platform CRUD as the primary Owner workflow, not a technical subpage.
+
+### Batch 7 — Offline/realtime contract sweep
 
 For every offline event type and realtime event type, require an explicit canonical producer, authoritative replay target, idempotency key, error state, and privacy class.
 
-### Batch 7 — Security/grant reconciliation
+### Batch 8 — Security/grant reconciliation
 
 Classify all SECURITY DEFINER functions as public-safe, authenticated-user-safe, business-scoped, Fleet/Enterprise-scoped, owner/admin, or worker-only. Remove grants that do not match the classification. Continue RLS policy reconciliation without adding broad policies merely to silence the advisor.
 
