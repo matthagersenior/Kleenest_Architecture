@@ -44,6 +44,15 @@ The deployed screenshots exposed three product failures plus a structural deploy
 - `get_enterprise_partner_network` production boundary is owner/admin + Fleet/Enterprise scoped while preserving its exact return contract.
 - `create_partner_allocation` follows the same network ownership/tier boundary.
 - `get_partner_network_benchmark` was additionally hardened in Production with the same owner/admin + Fleet/Enterprise network boundary and recorded in a new migration.
+- `record_enterprise_partner_metric` now requires owner/admin membership on the owning Fleet/Enterprise business.
+- `record_enterprise_partner_campaign_outcome` now requires the same owner/admin + Fleet/Enterprise boundary and verifies the target partner is an active member of the campaign's network.
+
+### Route discovery / activity security
+
+- Route-discovery mutation functions now explicitly reject unauthenticated callers even where the platform safety layer continues to expose their execute grant.
+- `record_favorite_route_event` no longer trusts the caller-supplied user ID; it derives the actor from `auth.uid()`.
+- `record_location_route_event` now requires an authenticated actor and runs with an explicit hardened search path.
+- The platform safety layer continues to prevent direct closure of several legacy/public execute grants. These are recorded as queued rather than falsely marked closed.
 
 ### Fleet
 
@@ -54,6 +63,18 @@ The deployed screenshots exposed three product failures plus a structural deploy
 The canonical application entry imported `src/CanonicalAppRuntime.jsx`, but that root file contained an obsolete router importing pages from the wrong directory. The actual implemented runtime is under `src/runtime/`. This created a second router boundary and was capable of leaving Pages on stale or inconsistent UI behavior even while runtime files were being improved.
 
 The root file now delegates directly to the runtime router. This is an architectural correction, not a cosmetic workaround.
+
+## Security verification
+
+Production verification after the security batch shows:
+
+- `get_enterprise_partner_network`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
+- `record_enterprise_partner_metric`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
+- `record_enterprise_partner_campaign_outcome`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
+- `record_favorite_route_event`: actor is now derived from `auth.uid()` and an authentication guard is present; the legacy anonymous grant remains platform-safety queued.
+- `record_location_route_event`: authentication guard is present; the legacy anonymous grant remains platform-safety queued.
+- `prepare_route_discovery` and `populate_route_discovery_cache`: authentication guards are present; legacy anonymous grants remain platform-safety queued.
+- Public SECURITY DEFINER functions were reviewed separately; the remaining anonymous-executable set is limited to intentionally public catalog/map/home/leaderboard/QR reads plus the guarded route-activity functions above.
 
 ## Acceptance standard
 
