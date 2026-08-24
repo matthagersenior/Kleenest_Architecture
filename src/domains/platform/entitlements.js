@@ -5,6 +5,7 @@ export function createEntitlementsService(client){
   const canonicalConsumerTier=code=>{const tier=normalize(code);if(['enterprise','enterprise_user'].includes(tier))return'enterprise';if(['fleet','fleet_user'].includes(tier))return'fleet';if(['premium','family'].includes(tier))return'premium';return'free';};
   const canonicalBusinessTier=record=>{const tier=normalize(record?.service_tier??record?.business_tier??record?.tier);if(tier==='enterprise'||record?.enterprise_fleet_enabled===true)return'enterprise';if(tier==='fleet'||record?.fleet_enabled===true&&Number(record?.location_limit??0)>5)return'fleet';if(tier==='growth'||tier==='business_growth'||tier==='business')return'growth';return'standard';};
   const adsEnabledForTier=tier=>canonicalConsumerTier(tier)==='free';
+  const businessIntelligenceAuthorized=async businessId=>['growth','fleet','enterprise'].includes(canonicalBusinessTier(await rpc('get_business_service_entitlement',{p_business_id:businessId})));
   return Object.freeze({
     product:()=>rpc('get_current_user_product_entitlements'),
     consumerTier:(userId)=>rpc('get_effective_consumer_tier',{p_user_id:userId}),
@@ -16,6 +17,7 @@ export function createEntitlementsService(client){
     canonicalBusinessTier:async businessId=>canonicalBusinessTier(await rpc('get_business_service_entitlement',{p_business_id:businessId})),
     businessLocationCap:(businessId)=>rpc('get_business_location_cap',{p_business_id:businessId}),
     engagementAuthorized:(businessId)=>rpc('business_engagement_authorized',{p_business_id:businessId}),
+    businessIntelligenceAuthorized,
     qrAuthorized:(businessId)=>rpc('business_qr_authorized',{p_business_id:businessId}),
     enterpriseAuthorized:(businessId)=>rpc('business_enterprise_authorized',{p_business_id:businessId}),
     fleetAuthorized:(businessId)=>rpc('business_fleet_authorized',{p_business_id:businessId}),
