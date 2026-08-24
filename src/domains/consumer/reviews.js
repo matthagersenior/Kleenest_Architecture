@@ -1,5 +1,6 @@
 export function createReviewService(client) {
   if (!client) throw new Error('Supabase client is required.');
+  function emit(type, detail) { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(`kleenest:${type}`, { detail })); }
   return Object.freeze({
     create: async ({ locationId, checkInId = null, stars, cleanlinessPct = null, comment = null }) => {
       if (!locationId || !Number.isFinite(Number(stars))) throw new Error('Location and rating are required.');
@@ -11,6 +12,8 @@ export function createReviewService(client) {
         p_comment: comment
       });
       if (error) throw error;
+      emit('review-created', { review: data, reviewId: data?.id || data?.review_id || null, locationId, checkInId });
+      emit('progression-updated', { type: 'review_created', review: data, reviewId: data?.id || data?.review_id || null, locationId });
       return data;
     },
     rewards: async reviewId => {
@@ -33,6 +36,8 @@ export function createReviewService(client) {
         p_attention_amenity_ids: attentionAmenityIds
       });
       if (error) throw error;
+      emit('review-evidence-updated', { reviewId, result: data });
+      emit('progression-updated', { type: 'review_evidence_updated', reviewId, result: data });
       return data;
     }
   });
