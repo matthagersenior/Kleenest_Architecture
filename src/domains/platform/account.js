@@ -11,5 +11,6 @@ export function createPlatformAccountService(client){
     registerPush:(endpoint,subscription)=>rpc('register_notification_push_subscription',{p_endpoint:endpoint,p_subscription:subscription}),
     removePush:(endpoint)=>rpc('remove_notification_push_subscription',{p_endpoint:endpoint}),
     resolveNearbyRecipients:(locationId,radius=10000)=>rpc('resolve_nearby_notification_recipients',{p_location_id:locationId,p_radius_m:Number(radius)}),
+    requestDeletion:(reason='')=>rpc('request_account_deletion',{p_reason:String(reason||'')}),
   });
 }
