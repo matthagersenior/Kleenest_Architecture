@@ -80,11 +80,10 @@ core/
   errors
 
 locations/
-  discovery
-  quality
-  verification
-  ingestion
-
+discovery/
+quality/
+verification/
+ingestion/
 maps/
 routing/
 offline/
@@ -119,5 +118,26 @@ Required conceptual separation:
 `Observe` ≠ `Configure` ≠ `Operate`.
 
 This contract intentionally does not invent Supabase RPC names or tables for the missing Fleet configuration layer. Its Production implementation must be designed and tested separately.
+
+## Caller-class registry requirement
+
+Every capability entry in the governed catalogue must carry a `caller_class` classification. Use:
+
+- `public` — intentionally callable without an authenticated identity;
+- `authenticated` — callable by a signed-in actor subject to normal entitlement/role checks;
+- `privileged` — a protected command requiring domain/business/enterprise authorization beyond generic authentication;
+- `worker` — internal orchestration, materialization, delivery, ingestion, cache/lease, or other infrastructure not exposed as a browser capability.
+
+A capability may not be promoted from `worker` to a browser-facing class solely because a UI feature would be convenient. Verify the caller and authorization contract first.
+
+For live-network capabilities, distinguish product commands from infrastructure primitives. Route publication may be a privileged Fleet/Enterprise command; notification queueing, delivery materialization, raw recipient resolution, and identity/cache primitives default to `worker` until a verified public caller contract exists.
+
+## Verification gate
+
+Before changing grants, deleting a capability, or exposing a backend primitive to the browser, trace:
+
+`UI/runtime → domain service → capability → authorization → Supabase/Edge Function → side effects → state refresh → telemetry`
+
+Absence from code search is `unverified`, not proof of orphan status. Migration/history and worker callers must be checked before destructive changes.
 
 This contract is intentionally independent of React. React pages/components are consumers of these domains.
