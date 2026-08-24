@@ -7,6 +7,7 @@ import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.jsx';
 import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
 import './styles.css';
+import './tier-experience.css';
 
 const root = document.getElementById('root');
 
