@@ -1,5 +1,4 @@
 -- Cover every remaining foreign key with an index unless an equivalent leading-column index already exists.
--- This is intentionally generated from catalog metadata so future absorbed datasets receive the same protection.
 do $$
 declare r record; v_name text;
 begin
@@ -11,13 +10,9 @@ begin
    join lateral unnest(con.conkey) with ordinality as k(attnum,ord) on true
    join pg_attribute a on a.attrelid=c.oid and a.attnum=k.attnum
    where con.contype='f' and n.nspname='public' and k.ord=1
-     and not exists (
-       select 1 from pg_index i
-       where i.indrelid=c.oid and i.indisvalid and i.indisready and i.indnkeyatts>=1
-         and i.indkey[0]=a.attnum
-     )
+     and not exists (select 1 from pg_index i where i.indrelid=c.oid and i.indisvalid and i.indisready and i.indnkeyatts>=1 and i.indkey[0]=a.attnum)
  loop
-   v_name:=left('idx_fk_'||table_name||'_'||column_name,55)||'_'||substr(md5(r.conname),1,8);
+   v_name:=left('idx_fk_'||r.table_name||'_'||r.column_name,55)||'_'||substr(md5(r.conname),1,8);
    execute format('create index if not exists %I on %I.%I (%I)',v_name,r.schema_name,r.table_name,r.column_name);
  end loop;
 end $$;
