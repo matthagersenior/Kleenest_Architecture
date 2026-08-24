@@ -54,6 +54,18 @@ The deployed screenshots exposed three product failures plus a structural deploy
 - `record_location_route_event` now requires an authenticated actor and runs with an explicit hardened search path.
 - The platform safety layer continues to prevent direct closure of several legacy/public execute grants. These are recorded as queued rather than falsely marked closed.
 
+### Owner Platform CRUD
+
+- The Owner CRUD gateway remains platform-owner-only and resource/action allowlisted.
+- Immutable system fields (`id`, `created_at`, `updated_at`, `deleted_at`) are now blocked from operator create/update payloads at the backend gateway, not merely hidden by the UI.
+- The UI remains form/table driven; JSON is only an advanced representation for structured fields.
+
+### Pages deployment safety
+
+- Added a Pages source smoke test that rejects committed route-specific `index.html` files that could shadow the canonical SPA.
+- The Pages workflow now runs that smoke test before the production build.
+- Production artifact validation remains in place for the React bundle and stale capability-explorer signatures.
+
 ### Fleet
 
 - `fleet_metric_source_allowed(text,text)` remains internally protected because direct privilege closure is blocked by the platform safety layer; the repository records the queued state rather than falsely claiming completion.
@@ -71,7 +83,9 @@ Production verification after the security batch shows:
 - `get_enterprise_partner_network`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
 - `record_enterprise_partner_metric`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
 - `record_enterprise_partner_campaign_outcome`: `SECURITY DEFINER`, authenticated execute, no anonymous execute.
-- `record_favorite_route_event`: actor is now derived from `auth.uid()` and an authentication guard is present; the legacy anonymous grant remains platform-safety queued.
+- `publish_live_network_event`: `SECURITY DEFINER`, authenticated execute, no anonymous execute, actor derived from `auth.uid()`.
+- `record_game_result`: `SECURITY DEFINER`, authenticated execute, no anonymous execute, user derived from `auth.uid()`.
+- `record_favorite_route_event`: actor is derived from `auth.uid()` and an authentication guard is present; the legacy anonymous grant remains platform-safety queued.
 - `record_location_route_event`: authentication guard is present; the legacy anonymous grant remains platform-safety queued.
 - `prepare_route_discovery` and `populate_route_discovery_cache`: authentication guards are present; legacy anonymous grants remain platform-safety queued.
 - Public SECURITY DEFINER functions were reviewed separately; the remaining anonymous-executable set is limited to intentionally public catalog/map/home/leaderboard/QR reads plus the guarded route-activity functions above.
