@@ -83,15 +83,15 @@ The current audit standard explicitly includes:
 
 ## 2026-08-24 batch status
 
-The current production batch closed three concrete user-visible wiring gaps and upgraded workspace chrome:
+The current production batch closed concrete user-visible wiring gaps and upgraded workspace chrome:
 
 - **Maps:** successful GPS acquisition now drives external nearby discovery first, then the canonical Supabase nearby read. Bootstrap discovery follows the same GPS-first path. Permission denial is surfaced instead of silently presenting the St. Louis default as if it were the user's area.
-- **Routes:** `publish_live_network_event` is now a security-definer authenticated publication contract so route lifecycle actions can insert through the protected `live_network_events` boundary without weakening table RLS.
-- **Play:** the progression service now implements the methods already consumed by `ProgressionPage`, using the existing gamification/progression RPCs and governed tables.
-- **Workspace UI:** Consumer, Business, Fleet, Enterprise, and Owner Control now expose a membership-aware quick-action rail; Owner Control explicitly highlights **Platform CRUD**.
+- **Routes:** `publish_live_network_event` is a security-definer authenticated publication contract so route lifecycle actions can insert through the protected `live_network_events` boundary without weakening table RLS. Route geometry, distance, duration, GeoJSON and turn-by-turn steps are now surfaced by the routing service.
+- **Play:** the progression service implements the methods consumed by `ProgressionPage`, and `/games` reaches an interactive six-game center whose scores terminate at `record_game_result`.
+- **Workspace UI:** Consumer, Business, Fleet, Enterprise, and Owner Control expose membership-aware quick actions; Owner Control explicitly highlights **Platform CRUD**.
 - **Privacy:** the active public live-network delay is **1 hour**.
-
-Remaining work is still batch-oriented: action-by-action verification of Platform CRUD, Fleet metric helper privilege closure where the platform safety layer permits it, deeper Enterprise network read/write reconciliation, and full button→service→Supabase→refresh→telemetry verification.
+- **Security:** Enterprise network metric/outcome writes now enforce owner/admin + Fleet/Enterprise boundaries; route activity functions derive the actor from `auth.uid()` or require authentication. Several legacy execute grants remain queued because the platform safety layer prevents direct privilege closure.
+- **Deployment:** stale static route artifacts were removed so Pages resolves the canonical SPA runtime rather than old route-specific HTML.
 
 ## UX implementation requirements
 
@@ -113,6 +113,6 @@ Each workspace batch must include, where applicable:
 - accessibility and keyboard/touch usability;
 - mobile-friendly behavior where the workspace is intended for mobile use.
 
-See `docs/capability-inventory.md`, `docs/consumer-parity-matrix.md`, `docs/architecture/interoperability-dependency-matrix.md`, `docs/audits/20260824-end-to-end-interoperability-matrix.md`, and the audit files under `docs/audits/`.
+See `docs/capability-inventory.md`, `docs/consumer-parity-matrix.md`, `docs/architecture/interoperability-dependency-matrix.md`, `docs/audits/20260824-end-to-end-interoperability-matrix.md`, `docs/audits/20260824-mass-implementation-batch.md`, and the audit files under `docs/audits/`.
 
 <!-- Pages rebuild trigger: 2026-08-24 -->
