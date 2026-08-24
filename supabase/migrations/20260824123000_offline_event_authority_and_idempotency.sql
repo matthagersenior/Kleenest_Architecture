@@ -17,18 +17,15 @@ create index if not exists offline_pack_events_pack_pending_idx
   on public.offline_pack_events(pack_id, synced_at)
   where synced_at is null;
 
-update public.offline_pack_events
-set actor_id = coalesce(actor_id, u.id)
-from public.offline_packs p
-join auth.users u on u.id = p.created_by
-where offline_pack_events.pack_id = p.id
-  and offline_pack_events.actor_id is null;
+update public.offline_pack_events e
+set actor_id = coalesce(e.actor_id, e.user_id)
+where e.actor_id is null;
 
 create or replace function public.queue_offline_pack_event(
   p_pack_id uuid,
   p_event_type text,
   p_payload jsonb default '{}'::jsonb,
-  p_client_event_id uuid default gen_random_uuid()
+  p_client_event_id text default gen_random_uuid()::text
 )
 returns public.offline_pack_events
 language plpgsql
@@ -41,12 +38,12 @@ begin
   if not exists (
     select 1 from public.offline_packs p
     where p.id = p_pack_id
-      and p.created_by = auth.uid()
+      and p.user_id = auth.uid()
       and coalesce(p.expires_at, now()) > now()
   ) then raise exception 'offline pack access denied'; end if;
 
-  insert into public.offline_pack_events(id,pack_id,event_type,payload,client_event_id,created_at,actor_id)
-  values(gen_random_uuid(),p_pack_id,p_event_type,coalesce(p_payload,'{}'::jsonb),p_client_event_id,now(),auth.uid())
+  insert into public.offline_pack_events(id,pack_id,user_id,event_type,payload,client_event_id,created_at,actor_id)
+  values(gen_random_uuid(),p_pack_id,auth.uid(),p_event_type,coalesce(p_payload,'{}'::jsonb),p_client_event_id,now(),auth.uid())
   on conflict (client_event_id) do update
     set payload = excluded.payload
   returning * into v_row;
@@ -54,6 +51,6 @@ begin
 end;
 $$;
 
-grant execute on function public.queue_offline_pack_event(uuid,text,jsonb,uuid) to authenticated;
+grant execute on function public.queue_offline_pack_event(uuid,text,jsonb,text) to authenticated;
 
 commit;
