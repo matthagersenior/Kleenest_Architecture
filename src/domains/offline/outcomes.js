@@ -1,0 +1,1 @@
+export function createOfflineOutcomeService(supabase){const rpc=async(name,args)=>{const{data,error}=await supabase.rpc(name,args);if(error)throw error;return data};return Object.freeze({createPack:({businessId,routeId,metadata={}}={})=>rpc('create_offline_pack',{p_business_id:businessId,p_route_id:routeId,p_metadata:metadata})})}
