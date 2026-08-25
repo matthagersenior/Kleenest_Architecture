@@ -2,6 +2,7 @@ export const PRODUCT_TIERS = Object.freeze({
   user: Object.freeze({
     free: Object.freeze({ id: 'user_free', label: 'Free', ads: true, workspaces: ['consumer'], capabilities: ['consumer', 'premium'], lockedCapabilities: [] }),
     premium: Object.freeze({ id: 'user_premium', label: 'Premium', ads: false, workspaces: ['consumer'], capabilities: ['consumer', 'premium'], lockedCapabilities: [] }),
+    family: Object.freeze({ id: 'user_family', label: 'Family', ads: false, workspaces: ['consumer'], capabilities: ['consumer', 'premium', 'family'], lockedCapabilities: [] }),
     fleet: Object.freeze({ id: 'user_fleet', label: 'Fleet User', ads: false, workspaces: ['consumer', 'fleet'], capabilities: ['consumer', 'premium', 'fleet'], lockedCapabilities: ['enterprise'] }),
     enterprise: Object.freeze({ id: 'user_enterprise', label: 'Enterprise User', ads: false, workspaces: ['consumer', 'fleet', 'enterprise'], capabilities: ['consumer', 'premium', 'fleet', 'enterprise'], lockedCapabilities: [] }),
   }),
@@ -23,6 +24,7 @@ export function normalizeProductTier(raw = 'free') {
   if (value.includes('business') && value.includes('fleet')) return 'business.fleet';
   if (value.includes('business') && value.includes('growth')) return 'business.growth';
   if (value.includes('business')) return 'business.standard';
+  if (value.includes('family')) return 'user.family';
   if (value.includes('enterprise')) return 'user.enterprise';
   if (value.includes('fleet')) return 'user.fleet';
   if (value.includes('premium') || value.includes('pro')) return 'user.premium';
