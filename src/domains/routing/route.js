@@ -2,21 +2,48 @@ import { createLiveNetworkService, LIVE_EVENT_TYPES } from '../live/network.js';
 import { createRouteCache } from './cache.js';
 
 const DEFAULT_ROUTER = 'https://router.project-osrm.org';
-const GEOCODER = 'https://nominatim.openstreetmap.org/search';
+const GEOCODERS = [
+  {
+    name: 'photon',
+    url: query => `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(query)}`,
+    parse: payload => payload?.features?.[0]?.geometry?.coordinates,
+  },
+  {
+    name: 'nominatim',
+    url: query => `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(query)}`,
+    parse: payload => payload?.[0] ? [Number(payload[0].lon), Number(payload[0].lat)] : null,
+  },
+];
 
 function coordinates(value) {
   if (Array.isArray(value) && value.length >= 2) return [Number(value[0]), Number(value[1])];
   const match = String(value || '').trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
   return match ? [Number(match[2]), Number(match[1])] : null;
 }
+
+function validCoordinates(point) {
+  return Array.isArray(point) && point.length >= 2 && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1]));
+}
+
 async function geocode(value) {
   const direct = coordinates(value); if (direct) return direct;
   const query = String(value || '').trim(); if (!query) return null;
-  const response = await fetch(`${GEOCODER}?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`Unable to locate “${query}”.`);
-  const rows = await response.json(); if (!rows?.[0]) throw new Error(`Unable to locate “${query}”.`);
-  return [Number(rows[0].lon), Number(rows[0].lat)];
+  const attempts = [];
+  for (const provider of GEOCODERS) {
+    try {
+      const response = await fetch(provider.url(query), { headers: { Accept: 'application/json' } });
+      if (!response.ok) { attempts.push(`${provider.name}: ${response.status}`); continue; }
+      const payload = await response.json();
+      const point = provider.parse(payload);
+      if (validCoordinates(point)) return [Number(point[0]), Number(point[1])];
+      attempts.push(`${provider.name}: no result`);
+    } catch (error) {
+      attempts.push(`${provider.name}: ${error?.message || 'request failed'}`);
+    }
+  }
+  throw new Error(`Unable to locate “${query}”. Try a fuller address, city/state, ZIP code, or coordinates.`);
 }
+
 async function canonicalCoordinates(client, locationId) {
   if (!locationId) return null;
   const { data, error } = await client.from('locations').select('id,latitude,longitude,name,address,city,state').eq('id', locationId).maybeSingle();
@@ -24,6 +51,7 @@ async function canonicalCoordinates(client, locationId) {
   if (!data || data.latitude == null || data.longitude == null) return null;
   return [Number(data.longitude), Number(data.latitude)];
 }
+
 async function canonicalCoordinatesMany(client, locationIds = []) {
   const ids = [...new Set(locationIds.filter(Boolean).map(String))]; if (!ids.length) return [];
   const { data, error } = await client.from('locations').select('id,latitude,longitude').in('id', ids); if (error) return [];
