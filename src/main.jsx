@@ -10,6 +10,7 @@ import './styles.css';
 import './tier-experience.css';
 import './runtime/designSystem.css';
 import './runtime/visualOverrides.css';
+import './runtime/mobileWorkspaceFix.css';
 
 const root = document.getElementById('root');
 ReactDOM.createRoot(root).render(
