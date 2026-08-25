@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import QuickRestroomActions from './QuickRestroomActions.preview.jsx';
 import { useAppContext } from '../AppContext.jsx';
+import './homeOperations.css';
 
 const actions = [
   { to:'/map', icon:MapPin, title:'Find a restroom', text:'Nearby locations, cleanliness signals, amenities, photos, and community trust.', label:'Explore nearby' },
@@ -39,7 +40,7 @@ function OperationsOverview({ workspace, tier }){
       {to:'/enterprise/partners',icon:Users,title:'Partners & networks',text:'Coordinate partner programs, networks and enterprise relationships.',label:'Open partner network'},
       {to:'/enterprise/performance',icon:BarChart3,title:'Enterprise performance',text:'Measure portfolio outcomes, engagement and operational performance.',label:'Open performance'},
     ];
-  return <section className="home-section"><div className="section-heading"><div><span className="eyebrow">OPERATIONS OVERVIEW</span><h2>{enterprise?'Enterprise':fleet?'Fleet':'Business'} control panels</h2><p className="section-subtitle">Your operational dashboards are surfaced here instead of being buried behind the workspace switcher.</p></div></div><div className="home-grid">{cards.map(({to,icon:Icon,title,text,label})=><Link className="home-card" to={to} key={to}><span className="home-card-icon"><Icon size={21}/></span><div><h3>{title}</h3><p>{text}</p><span className="text-link">{label} <ArrowRight size={14}/></span></div><ArrowRight className="home-card-arrow" size={17}/></Link>)}</div></section>;
+  return <section className="home-section operations-overview"><div className="section-heading"><div><span className="eyebrow">OPERATIONS OVERVIEW</span><h2>{enterprise?'Enterprise':fleet?'Fleet':'Business'} control panels</h2><p className="section-subtitle">Your operational dashboards are surfaced here instead of being buried behind the workspace switcher.</p></div></div><div className="home-grid operations-overview-grid">{cards.map(({to,icon:Icon,title,text,label})=><Link className="home-card operations-card" to={to} key={to}><span className="home-card-icon"><Icon size={21}/></span><div className="operations-card-content"><h3>{title}</h3><p>{text}</p><span className="text-link">{label} <ArrowRight size={14}/></span></div><ArrowRight className="home-card-arrow" size={17}/></Link>)}</div></section>;
 }
 
 export default function Home(){
