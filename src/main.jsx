@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
-import CanonicalAppRuntime from './CanonicalAppRuntime.jsx';
+import MapRouteOverride from './runtime/MapRouteOverride.jsx';
 import { AppProvider } from './AppContext.jsx';
 import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.jsx';
@@ -19,7 +19,7 @@ ReactDOM.createRoot(root).render(
         <AppProvider>
           <UniversalDiscoveryBootstrap />
           <UniversalNetworkEventBridge />
-          <CanonicalAppRuntime />
+          <MapRouteOverride />
         </AppProvider>
       </RuntimeErrorBoundary>
     </HashRouter>
