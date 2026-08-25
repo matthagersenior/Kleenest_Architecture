@@ -1,6 +1,7 @@
 import { ArrowRight, Compass, Heart, MapPin, MessageCircle, Sparkles, Trophy, Users, Search, Route as RouteIcon, Camera, CircleUserRound, ShieldCheck, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
+import QuickRestroomActions from './QuickRestroomActions.jsx';
 import { useAppContext } from '../AppContext.jsx';
 
 const actions = [
@@ -26,6 +27,8 @@ export default function Home(){
         </div>
         <div className="hero-actions"><Link to="/map" className="button primary"><MapPin size={17}/>Find a restroom</Link><Link to="/check-in" className="button secondary"><Sparkles size={17}/>Verify a visit</Link></div>
       </section>
+
+      <QuickRestroomActions />
 
       <section className="home-section">
         <div className="section-heading"><div><span className="eyebrow">THE KLEENEST LOOP</span><h2>Make your next visit count</h2><p className="section-subtitle">Everything you need is here. Free and Premium use the same consumer experience.</p></div><Link className="text-link" to="/activity">Your activity <ArrowRight size={15}/></Link></div>
