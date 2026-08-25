@@ -1,0 +1,18 @@
+/* Mobile workspace/control-panel layout overrides. Loaded last so legacy grid rules cannot win. */
+@media (max-width: 700px){
+  .home-section{width:100%;max-width:100%;padding-left:18px;padding-right:18px;overflow:visible}
+  .home-grid,.home-grid.workspace-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%;max-width:100%;gap:14px}
+  .home-card{width:100%;min-width:0;min-height:0;padding:20px 18px;gap:13px;overflow:hidden}
+  .home-card>div{min-width:0;max-width:none;flex:1 1 auto}
+  .home-card h3,.home-card p,.home-card .text-link{max-width:100%;overflow-wrap:anywhere;word-break:normal}
+  .home-card h3{font-size:18px;line-height:1.2}
+  .home-card p{font-size:14px;line-height:1.55}
+  .home-card-arrow{display:none}
+  .section-heading{display:block}
+  .section-heading h2{font-size:28px;line-height:1.05}
+}
+@media (min-width:701px) and (max-width:1000px){
+  .home-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .home-card{min-width:0}
+  .home-card>div{min-width:0}
+}
