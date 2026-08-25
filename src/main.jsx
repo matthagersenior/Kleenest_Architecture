@@ -8,9 +8,9 @@ import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.j
 import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
 import './styles.css';
 import './tier-experience.css';
+import './runtime/designSystem.css';
 
 const root = document.getElementById('root');
-
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <HashRouter>
