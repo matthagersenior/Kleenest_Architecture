@@ -3,10 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "apps/consumer-mobile",
+    "apps/business-mobile",
+    "packages/mobile-core"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mobile:consumer": "npm --workspace @kleenest/consumer-mobile start",
+    "mobile:business": "npm --workspace @kleenest/business-mobile start"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
