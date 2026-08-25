@@ -20,12 +20,13 @@ async function geocode(value) {
 async function canonicalCoordinates(client, locationId) {
   if (!locationId) return null;
   const { data, error } = await client.from('locations').select('id,latitude,longitude,name,address,city,state').eq('id', locationId).maybeSingle();
-  if (error) throw error; if (!data || data.latitude == null || data.longitude == null) return null;
+  if (error) return null;
+  if (!data || data.latitude == null || data.longitude == null) return null;
   return [Number(data.longitude), Number(data.latitude)];
 }
 async function canonicalCoordinatesMany(client, locationIds = []) {
   const ids = [...new Set(locationIds.filter(Boolean).map(String))]; if (!ids.length) return [];
-  const { data, error } = await client.from('locations').select('id,latitude,longitude').in('id', ids); if (error) throw error;
+  const { data, error } = await client.from('locations').select('id,latitude,longitude').in('id', ids); if (error) return [];
   const byId = new Map((data || []).filter(row => row.latitude != null && row.longitude != null).map(row => [String(row.id), [Number(row.longitude), Number(row.latitude)]]));
   return ids.map(id => byId.get(id)).filter(Boolean);
 }
@@ -34,13 +35,14 @@ async function buildGeometry(client, { origin, destination, locationId, stopLoca
   const start = coordinates(origin) || await geocode(origin);
   const explicitStops = [...new Set((stopLocationIds || []).filter(Boolean).map(String))];
   const selectedId = locationId ? String(locationId) : null;
-  const stopIds = [...new Set([...explicitStops, ...(selectedId && explicitStops.length ? [selectedId] : [])])];
-  const stopPoints = await canonicalCoordinatesMany(client, stopIds);
-  const useSelectedAsDestination = Boolean(selectedId && explicitStops.length === 0);
+  const destinationCoordinates = coordinates(destination);
+  const stopPoints = await canonicalCoordinatesMany(client, explicitStops);
+  const useSelectedAsDestination = Boolean(selectedId && explicitStops.length === 0 && !destinationCoordinates);
   const middle = [...stopPoints];
   let end = null;
   if (useSelectedAsDestination) end = await canonicalCoordinates(client, selectedId);
-  if (!end && destination) end = coordinates(destination) || await geocode(destination);
+  if (!end && destinationCoordinates) end = destinationCoordinates;
+  if (!end && destination) end = await geocode(destination);
   if (!end && middle.length) end = middle.pop();
   if (!end) throw new Error('Choose a destination or restroom stop before building the route.');
   const points = [start, ...middle, ...((end && !middle.includes(end)) ? [end] : [])];
