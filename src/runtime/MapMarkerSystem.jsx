@@ -1,26 +1,32 @@
 import L from 'leaflet';
 
-export const MAP_ICON_OPTIONS = [
-  { id: 'auto', label: 'Automatic', glyph: '✦' },
-  { id: 'restroom', label: 'Restroom', glyph: '🚻' },
-  { id: 'restaurant', label: 'Restaurant', glyph: '🍽️' },
-  { id: 'cafe', label: 'Cafe', glyph: '☕' },
-  { id: 'hotel', label: 'Hotel', glyph: '🏨' },
-  { id: 'retail', label: 'Retail', glyph: '🛍️' },
-  { id: 'gas_station', label: 'Gas station', glyph: '⛽' },
-  { id: 'health', label: 'Health', glyph: '⚕️' },
-  { id: 'government', label: 'Government', glyph: '🏛️' },
-  { id: 'park', label: 'Park', glyph: '🌳' },
-  { id: 'service', label: 'Service', glyph: '🔧' },
-  { id: 'brand', label: 'Brand', glyph: '🏷️' }
+const ICONS={
+  auto:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+  restroom:'<path d="M8 4v7m0-3h8m0-4v7M6 20l2-6 2 6m4 0 2-6 2 6M7 4h2m6 0h2"/>',
+  restaurant:'<path d="M6 3v8m3-8v8M4 3v5a3 3 0 0 0 6 0V3m7 0v18m0-12c2-2 3-4 0-6"/>',
+  cafe:'<path d="M5 8h11v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Zm11 2h2a3 3 0 0 1 0 6h-2M8 4c0 1 1 1 1 2m3-2c0 1 1 1 1 2"/>',
+  hotel:'<path d="M4 18V6m0 8h16v4M8 14v-3h4a3 3 0 0 1 3 3M8 18v2m12-2v2"/>',
+  retail:'<path d="M4 9h16l-1 11H5L4 9Zm3 0V7a5 5 0 0 1 10 0v2M9 13h6"/>',
+  gas_station:'<path d="M5 20V5h9v15M5 8h9m3 12V9l3 3v8a2 2 0 0 1-4 0m-8-9h5"/>',
+  health:'<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.7-7 10-7 10Zm0-12v6m-3-3h6"/>',
+  government:'<path d="m3 9 9-5 9 5M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18"/>',
+  park:'<path d="M12 20V8m0 3-4-3m4 0 4-3M5 20h14M7 15c-2-1-2-4 1-5 0-3 4-4 5-1 1-3 5-2 5 1 3 1 3 4 1 5H7Z"/>',
+  service:'<path d="m14 6 4 4-9 9H5v-4l9-9Zm-2-2 2-2 4 4-2 2"/>',
+  brand:'<path d="M4 7h16l-2 13H6L4 7Zm4 0a4 4 0 0 1 8 0M9 12h6"/>'
+};
+export const MAP_ICON_OPTIONS=[
+  {id:'auto',label:'Automatic'},{id:'restroom',label:'Restroom'},{id:'restaurant',label:'Restaurant'},
+  {id:'cafe',label:'Cafe'},{id:'hotel',label:'Hotel'},{id:'retail',label:'Retail'},{id:'gas_station',label:'Gas station'},
+  {id:'health',label:'Health'},{id:'government',label:'Government'},{id:'park',label:'Park'},{id:'service',label:'Service'},{id:'brand',label:'Brand'}
 ];
-export const CATEGORY_GLYPHS = Object.fromEntries(MAP_ICON_OPTIONS.map(item => [item.id, item.glyph]));
-export function safeText(value) { return String(value ?? '').replace(/[&<>\"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[char])); }
-export function placeBrand(place) { return place.brand || place.operator_name || place.business_name || ''; }
-function businessIdentity(place) { const id = place.business_id || place.businessId; if (!id) return null; try { const raw = window.localStorage.getItem(`kleenest.map.identity.${id}`); return raw ? JSON.parse(raw) : null; } catch { return null; } }
-export function placeLogo(place) { const identity = businessIdentity(place); return identity?.logoUrl || place.logo_url || place.logoUrl || place.business_logo_url || place.businessLogoUrl || place.image_url || place.imageUrl || ''; }
-export function placeIconKey(place) { const identity = businessIdentity(place); const explicit = identity?.iconKey || place.map_icon || place.map_icon_key || place.business_icon || place.icon_key; if (explicit && CATEGORY_GLYPHS[explicit]) return explicit; if (place.category && CATEGORY_GLYPHS[place.category]) return place.category; return 'auto'; }
-export function placeStatus(place) { const raw = String(place.bathroom_verification_status || place.bathroom_status || place.verification_status || '').toLowerCase(); if (place.is_verified === true || raw === 'verified') return { key: 'verified', label: 'Verified', glyph: '✓' }; if (place.sponsored === true || place.is_sponsored === true || place.premium === true) return { key: 'premium', label: 'Premium', glyph: '◆' }; if (place.open_now === true || place.is_open === true) return { key: 'open', label: 'Open', glyph: '●' }; if (place.bathroom_reported === true || place.category === 'restroom' || raw) return { key: 'reported', label: 'Community reported', glyph: '•' }; return { key: 'unknown', label: 'Location signal', glyph: '•' }; }
-export function markerIcon(place, { selected = false, favorite = false } = {}) { const iconKey = placeIconKey(place); const glyph = CATEGORY_GLYPHS[iconKey] || '✦'; const logo = placeLogo(place); const status = placeStatus(place); const brand = placeBrand(place); const identity = logo ? `<img class="marker-logo" src="${safeText(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'\"/><span class="marker-fallback">${glyph}</span>` : `<span class="marker-fallback">${glyph}</span>`; return L.divIcon({ className: 'kleenest-marker-wrapper', html: `<div class="map-marker ${status.key} ${selected ? 'selected' : ''} ${favorite ? 'favorite' : ''}" aria-label="${safeText(place.name || brand || 'Kleenest location')}"><span class="marker-identity">${identity}</span><span class="marker-status" title="${safeText(status.label)}">${status.glyph}</span>${brand ? `<small>${safeText(brand)}</small>` : ''}</div>`, iconSize: [58, 54], iconAnchor: [29, 50], popupAnchor: [0, -46] }); }
-export function clusterIcon(count, category = 'all') { const glyph = CATEGORY_GLYPHS[category] || '✦'; return L.divIcon({ className: 'kleenest-cluster-wrapper', html: `<div class="map-cluster"><span>${glyph}</span><strong>${count}</strong></div>`, iconSize: [52, 52], iconAnchor: [26, 26] }); }
-export function clusterPlaces(places, zoom, forceIndividual = false) { if (forceIndividual || zoom >= 13) return places.map(place => ({ type: 'place', place })); const cellSize = zoom <= 10 ? 0.12 : 0.035; const groups = new Map(); for (const place of places) { const lat = Number(place.latitude); const lng = Number(place.longitude); if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue; const key = `${Math.floor(lat / cellSize)}:${Math.floor(lng / cellSize)}`; const group = groups.get(key) || []; group.push(place); groups.set(key, group); } return Array.from(groups.values()).map(group => { if (group.length === 1) return { type: 'place', place: group[0] }; const lat = group.reduce((sum, p) => sum + Number(p.latitude), 0) / group.length; const lng = group.reduce((sum, p) => sum + Number(p.longitude), 0) / group.length; const categories = group.map(p => p.category).filter(Boolean); const category = categories.length ? categories.sort()[0] : 'all'; return { type: 'cluster', places: group, latitude: lat, longitude: lng, category }; }); }
+export const CATEGORY_GLYPHS=Object.fromEntries(MAP_ICON_OPTIONS.map(item=>[item.id,item.id]));
+export function safeText(value){return String(value??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));}
+export function placeBrand(place){return place.brand||place.operator_name||place.business_name||'';}
+function businessIdentity(place){const id=place.business_id||place.businessId;if(!id)return null;try{const raw=window.localStorage.getItem(`kleenest.map.identity.${id}`);return raw?JSON.parse(raw):null;}catch{return null;}}
+export function placeLogo(place){const identity=businessIdentity(place);return identity?.logoUrl||place.logo_url||place.logoUrl||place.business_logo_url||place.businessLogoUrl||place.image_url||place.imageUrl||'';}
+export function placeIconKey(place){const identity=businessIdentity(place);const explicit=identity?.iconKey||place.map_icon||place.map_icon_key||place.business_icon||place.icon_key;if(explicit&&ICONS[explicit])return explicit;if(place.category&&ICONS[place.category])return place.category;if(place.category==='shopping')return'retail';if(place.category==='gas')return'gas_station';return'auto';}
+export function placeStatus(place){const raw=String(place.bathroom_verification_status||place.bathroom_status||place.verification_status||'').toLowerCase();if(place.is_verified===true||raw==='verified')return{key:'verified',label:'Verified',glyph:'✓'};if(place.sponsored===true||place.is_sponsored===true||place.premium===true)return{key:'premium',label:'Premium',glyph:'◆'};if(place.open_now===true||place.is_open===true)return{key:'open',label:'Open',glyph:'●'};if(place.bathroom_reported===true||place.category==='restroom'||raw)return{key:'reported',label:'Community reported',glyph:'•'};return{key:'unknown',label:'Location signal',glyph:'•'};}
+const svgIcon=key=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[key]||ICONS.auto}</svg>`;
+export function markerIcon(place,{selected=false,favorite=false}={}){const iconKey=placeIconKey(place),logo=placeLogo(place),status=placeStatus(place),brand=placeBrand(place);const identity=logo?`<img class="marker-logo" src="${safeText(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"/><span class="marker-fallback">${svgIcon(iconKey)}</span>`:`<span class="marker-fallback">${svgIcon(iconKey)}</span>`;return L.divIcon({className:'kleenest-marker-wrapper',html:`<div class="map-marker ${status.key} ${selected?'selected':''} ${favorite?'favorite':''}" aria-label="${safeText(place.name||brand||'Kleenest location')}"><span class="marker-identity">${identity}</span><span class="marker-status" title="${safeText(status.label)}">${status.glyph}</span>${brand?`<small>${safeText(brand)}</small>`:''}</div>`,iconSize:[58,54],iconAnchor:[29,50],popupAnchor:[0,-46]});}
+export function clusterIcon(count,category='all'){const key=ICONS[category]?category:'auto';return L.divIcon({className:'kleenest-cluster-wrapper',html:`<div class="map-cluster"><span class="cluster-symbol">${svgIcon(key)}</span><strong>${count}</strong></div>`,iconSize:[52,52],iconAnchor:[26,26]});}
+export function clusterPlaces(places,zoom,forceIndividual=false){if(forceIndividual||zoom>=13)return places.map(place=>({type:'place',place}));const cellSize=zoom<=10?0.12:0.035;const groups=new Map();for(const place of places){const lat=Number(place.latitude),lng=Number(place.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))continue;const key=`${Math.floor(lat/cellSize)}:${Math.floor(lng/cellSize)}`;const group=groups.get(key)||[];group.push(place);groups.set(key,group);}return Array.from(groups.values()).map(group=>{if(group.length===1)return{type:'place',place:group[0]};const lat=group.reduce((sum,p)=>sum+Number(p.latitude),0)/group.length,lng=group.reduce((sum,p)=>sum+Number(p.longitude),0)/group.length,categories=group.map(p=>p.category).filter(Boolean),category=categories.length?categories.sort()[0]:'all';return{type:'cluster',places:group,latitude:lat,longitude:lng,category};});}
