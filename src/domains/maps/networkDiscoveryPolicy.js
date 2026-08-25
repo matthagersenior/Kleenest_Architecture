@@ -1,6 +1,6 @@
 export const NETWORK_DISCOVERY_POLICY = Object.freeze({
   defaultRadiusKm: 8,
-  maxRadiusKm: 50,
+  maxRadiusKm: 100,
   sources: ['supabase', 'community', 'osm', 'geocache'],
   freshnessMinutes: 15,
   collectOnOpen: true,
