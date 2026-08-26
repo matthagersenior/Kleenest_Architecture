@@ -1,0 +1,70 @@
+name: Three-Surface Parity Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify product surfaces exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/consumer-mobile/app/_layout.tsx
+          test -f apps/business-mobile/app/_layout.tsx
+          test -d src/runtime
+          test -f docs/architecture/three-surface-feature-contract.md
+
+      - name: Verify web is a first-class product surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/AppContext.jsx
+          test -f src/runtime/BusinessManagePage.jsx
+          test -f src/runtime/BusinessAnalyticsPage.jsx
+          test -f src/runtime/BusinessIntelligencePage.jsx
+
+      - name: Verify Business web does not depend on Business Mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R "business-mobile\|apps/business-mobile" src/runtime src/domains 2>/dev/null; then
+            echo 'Web runtime must not depend on the Business Mobile application.'
+            exit 1
+          fi
+
+      - name: Verify canonical front-to-back contract is documented
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "canonical data/RPC" docs/architecture/three-surface-feature-contract.md
+          grep -q "visible control" docs/architecture/three-surface-feature-contract.md
+          grep -q "resulting fact" docs/architecture/three-surface-feature-contract.md
+
+      - name: Verify mobile clients use publishable Supabase boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -R "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" packages/mobile-core apps/consumer-mobile apps/business-mobile >/dev/null
+          if grep -R "service_role\|SUPABASE_SERVICE_ROLE_KEY" packages/mobile-core apps/consumer-mobile apps/business-mobile 2>/dev/null; then
+            echo 'Service-role credentials must never ship in mobile source.'
+            exit 1
+          fi
+
+      - name: Verify no obvious UI-only placeholders in product entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E "coming soon|TODO.*implement|not implemented|placeholder" apps/consumer-mobile/app apps/business-mobile/app 2>/dev/null; then
+            echo 'Product entry points contain an obvious incomplete implementation marker.'
+            exit 1
+          fi
