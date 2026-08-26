@@ -32,10 +32,12 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Verify React context imports before build
+        run: node scripts/verify-react-hooks.mjs
 
       - name: Build consumer runtime
         run: npm run build
@@ -47,17 +49,7 @@ jobs:
           test -s dist/index.html
           test -d dist/assets
           test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
-
-          required_routes=(
-            '/map'
-            '/search'
-            '/ai-search'
-            '/route'
-            '/notifications'
-            '/family'
-            '/profile'
-          )
-
+          required_routes=( '/map' '/search' '/ai-search' '/route' '/notifications' '/family' '/profile' )
           for route in "${required_routes[@]}"; do
             if ! grep -Rqi --fixed-strings "$route" dist --exclude='*.map'; then
               echo "ERROR: expected consumer route not found in production artifact: $route"
@@ -85,7 +77,8 @@ jobs:
           {
             echo '## Kleenest Consumer Journey Audit'
             echo ''
-            echo '- Build: attempted'
+            echo '- React context import audit: checked'
+            echo '- Production build: attempted'
             echo '- Canonical routes: checked'
             echo '- Semantic AI surface: checked'
             echo '- Stale internal capability explorer: checked'
