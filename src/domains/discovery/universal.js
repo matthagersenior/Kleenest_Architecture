@@ -1,6 +1,23 @@
 const DISCOVERY_FALLBACK_TTL_MS = 5 * 60 * 1000;
 const DISCOVERY_FALLBACK_MAX_ENTRIES = 24;
+const DISCOVERY_MAX_CATEGORY_LENGTH = 64;
+const DISCOVERY_MAX_SEARCH_LENGTH = 160;
 const discoveryFallbackCache = new Map();
+
+const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, userId = undefined, category = undefined, search = undefined, limit = 1000 } = {}) => {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  const parsedRadius = Number(radiusKm);
+  const radius = Math.min(Math.max(Number.isFinite(parsedRadius) ? parsedRadius : 50, 1), 80.467);
+  const safeCategory = typeof category === 'string' ? category.trim().slice(0, DISCOVERY_MAX_CATEGORY_LENGTH) || undefined : undefined;
+  const safeSearch = typeof search === 'string' ? search.trim().slice(0, DISCOVERY_MAX_SEARCH_LENGTH) || undefined : undefined;
+  const parsedLimit = Number(limit);
+  const safeLimit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 1000, 25), 2000);
+
+  return Object.freeze({ lat, lng, radius, safeUserId: userId || undefined, safeCategory, safeSearch, safeLimit });
+};
 
 const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeUserId }) => [
   safeUserId || 'anonymous',
@@ -36,32 +53,27 @@ export function createUniversalDiscoveryService(client) {
   if (!client) throw new Error('Supabase client is required.');
   return Object.freeze({
     nearby: async ({ latitude, longitude, radiusKm = 50, userId = undefined, category = undefined, search = undefined, limit = 1000, discover = false } = {}) => {
-      const lat = Number(latitude);
-      const lng = Number(longitude);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return [];
-      const radius = Math.min(Math.max(Number(radiusKm) || 1, 1), 80.467);
-      const safeCategory = typeof category === 'string' && category.trim() ? category.trim() : undefined;
-      const safeSearch = typeof search === 'string' && search.trim() ? search.trim() : undefined;
-      const safeLimit = Math.min(Math.max(Number(limit) || 1000, 25), 2000);
+      const request = normalizeDiscoveryRequest({ latitude, longitude, radiusKm, userId, category, search, limit });
+      if (!request) return [];
+      const { lat, lng, radius, safeUserId, safeCategory, safeSearch, safeLimit } = request;
 
-      let safeUserId;
       try {
         const { data: authData } = await client.auth.getUser();
-        safeUserId = authData?.user?.id || undefined;
+        request.safeUserId = authData?.user?.id || safeUserId;
       } catch {
-        safeUserId = undefined;
+        request.safeUserId = safeUserId;
       }
 
       const params = {
         p_lat: lat,
         p_lng: lng,
         p_radius_m: Math.round(radius * 1000),
-        p_user_id: safeUserId,
+        p_user_id: request.safeUserId,
         p_category: safeCategory,
         p_search: safeSearch,
         p_limit: safeLimit
       };
-      const cacheKey = fallbackKey({ lat, lng, radius, safeCategory, safeSearch, safeUserId });
+      const cacheKey = fallbackKey({ ...request, safeUserId: request.safeUserId });
       const fallback = () => readFallback(cacheKey);
 
       const execute = async () => {
