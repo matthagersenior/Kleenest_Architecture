@@ -30,6 +30,8 @@ jobs:
         run: node --version && npm --version
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Verify React context imports
+        run: node scripts/verify-react-hooks.mjs
       - name: Verify Pages source ownership
         run: node scripts/pages-smoke.mjs
       - name: Configure GitHub Pages
