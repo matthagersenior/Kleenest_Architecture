@@ -10,13 +10,13 @@ export const NETWORK_DISCOVERY_POLICY = Object.freeze({
 
 export function buildDiscoveryRequest({ latitude, longitude, radiusKm = NETWORK_DISCOVERY_POLICY.defaultRadiusKm } = {}) {
   if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) return null;
-  return {
+  return Object.freeze({
     latitude: Number(latitude),
     longitude: Number(longitude),
     radiusKm: Math.min(Math.max(Number(radiusKm) || NETWORK_DISCOVERY_POLICY.defaultRadiusKm, 1), NETWORK_DISCOVERY_POLICY.maxRadiusKm),
-    sources: NETWORK_DISCOVERY_POLICY.sources,
+    sources: [...NETWORK_DISCOVERY_POLICY.sources],
     collect: NETWORK_DISCOVERY_POLICY.collectOnOpen,
     enrichExisting: NETWORK_DISCOVERY_POLICY.enrichExisting,
     shareNetworkEvents: NETWORK_DISCOVERY_POLICY.shareNetworkEvents,
-  };
+  });
 }
