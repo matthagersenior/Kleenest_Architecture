@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CheckCircle2, MapPin, QrCode, Star, Trophy, Zap, Ticket, Camera, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import WorkspaceShell from './WorkspaceShell.jsx';
@@ -24,41 +24,59 @@ export default function VisitSurface() {
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const operationRef = useRef(0);
+
+  const begin = key => {
+    const token = operationRef.current + 1;
+    operationRef.current = token;
+    setBusy(key); setError('');
+    return token;
+  };
+  const current = token => operationRef.current === token;
 
   const run = async (key, fn) => {
-    setBusy(key); setError('');
-    try { const data = await fn(); setResult(data); return data; }
-    catch (e) { setError(e?.message || 'We could not complete that action.'); return null; }
-    finally { setBusy(''); }
+    const token = begin(key);
+    try {
+      const data = await fn(token);
+      if (current(token)) setResult(data);
+      return data;
+    } catch (e) {
+      if (current(token)) setError(e?.message || 'We could not complete that action.');
+      return null;
+    } finally {
+      if (current(token)) setBusy('');
+    }
   };
 
-  const settleCheckIn = async (data) => {
+  const settleCheckIn = async (data, token) => {
     const normalized = Array.isArray(data) ? data[0] : data;
     const nextLocationId = normalized?.location_id || normalized?.locationId || '';
     const nextPlaceId = normalized?.place_id || normalized?.placeId || '';
-    if (nextLocationId) setLocationId(String(nextLocationId));
-    if (nextPlaceId) setPlaceId(String(nextPlaceId));
     const resolvedLocationId = nextLocationId || locationId || '';
-    setCheckIn(normalized);
     const checkInId = normalized?.id || normalized?.check_in_id || normalized?.checkin_id;
     const [rewards] = await Promise.all([
       checkInId ? services.progression.checkinRewards(checkInId) : Promise.resolve(null),
       resolvedLocationId ? services.analytics.checkIn(resolvedLocationId, { checkInId, pointsAwarded: Number(normalized?.points_awarded || normalized?.points || 0) }) : Promise.resolve(null),
     ]);
+    if (!current(token)) return rewards || data;
+    if (nextLocationId) setLocationId(String(nextLocationId));
+    if (nextPlaceId) setPlaceId(String(nextPlaceId));
+    setCheckIn(normalized);
     window.dispatchEvent(new CustomEvent('kleenest:checkin-completed', { detail: { checkInId, locationId: resolvedLocationId } }));
     return rewards || data;
   };
 
-  const doQr = () => run('qr', async () => settleCheckIn(await services.checkins.byQr({ placeId, qrToken: qr })));
+  const doQr = () => run('qr', async token => settleCheckIn(await services.checkins.byQr({ placeId, qrToken: qr }), token));
   const doSingleUse = () => run('single', () => services.qr.consumeSingleUse(qr));
   const doRedeem = () => run('redeem', () => services.qr.redeem(qr));
-  const doGps = () => run('gps', async () => {
+  const doGps = () => run('gps', async token => {
     if (!navigator.geolocation) throw new Error('Location services are unavailable.');
     return new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(
         async ({ coords }) => {
           try {
-            resolve(await settleCheckIn(await services.checkins.byGps({ latitude: coords.latitude, longitude: coords.longitude, locationId: locationId || null })));
+            const data = await services.checkins.byGps({ latitude: coords.latitude, longitude: coords.longitude, locationId: locationId || null });
+            resolve(await settleCheckIn(data, token));
           } catch (e) { reject(e); }
         },
         () => reject(new Error('Location permission is required for GPS verification.')),
@@ -67,17 +85,20 @@ export default function VisitSurface() {
     });
   });
 
-  const submitReview = () => run('review', async () => {
+  const submitReview = () => run('review', async token => {
     const resolvedLocationId = locationId || checkIn?.location_id || checkIn?.locationId;
     if (!resolvedLocationId) throw new Error('A canonical location is required before publishing a review.');
-    const data = await services.reviews.create({ locationId: resolvedLocationId, checkInId: checkIn?.id || checkIn?.check_in_id, stars: Number(review.stars), comment: review.comment.trim() });
+    const checkInId = checkIn?.id || checkIn?.check_in_id;
+    const stars = Number(review.stars);
+    const comment = review.comment.trim();
+    const data = await services.reviews.create({ locationId: resolvedLocationId, checkInId, stars, comment });
     const reviewRow = Array.isArray(data) ? data[0] : data;
     const reviewId = reviewRow?.id || reviewRow?.review_id;
     await Promise.all([
-      services.analytics.reviewSubmitted(resolvedLocationId, { reviewId, rating: Number(review.stars) }),
+      services.analytics.reviewSubmitted(resolvedLocationId, { reviewId, rating: stars }),
       reviewId ? services.progression.reviewRewards(reviewId) : Promise.resolve(null),
     ]);
-    window.dispatchEvent(new CustomEvent('kleenest:rewards-updated', { detail: { reviewId, locationId: resolvedLocationId } }));
+    if (current(token)) window.dispatchEvent(new CustomEvent('kleenest:rewards-updated', { detail: { reviewId, locationId: resolvedLocationId } }));
     return data;
   });
 
