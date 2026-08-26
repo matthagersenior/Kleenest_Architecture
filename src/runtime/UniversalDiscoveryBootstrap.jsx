@@ -6,28 +6,33 @@ export default function UniversalDiscoveryBootstrap() {
   const started = useRef(false);
 
   useEffect(() => {
-    // Canonical map RPCs and ingestion are authenticated. Do not race the
-    // initial auth/profile load with background discovery.
+    // Canonical map discovery is authenticated. Do not race the initial
+    // auth/profile load or request a second browser location from bootstrap.
     if (!configured || loading || !user || !services?.maps || started.current) return;
     started.current = true;
-    if (!navigator.geolocation) return;
 
     let active = true;
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      if (!active) return;
-      try {
-        await services.maps.nearby({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          radiusKm: 8,
-          category: 'all',
-          limit: 500,
-          discover: true
-        });
-      } catch {
+    try {
+      const raw = window.localStorage.getItem('kleenest.lastLocation');
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const latitude = Number(saved?.latitude);
+      const longitude = Number(saved?.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+      services.maps.nearby({
+        latitude,
+        longitude,
+        radiusKm: 8,
+        category: 'all',
+        limit: 500,
+        discover: true
+      }).catch(() => {
         // Bootstrap is opportunistic. The active map owns user-visible errors.
-      }
-    }, () => {}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+      });
+    } catch {
+      // Ignore malformed local state; the active map owns location acquisition.
+    }
 
     return () => { active = false; };
   }, [configured, loading, user, services]);
