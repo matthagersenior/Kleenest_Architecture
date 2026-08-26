@@ -49,8 +49,10 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
 
   async function reviews(locationId, limit = 30) {
     if (!locationId) return [];
+    // Keep the primary review query independent from review_photos RLS. A denied
+    // photo relation must never make otherwise-public reviews disappear.
     const { data, error } = await client.from('reviews')
-      .select('id,location_id,user_id,check_in_id,stars,cleanliness_pct,comment,status,business_reply,business_replied_at,created_at,profiles:user_id(display_name,avatar_url),review_photos(id,storage_path,mime_type,width,height,sort_order)')
+      .select('id,location_id,user_id,check_in_id,stars,cleanliness_pct,comment,status,business_reply,business_replied_at,created_at,profiles:user_id(display_name,avatar_url)')
       .eq('location_id', locationId).order('created_at', { ascending: false }).limit(Math.min(Math.max(Number(limit) || 30, 1), 100));
     if (error) throw error;
     const rows = data || [];
@@ -58,10 +60,21 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     let reputationByUser = new Map();
     if (userIds.length) {
       const { data: reputationRows, error: reputationError } = await client.from('contributor_reputation').select('user_id,reputation_score,verification_level,verified_checkins_count,confirmed_observations_count').in('user_id', userIds);
-      if (reputationError) throw reputationError;
-      reputationByUser = new Map((reputationRows || []).map(row => [row.user_id, row]));
+      if (!reputationError) reputationByUser = new Map((reputationRows || []).map(row => [row.user_id, row]));
     }
-    return rows.map(row => ({ ...row, rating: row.stars, body: row.comment, photos: row.review_photos || [], verified: Boolean(row.check_in_id), reputation: reputationByUser.get(row.user_id) || null }));
+    let photosByReview = new Map();
+    try {
+      const reviewIds = rows.map(row => row.id).filter(Boolean);
+      if (reviewIds.length) {
+        const { data: photoRows, error: photoError } = await client.from('review_photos').select('id,review_id,storage_path,mime_type,width,height,sort_order').in('review_id', reviewIds).order('sort_order', { ascending: true });
+        if (!photoError) for (const photo of photoRows || []) {
+          const list = photosByReview.get(photo.review_id) || [];
+          list.push(photo);
+          photosByReview.set(photo.review_id, list);
+        }
+      }
+    } catch {}
+    return rows.map(row => ({ ...row, rating: row.stars, body: row.comment, photos: photosByReview.get(row.id) || [], verified: Boolean(row.check_in_id), reputation: reputationByUser.get(row.user_id) || null }));
   }
 
   async function interactionState(locationId) {
