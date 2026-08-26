@@ -53,7 +53,7 @@ const writeFallback = (key, locations) => {
 export function createUniversalDiscoveryService(client) {
   if (!client) throw new Error('Supabase client is required.');
   return Object.freeze({
-    nearby: async ({ latitude, longitude, radiusKm = 50, category = undefined, search = undefined, limit = 1000, discover = false } = {}) => {
+    nearby: async ({ latitude, longitude, radiusKm = 50, category = undefined, search = undefined, limit = 1000, discover = true } = {}) => {
       const request = normalizeDiscoveryRequest({ latitude, longitude, radiusKm, category, search, limit });
       if (!request) return [];
       const { lat, lng, radius, safeCategory, safeSearch, safeLimit } = request;
