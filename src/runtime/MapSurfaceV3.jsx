@@ -1,0 +1,100 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import L from 'leaflet';
+import { CheckCircle2, Heart, LocateFixed, Navigation, Search, SlidersHorizontal } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
+import { useNavigate } from 'react-router-dom';
+import WorkspaceShell from './WorkspaceShell.jsx';
+import { useAppContext } from '../AppContext.jsx';
+import { MAP_CATEGORIES } from '../domains/maps/network.js';
+import { brandIconCandidates, markerIcon, placeBrand, placeStatus, safeText, spiderfyPosition } from './MapMarkerSystem.jsx';
+import './MapSurfaceV3.css';
+
+const RADII_MILES = [1, 2, 5, 10, 25, 50];
+const MILES_TO_KM = 1.609344;
+const keyOf = p => String(p?.location_id || p?.id || '');
+const nameOf = p => p?.name || p?.brand || p?.operator_name || 'Kleenest location';
+const distanceOf = p => {
+  const n = Number(p?.distance_meters ?? p?.distance ?? Number(p?.distance_km) * 1000);
+  return Number.isFinite(n) ? n : null;
+};
+const coordinateKey = p => `${Number(p.latitude).toFixed(6)},${Number(p.longitude).toFixed(6)}`;
+const hav = (a,b,c,d) => { const r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,q=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2; return 6371008.8*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q)); };
+const withDistance = (rows, origin) => origin ? rows.map(p => { const d=Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude)) ? hav(origin[0],origin[1],Number(p.latitude),Number(p.longitude)) : null; return d==null?p:{...p,distance_meters:d,distance_km:d/1000,distance_miles:d/1609.344}; }) : rows;
+const normalize = value => Array.isArray(value) ? value.filter(Boolean) : Array.isArray(value?.locations) ? value.locations.filter(Boolean) : Array.isArray(value?.results) ? value.results.filter(Boolean) : [];
+const miles = meters => meters == null ? null : meters / 1609.344;
+
+function popupLogo(place){
+  const candidates=brandIconCandidates(place);
+  if(!candidates.length)return '';
+  return `<img class="marker-logo" src="${safeText(candidates[0])}" alt="" data-brand-candidates='${safeText(JSON.stringify(candidates))}' referrerpolicy="no-referrer" onerror="const a=JSON.parse(this.dataset.brandCandidates||'[]');a.shift();if(a.length)this.src=a[0];else this.style.display='none';"/>`;
+}
+function resilientImageProps(candidates){return{src:candidates[0],'data-candidates':JSON.stringify(candidates),referrerPolicy:'no-referrer',onError:e=>{try{const n=JSON.parse(e.currentTarget.dataset.candidates||'[]').slice(1);if(n.length){e.currentTarget.dataset.candidates=JSON.stringify(n);e.currentTarget.src=n[0];}else e.currentTarget.style.display='none';}catch{e.currentTarget.style.display='none';}}};}
+
+export default function MapSurfaceV3(){
+  const navigate=useNavigate();
+  const {services,configured,user}=useAppContext();
+  const node=useRef(null),map=useRef(null),layer=useRef(null),markers=useRef(new Map());
+  const [places,setPlaces]=useState([]),[origin,setOrigin]=useState(null),[radiusMiles,setRadiusMiles]=useState(5),[category,setCategory]=useState('all'),[search,setSearch]=useState(''),[verified,setVerified]=useState(false),[favorites,setFavorites]=useState(new Set()),[busy,setBusy]=useState(false),[status,setStatus]=useState('Getting your location…');
+  const radiusKm=radiusMiles*MILES_TO_KM;
+
+  const visible=useMemo(()=>places.filter(p=>{
+    if(category!=='all'&&String(p.category||'')!==category)return false;
+    if(verified&&placeStatus(p).key!=='verified')return false;
+    const q=search.trim().toLowerCase();
+    if(q&&!`${p.name||''} ${p.brand||''} ${p.operator_name||''} ${p.address||''} ${p.city||''} ${p.category||''}`.toLowerCase().includes(q))return false;
+    const d=distanceOf(p); return d==null||d<=radiusMiles*1609.344;
+  }).sort((a,b)=>(distanceOf(a)??Infinity)-(distanceOf(b)??Infinity)),[places,category,verified,search,radiusMiles]);
+
+  const refreshFavorites=async()=>{try{if(!services?.favorites?.list)return;const rows=await services.favorites.list();setFavorites(new Set((Array.isArray(rows)?rows:[]).map(keyOf).filter(Boolean)));}catch{}};
+  const toggleFavorite=async place=>{const id=keyOf(place);try{if(!services?.favorites?.toggle||!id)return;await services.favorites.toggle(id);await refreshFavorites();}catch(e){setStatus(e?.message||'Unable to update favorite.');}};
+
+  const load=async(lat,lng,nextRadiusMiles=radiusMiles)=>{
+    const nextRadiusKm=nextRadiusMiles*MILES_TO_KM;
+    const current=[lat,lng]; setOrigin(current); setBusy(true); setStatus(`Searching within ${nextRadiusMiles} mi…`);
+    try{
+      const rows=normalize(await services.maps.nearby({latitude:lat,longitude:lng,radiusKm:nextRadiusKm,category,search:search.trim(),discover:true,limit:500}));
+      const fresh=withDistance(rows,current).filter(p=>{const d=distanceOf(p);return d==null||d<=nextRadiusMiles*1609.344;});
+      setPlaces(fresh);
+      setStatus(fresh.length?`${fresh.length} locations within ${nextRadiusMiles} mi · live discovery + canonical network.`:`No locations found within ${nextRadiusMiles} mi. Try a larger radius.`);
+    }catch(e){setPlaces([]);setStatus(e?.message||'Nearby location retrieval failed.');}
+    finally{setBusy(false);}
+  };
+
+  const locate=()=>{if(!navigator.geolocation){setStatus('GPS is unavailable in this browser.');return;}setBusy(true);setStatus('Getting your current location…');navigator.geolocation.getCurrentPosition(({coords})=>{try{localStorage.setItem('kleenest.lastLocation',JSON.stringify({latitude:coords.latitude,longitude:coords.longitude,accuracy:coords.accuracy||0,savedAt:Date.now()}));}catch{}void load(coords.latitude,coords.longitude);},()=>{try{const saved=JSON.parse(localStorage.getItem('kleenest.lastLocation')||'null');if(Number.isFinite(Number(saved?.latitude))&&Number.isFinite(Number(saved?.longitude))){void load(Number(saved.latitude),Number(saved.longitude));return;}}catch{}setBusy(false);setStatus('Location permission was unavailable. Use your browser location setting or search manually.');},{enableHighAccuracy:true,timeout:10000,maximumAge:30000});};
+
+  const render=()=>{
+    const m=map.current,l=layer.current;if(!m||!l)return;l.clearLayers();markers.current.clear();
+    const groups=new Map();
+    visible.forEach(p=>{if(!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude)))return;const k=coordinateKey(p);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
+    groups.forEach(group=>{
+      const base=[Number(group[0].latitude),Number(group[0].longitude)];
+      group.forEach((place,index)=>{
+        const id=keyOf(place),original=[Number(place.latitude),Number(place.longitude)],position=spiderfyPosition(original[0],original[1],index,group.length);
+        if(group.length>1)L.polyline([base,position],{weight:1,opacity:.35,dashArray:'2 4',interactive:false}).addTo(l);
+        const marker=L.marker(position,{icon:markerIcon(place,{selected:false,favorite:favorites.has(id)}),zIndexOffset:index}).addTo(l);markers.current.set(id,marker);
+        const info=placeStatus(place),brand=placeBrand(place),logo=popupLogo(place);
+        marker.bindPopup(`<div class="map-popup"><div class="popup-identity">${logo}<div><strong>${safeText(nameOf(place))}</strong>${brand&&brand!==nameOf(place)?`<div class="map-brand">${safeText(brand)}</div>`:''}</div></div><div class="popup-status"><span class="status-pill ${safeText(info.key)}">${safeText(info.glyph)} ${safeText(info.label)}</span>${distanceOf(place)!=null?`<span>${miles(distanceOf(place)).toFixed(1)} mi away</span>`:''}</div><div class="map-popup-actions"><button data-a="details">Details</button><button data-a="favorite">${favorites.has(id)?'♥ Remove favorite':'♡ Favorite'}</button><button data-a="route">Route</button><button data-a="verify">Verify</button></div></div>`);
+        marker.on('popupopen',event=>{const root=event.popup.getElement();root?.querySelector('[data-a="details"]')?.addEventListener('click',()=>navigate(`/place/${encodeURIComponent(place.id||place.location_id)}`));root?.querySelector('[data-a="favorite"]')?.addEventListener('click',()=>void toggleFavorite(place));root?.querySelector('[data-a="route"]')?.addEventListener('click',()=>navigate(`/route?origin=${encodeURIComponent(origin?`${origin[0]},${origin[1]}`:'')}&destination=${encodeURIComponent(`${original[0]},${original[1]}`)}&locationId=${encodeURIComponent(id)}`));root?.querySelector('[data-a="verify"]')?.addEventListener('click',()=>navigate(`/evidence?locationId=${encodeURIComponent(id)}`));});
+      });
+    });
+    if(origin)L.circleMarker(origin,{radius:7,color:'#111827',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(l).bindTooltip('You are here');
+    const points=visible.map(p=>[Number(p.latitude),Number(p.longitude)]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
+    if(points.length>1)m.fitBounds(L.latLngBounds(points),{padding:[35,35],maxZoom:16});else if(points.length===1)m.setView(points[0],16);else if(origin)m.setView(origin,radiusMiles>=25?10:13);
+  };
+
+  useEffect(()=>{void refreshFavorites();if(configured)locate();},[configured,user?.id]);
+  useEffect(()=>{if(!node.current||map.current)return undefined;const instance=L.map(node.current,{zoomControl:true,preferCanvas:true,zoomAnimation:true}).setView([38.627,-90.199],11);const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:['a','b','c'],attribution:'&copy; OpenStreetMap contributors'}).addTo(instance);tiles.on('tileerror',()=>setStatus(s=>s.includes('map tiles')?s:`${s} · map tiles are temporarily unavailable.`));layer.current=L.layerGroup().addTo(instance);map.current=instance;const resize=new ResizeObserver(()=>instance.invalidateSize());resize.observe(node.current);setTimeout(()=>instance.invalidateSize(),50);return()=>{resize.disconnect();instance.remove();map.current=null;layer.current=null;};},[]);
+  useEffect(()=>{render();if(map.current)setTimeout(()=>map.current.invalidateSize(),50);},[visible,origin,favorites]);
+
+  return <WorkspaceShell><section className="page-head map-surface map-v3">
+    <div className="map-heading"><div><span className="eyebrow">Explore</span><h1>Map & location intelligence</h1><p>Search the live Kleenest network by distance. The selected radius is applied to the query, discovery response, and final client-side distance filter.</p></div></div>
+    <div className="map-toolbar"><input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&origin&&void load(origin[0],origin[1])} placeholder="Search nearby places, brands, amenities…"/><select value={category} onChange={e=>{setCategory(e.target.value);if(origin)void load(origin[0],origin[1]);}}>{MAP_CATEGORIES.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select><button className="button" disabled={busy} onClick={()=>origin?void load(origin[0],origin[1]):locate()}><Search size={16}/>Search</button><button className="button primary" disabled={busy} onClick={locate}><LocateFixed size={16}/>Use my location</button></div>
+    <div className="map-filters"><button className={`map-chip ${verified?'active':''}`} onClick={()=>setVerified(v=>!v)}><CheckCircle2 size={15}/>Verified only</button><label className="map-chip"><SlidersHorizontal size={15}/>Radius<select value={radiusMiles} onChange={e=>{const v=Number(e.target.value);setRadiusMiles(v);if(origin)void load(origin[0],origin[1],v);}}>{RADII_MILES.map(v=><option key={v} value={v}>{v} mi</option>)}</select></label></div>
+    <div className="map-status">{busy?'Working…':status}</div>
+    <div className="map-legend-panel"><div><div className="map-legend-title">Map markers</div><div className="map-legend-group"><span>🏢 Business / brand</span><span>🚻 Restroom</span><span>☕ Cafe</span><span>🍽️ Restaurant</span><span>⛽ Gas</span><span>🌳 Park</span></div></div><div><div className="map-legend-title">Trust / state</div><div className="map-legend-group"><span><i className="legend-status verified">✓</i> Verified</span><span><i className="legend-status open">•</i> Open</span><span><i className="legend-status premium">◆</i> Premium</span><span><i className="legend-status reported">!</i> Reported</span><span><i className="legend-status favorite">♥</i> Saved</span></div></div><div className="map-legend-note"><strong>{radiusMiles} mi radius</strong><br/>Brand-preferred logos are used on individual pins when available. Status badges remain consistent with the marker system.</div></div>
+    <div className="map-grid"><div className="map-canvas" ref={node}/><div className="map-results">
+      {visible.slice(0,75).map(place=>{const id=keyOf(place),info=placeStatus(place),candidates=brandIconCandidates(place);return <article className="map-card" key={id} onClick={()=>{const marker=markers.current.get(id);marker?.openPopup();if(map.current)map.current.flyTo([Number(place.latitude),Number(place.longitude)],16);}}><div className="map-card-head"><div className="map-card-identity">{candidates.length?<img className="marker-logo" {...resilientImageProps(candidates)} alt=""/>:<span className="map-card-glyph">{String(place.category||'service').slice(0,1).toUpperCase()}</span>}<div><strong>{safeText(nameOf(place))}</strong>{placeBrand(place)&&placeBrand(place)!==nameOf(place)&&<small className="map-brand">{safeText(placeBrand(place))}</small>}</div></div><span className={`status-pill ${safeText(info.key)}`}>{safeText(info.glyph)} {safeText(info.label)}</span></div><div className="map-card-meta">{distanceOf(place)!=null&&<span>{miles(distanceOf(place)).toFixed(1)} mi</span>}</div><div className="map-card-actions"><button className="button" onClick={e=>{e.stopPropagation();navigate(`/place/${encodeURIComponent(place.id||place.location_id)}`);}}>Details</button><button className="button" onClick={e=>{e.stopPropagation();navigate(`/route?origin=${encodeURIComponent(origin?`${origin[0]},${origin[1]}`:'')}&destination=${encodeURIComponent(`${place.latitude},${place.longitude}`)}&locationId=${encodeURIComponent(id)}`);}}><Navigation size={15}/>Route</button><button className="button" onClick={e=>{e.stopPropagation();navigate(`/evidence?locationId=${encodeURIComponent(id)}`);}}>Verify</button><button className="button" onClick={e=>{e.stopPropagation();void toggleFavorite(place);}}><Heart size={15}/>{favorites.has(id)?'Saved':'Save'}</button></div></article>;})}
+      {!visible.length&&<div className="map-empty"><h3>No nearby locations</h3><p>Nothing is inside the selected radius. Increase the radius or refresh your location.</p><button className="button primary" onClick={locate}>Refresh nearby</button></div>}
+    </div></div>
+  </section></WorkspaceShell>;
+}
