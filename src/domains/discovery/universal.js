@@ -87,7 +87,7 @@ export function createUniversalDiscoveryService(client) {
       if (!discover || typeof client.functions?.invoke !== 'function') return fallback() || locations;
 
       try {
-        const { error: ingestError } = await client.functions.invoke('ingest-map-candidates-v2', {
+        const { error: ingestError } = await client.functions.invoke('ingest-map-candidates-v3', {
           body: { latitude: lat, longitude: lng, radiusKm: radius }
         });
         if (ingestError) throw ingestError;
@@ -104,10 +104,6 @@ export function createUniversalDiscoveryService(client) {
         throw error;
       }
 
-      // A successful retry returning zero rows can still be a transient ingestion/RPC
-      // race. If this query already has a known-good result, preserve it rather than
-      // converting the map into an authoritative-looking empty state. Only a genuinely
-      // uncached empty discovery is allowed to reach the map as an empty result.
       if (locations.length) {
         writeFallback(cacheKey, locations);
         return locations;
