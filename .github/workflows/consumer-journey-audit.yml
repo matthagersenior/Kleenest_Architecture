@@ -1,0 +1,93 @@
+name: Consumer Journey Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: consumer-journey-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+  VITE_SUPABASE_URL: https://ssgesjzdvdsqacdtasje.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build consumer runtime
+        run: npm run build
+
+      - name: Verify canonical consumer routes are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -d dist/assets
+          test -n "$(find dist/assets -type f -name '*.js' -print -quit)"
+
+          required_routes=(
+            '/map'
+            '/search'
+            '/ai-search'
+            '/route'
+            '/notifications'
+            '/family'
+            '/profile'
+          )
+
+          for route in "${required_routes[@]}"; do
+            if ! grep -Rqi --fixed-strings "$route" dist --exclude='*.map'; then
+              echo "ERROR: expected consumer route not found in production artifact: $route"
+              exit 1
+            fi
+          done
+
+      - name: Verify semantic AI contract is shipped
+        run: |
+          set -euo pipefail
+          grep -Rqi 'semantic' dist --exclude='*.map'
+          grep -Rqi 'canonical' dist --exclude='*.map'
+
+      - name: Reject stale capability-explorer artifact
+        run: |
+          set -euo pipefail
+          if grep -RniE 'Production capability graph|production-reconciled capability explorer|static deployment safety layer' dist --exclude='*.map'; then
+            echo 'ERROR: stale internal capability-explorer artifact detected in consumer build'
+            exit 1
+          fi
+
+      - name: Write audit summary
+        if: always()
+        run: |
+          {
+            echo '## Kleenest Consumer Journey Audit'
+            echo ''
+            echo '- Build: attempted'
+            echo '- Canonical routes: checked'
+            echo '- Semantic AI surface: checked'
+            echo '- Stale internal capability explorer: checked'
+            echo '- This workflow is read-only and does not modify main.'
+          } >> "$GITHUB_STEP_SUMMARY"
