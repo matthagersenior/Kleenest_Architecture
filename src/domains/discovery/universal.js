@@ -16,7 +16,7 @@ const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, userId 
   const parsedLimit = Number(limit);
   const safeLimit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 1000, 25), 2000);
 
-  return Object.freeze({ lat, lng, radius, safeUserId: userId || undefined, safeCategory, safeSearch, safeLimit });
+  return Object.freeze({ lat, lng, radius, safeUserId: typeof userId === 'string' && userId.trim() ? userId.trim() : undefined, safeCategory, safeSearch, safeLimit });
 };
 
 const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeUserId }) => [
@@ -55,25 +55,26 @@ export function createUniversalDiscoveryService(client) {
     nearby: async ({ latitude, longitude, radiusKm = 50, userId = undefined, category = undefined, search = undefined, limit = 1000, discover = false } = {}) => {
       const request = normalizeDiscoveryRequest({ latitude, longitude, radiusKm, userId, category, search, limit });
       if (!request) return [];
-      const { lat, lng, radius, safeUserId, safeCategory, safeSearch, safeLimit } = request;
+      const { lat, lng, radius, safeCategory, safeSearch, safeLimit } = request;
 
+      let safeUserId = request.safeUserId;
       try {
         const { data: authData } = await client.auth.getUser();
-        request.safeUserId = authData?.user?.id || safeUserId;
+        safeUserId = authData?.user?.id || safeUserId;
       } catch {
-        request.safeUserId = safeUserId;
+        // Preserve the caller-supplied identity only when auth lookup is unavailable.
       }
 
       const params = {
         p_lat: lat,
         p_lng: lng,
         p_radius_m: Math.round(radius * 1000),
-        p_user_id: request.safeUserId,
+        p_user_id: safeUserId,
         p_category: safeCategory,
         p_search: safeSearch,
         p_limit: safeLimit
       };
-      const cacheKey = fallbackKey({ ...request, safeUserId: request.safeUserId });
+      const cacheKey = fallbackKey({ ...request, safeUserId });
       const fallback = () => readFallback(cacheKey);
 
       const execute = async () => {
