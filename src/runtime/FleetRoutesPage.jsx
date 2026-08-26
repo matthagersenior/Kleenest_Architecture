@@ -4,7 +4,7 @@ import WorkspaceShell from './WorkspaceShell.jsx';
 import FleetRouteCrudPanel from './FleetRouteCrudPanel.jsx';
 
 export default function FleetRoutesPage() {
-  const { selectedBusinessId, selectedBusiness, isPlatformOwner, services } = useAppContext();
+  const { selectedBusinessId, selectedBusiness, isPlatformOwner } = useAppContext();
   const businessId = selectedBusinessId || selectedBusiness?.business_id || selectedBusiness?.id || '';
 
   if (!businessId) {
