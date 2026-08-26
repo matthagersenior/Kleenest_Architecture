@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { AppProvider } from './AppContext.jsx';
 import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
-import UniversalDiscoveryBootstrap from './runtime/UniversalDiscoveryBootstrap.jsx';
 import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
 import CanonicalAppRuntime from './runtime/CanonicalAppRuntime.jsx';
 import './styles.css';
@@ -20,7 +19,6 @@ ReactDOM.createRoot(root).render(
     <HashRouter>
       <RuntimeErrorBoundary>
         <AppProvider>
-          <UniversalDiscoveryBootstrap />
           <UniversalNetworkEventBridge />
           <CanonicalAppRuntime />
         </AppProvider>
