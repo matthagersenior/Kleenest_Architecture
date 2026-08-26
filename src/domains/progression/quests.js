@@ -9,6 +9,7 @@ export function createQuestService(client){
     setStatus:(questId,status)=>rpc('quest_set_status',{p_quest_id:questId,p_status:status}),
     start:(questId)=>rpc('quest_start',{p_quest_id:questId}),
     recordStep:(participationId,stepId,eventType,options={})=>rpc('quest_record_step',{p_participation_id:participationId,p_quest_step_id:stepId,p_event_type:eventType,p_source:options.source??null,p_metadata:options.metadata??{},p_location_id:options.locationId??null,p_geofence_event_id:options.geofenceEventId??null,p_qr_code_id:options.qrCodeId??null,p_checkin_id:options.checkinId??null}),
+    dispatchEvent:(eventType,options={})=>rpc('quest_dispatch_event',{p_user_id:options.userId,p_event_type:eventType,p_location_id:options.locationId??null,p_checkin_id:options.checkinId??null,p_qr_code_id:options.qrCodeId??null,p_geofence_event_id:options.geofenceEventId??null,p_metadata:options.metadata??{}}),
     leaderboard:(questId,limit=25)=>rpc('quest_leaderboard',{p_quest_id:questId,p_limit:limit})
   });
 }
