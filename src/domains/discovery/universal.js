@@ -6,22 +6,19 @@ export function createUniversalDiscoveryService(client) {
       const lng = Number(longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return [];
       const radius = Math.min(Math.max(Number(radiusKm) || 1, 1), 80.467);
-      const requestedUserId = typeof userId === 'string' && userId.trim() ? userId.trim() : undefined;
       const safeCategory = typeof category === 'string' && category.trim() ? category.trim() : undefined;
       const safeSearch = typeof search === 'string' && search.trim() ? search.trim() : undefined;
 
-      // Never let a stale client-side identity become the execution context for discovery.
-      // Resolve the current authenticated user immediately before the RPC and prefer auth.uid().
-      // If there is no authenticated session, omit the optional user id rather than failing
-      // discovery or manufacturing an identity from stale application state.
-      let authenticatedUserId;
+      // Resolve identity from the live Supabase session immediately before the RPC.
+      // Do not fall back to a caller-supplied user id: a stale AppContext/session value
+      // must never become the identity used by universal discovery.
+      let safeUserId;
       try {
         const { data: authData } = await client.auth.getUser();
-        authenticatedUserId = authData?.user?.id || undefined;
+        safeUserId = authData?.user?.id || undefined;
       } catch {
-        authenticatedUserId = undefined;
+        safeUserId = undefined;
       }
-      const safeUserId = authenticatedUserId || requestedUserId;
 
       const { data, error } = await client.rpc('prepare_universal_location_discovery', {
         p_lat: lat,
