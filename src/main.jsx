@@ -13,6 +13,7 @@ import './runtime/mobileWorkspaceFix.css';
 import './runtime/role-crud.css';
 import './runtime/detailPages.css';
 
+// Keep the application bootstrap deterministic; map discovery is owned by MapSurfaceV3.
 const root = document.getElementById('root');
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
