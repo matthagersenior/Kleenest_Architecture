@@ -14,6 +14,8 @@ export function createEnterprisePartnerNetworkService(client) {
     createCampaign: async (networkId,name,campaignType='engagement',goal=null) => rpc('create_enterprise_partner_campaign',{p_network_id:networkId,p_name:name,p_campaign_type:campaignType,p_goal:goal}),
     updateCampaign: async (campaignId,name,campaignType,goal,status) => rpc('enterprise_update_campaign',{p_campaign_id:campaignId,p_name:name,p_campaign_type:campaignType,p_goal:goal,p_status:status}),
     deleteCampaign: async campaignId => rpc('enterprise_delete_campaign',{p_campaign_id:campaignId}),
+    listNetworkMembers: async networkId => rpc('enterprise_list_network_members',{p_network_id:networkId}).then(data=>data??[]),
+    listPartnerBusinesses: async businessId => rpc('enterprise_list_partner_businesses',{p_business_id:businessId}).then(data=>data??[]),
     invitePartner: async (networkId,partnerBusinessId) => rpc('invite_enterprise_partner',{p_network_id:networkId,p_partner_business_id:partnerBusinessId}),
     setMembershipStatus: async (membershipId,status) => rpc('set_enterprise_partner_status',{p_membership_id:membershipId,p_status:status})
   });
