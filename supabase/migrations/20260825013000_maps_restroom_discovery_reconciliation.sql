@@ -1,9 +1,9 @@
--- Maps Core: make restroom discovery first-class and prevent generic-place coverage
--- from masquerading as restroom coverage.
+-- Maps Core: make restroom discovery first-class without depending on
+-- columns that do not exist on public.locations.
 --
--- The canonical map RPC remains the source of truth. This adds robust bathroom
--- signals for existing records so businesses/venues with explicit bathroom data
--- are discoverable even when their generic place category is restaurant/service/etc.
+-- This migration is intentionally schema-compatible with the production
+-- locations model. Bathroom signals are derived from the canonical fields
+-- already present in locations plus OSM/source metadata.
 
 create or replace function public.map_network_nearby_v1(
   p_lat double precision,
@@ -23,7 +23,8 @@ returns table(
   verification_confidence numeric, amenities jsonb, fixtures jsonb,
   brand text, operator_name text, osm_tags jsonb
 )
-language sql stable security definer set search_path=public,pg_temp as $$
+language sql stable security definer
+set search_path=public,auth,extensions,pg_temp as $$
 with base as (
   select
     l.id,
@@ -49,23 +50,21 @@ with base as (
     p.review_count as p_review_count,
     p.is_verified as p_is_verified,
     p.name as place_name,
-    coalesce(l.source_metadata->>'brand', l.source_metadata->>'brand_name') as brand_name,
-    coalesce(l.source_metadata->>'operator', l.source_metadata->>'operator_name') as operator_name,
+    coalesce(l.source_metadata->>'brand',l.source_metadata->>'brand_name') as brand_name,
+    coalesce(l.source_metadata->>'operator',l.source_metadata->>'operator_name') as operator_name,
     6371000.0*2*asin(sqrt(
       power(sin(radians(l.latitude-p_lat)/2),2)+
       cos(radians(p_lat))*cos(radians(l.latitude))*power(sin(radians(l.longitude-p_lng)/2),2)
     )) as dist,
     (
-      l.has_bathroom = true
-      or l.has_restroom = true
-      or lower(coalesce(l.bathroom_verification_status,'')) in ('has_bathroom','verified')
+      lower(coalesce(l.bathroom_verification_status,'')) in ('has_bathroom','verified')
       or lower(coalesce(l.place_type,'')) in ('restroom','bathroom','toilet')
       or lower(coalesce(p.category,'')) in ('restroom','bathroom','toilet')
       or lower(coalesce(l.source_metadata->>'amenity','')) in ('toilets','restroom','bathroom')
       or lower(coalesce(l.source_metadata->>'toilets','')) in ('yes','public','customers')
       or lower(coalesce(l.source_metadata->>'restroom','')) in ('yes','public','customers')
       or lower(coalesce(l.source_metadata->>'bathroom','')) in ('yes','public','customers')
-      or coalesce((l.source_metadata->'osm_tags'->>'amenity'),'') ilike 'toilet%'
+      or coalesce(l.source_metadata->'osm_tags'->>'amenity','') ilike 'toilet%'
     ) as bathroom_signal
   from public.locations l
   left join public.places p on p.location_id=l.id and p.is_active=true
@@ -79,15 +78,14 @@ with base as (
       or lower(p_category)=lower(coalesce(p.category,l.place_type,''))
       or (lower(p_category)='brand' and coalesce(l.source_metadata->>'brand',l.source_metadata->>'brand_name') is not null)
       or (lower(p_category)='restroom' and (
-        l.has_bathroom=true or l.has_restroom=true
-        or lower(coalesce(l.bathroom_verification_status,'')) in ('has_bathroom','verified')
+        lower(coalesce(l.bathroom_verification_status,'')) in ('has_bathroom','verified')
         or lower(coalesce(l.place_type,'')) in ('restroom','bathroom','toilet')
         or lower(coalesce(p.category,'')) in ('restroom','bathroom','toilet')
         or lower(coalesce(l.source_metadata->>'amenity','')) in ('toilets','restroom','bathroom')
         or lower(coalesce(l.source_metadata->>'toilets','')) in ('yes','public','customers')
         or lower(coalesce(l.source_metadata->>'restroom','')) in ('yes','public','customers')
         or lower(coalesce(l.source_metadata->>'bathroom','')) in ('yes','public','customers')
-        or coalesce((l.source_metadata->'osm_tags'->>'amenity'),'') ilike 'toilet%'
+        or coalesce(l.source_metadata->'osm_tags'->>'amenity','') ilike 'toilet%'
       ))
       or (lower(p_category)='restaurant' and lower(coalesce(p.category,l.place_type,'')) similar to '%(restaurant|food|fast_food)%')
       or (lower(p_category)='cafe' and lower(coalesce(p.category,l.place_type,'')) similar to '%(cafe|coffee)%')
@@ -111,19 +109,23 @@ with base as (
     and (
       coalesce(cardinality(p_amenity_names),0)=0
       or exists (
-        select 1 from public.location_amenities la
+        select 1
+        from public.location_amenities la
         join public.amenities aa on aa.id=la.amenity_id
         where la.location_id=l.id and aa.name=any(p_amenity_names)
       )
     )
 ), ranked as (
-  select * from base
+  select *
+  from base
   where dist<=p_radius_m
   order by case when lower(coalesce(p_category,''))='restroom' then not bathroom_signal else false end, dist
   limit greatest(1,least(p_limit,500))
 ), amen as (
   select la.location_id,jsonb_agg(distinct jsonb_build_object('name',a.name,'category',a.category)) items
-  from public.location_amenities la join public.amenities a on a.id=la.amenity_id group by la.location_id
+  from public.location_amenities la
+  join public.amenities a on a.id=la.amenity_id
+  group by la.location_id
 ), fx as (
   select lf.location_id,jsonb_build_object('stalls',lf.stalls,'urinals',lf.urinals,'sinks',lf.sinks,'hand_dryers',lf.hand_dryers,'changing_tables',lf.changing_tables,'showers',lf.showers) items
   from public.location_fixtures lf
@@ -137,10 +139,13 @@ select
   coalesce(r.p_is_verified,false),coalesce(r.p_rating,r.l_rating,0),coalesce(r.p_review_count,r.l_review_count,0),
   r.cleanliness_pct,r.verification_confidence,coalesce(a.items,'[]'::jsonb),coalesce(f.items,'{}'::jsonb),
   r.brand_name,r.operator_name,coalesce(r.source_metadata->'osm_tags','{}'::jsonb)
-from ranked r left join amen a on a.location_id=r.id left join fx f on f.location_id=r.id order by r.dist;
+from ranked r
+left join amen a on a.location_id=r.id
+left join fx f on f.location_id=r.id
+order by r.dist;
 $$;
 
 grant execute on function public.map_network_nearby_v1(double precision,double precision,integer,integer,text,text,text[]) to anon,authenticated;
 
 comment on function public.map_network_nearby_v1(double precision,double precision,integer,integer,text,text,text[]) is
-'Canonical nearby-location query. Restroom filtering accepts explicit restroom fields, OSM toilet signals, and bathroom verification signals; generic venue categories remain discoverable separately.';
+'Canonical nearby-location query. Restroom filtering accepts explicit restroom verification fields, OSM toilet signals, and bathroom metadata; generic venue categories remain discoverable separately.';
