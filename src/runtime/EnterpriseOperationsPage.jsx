@@ -105,8 +105,25 @@ export default function EnterpriseOperationsPage({ mode = 'partners' }) {
       <div className="page-header"><div><span className="eyebrow">ENTERPRISE OPERATIONS</span><h1>{mode === 'campaigns' ? 'Partner campaigns' : mode === 'performance' ? 'Network performance' : 'Partner network'}</h1><p>Enterprise partner networks, campaigns, outcomes and intelligence.</p></div><div className="hero-actions"><button className="secondary" onClick={load}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/enterprise">Command center</Link></div></div>
       {error && <p className="form-error" role="alert">{error}</p>}{message && <p className="form-success" role="status">{message}</p>}
       <RoleScopedCrudPanel role="enterprise" businessId={selectedBusinessId}/><EnterpriseMembershipCrud businessId={selectedBusinessId}/>
-      <section className="detail-panel"><div className="panel-heading"><div><span className="eyebrow">NETWORK CONTEXT</span><h2>Enterprise network controls</h2></div><Target size={22}/></div><div className="metric-card"><Building2 size={18}/><strong>{selectedBusinessName}</strong><span>Active enterprise network context</span></div>
-        {mode === 'campaigns' && <><label className="form-field"><span>Campaign name</span><input value={campaignName} onChange={e => setCampaignName(e.target.value)} /></label><label className="form-field"><span>Campaign type</span><select value={campaignType} onChange={e => setCampaignType(e.target.value)}><option value="engagement">Engagement</option><option value="promotion">Promotion</option><option value="access">Access</option></select></label><div className="hero-actions"><button className="primary" onClick={createCampaign} disabled={!networkId || !campaignName.trim()}><Megaphone size={16}/>Create campaign</button>{campaign && <><button className="secondary" onClick={() => mutate(() => lifecycle.activateCampaign(campaignId), 'Partner campaign activated.')}><Play size={16}/>Activate</button><button className="secondary" onClick={() => mutate(() => lifecycle.pauseCampaign(campaignId), 'Partner campaign paused.')}><Pause size={16}/>Pause</button></>}</div>{campaign && <button className="secondary" onClick={loadCampaignRoi}><TrendingUp size={16}/>Load campaign ROI</button></>}
+      <section className="detail-panel">
+        <div className="panel-heading"><div><span className="eyebrow">NETWORK CONTEXT</span><h2>Enterprise network controls</h2></div><Target size={22}/></div>
+        <div className="metric-card"><Building2 size={18}/><strong>{selectedBusinessName}</strong><span>Active enterprise network context</span></div>
+        {mode === 'campaigns' && (
+          <>
+            <label className="form-field"><span>Campaign name</span><input value={campaignName} onChange={e => setCampaignName(e.target.value)} /></label>
+            <label className="form-field"><span>Campaign type</span><select value={campaignType} onChange={e => setCampaignType(e.target.value)}><option value="engagement">Engagement</option><option value="promotion">Promotion</option><option value="access">Access</option></select></label>
+            <div className="hero-actions">
+              <button className="primary" onClick={createCampaign} disabled={!networkId || !campaignName.trim()}><Megaphone size={16}/>Create campaign</button>
+              {campaign ? (
+                <>
+                  <button className="secondary" onClick={() => mutate(() => lifecycle.activateCampaign(campaignId), 'Partner campaign activated.')}><Play size={16}/>Activate</button>
+                  <button className="secondary" onClick={() => mutate(() => lifecycle.pauseCampaign(campaignId), 'Partner campaign paused.')}><Pause size={16}/>Pause</button>
+                </>
+              ) : null}
+            </div>
+            {campaign ? <button className="secondary" onClick={loadCampaignRoi}><TrendingUp size={16}/>Load campaign ROI</button> : null}
+          </>
+        )}
         {mode === 'performance' && <button className="primary" onClick={loadReport} disabled={!networkId}><BarChart3 size={16}/>Load network intelligence</button>}
         {mode === 'partners' && <div className="hero-actions"><button className="primary" disabled={!context?.programId || !context?.partnerBusinessId} onClick={() => mutate(() => lifecycle.requestAgreement(context.programId, context.partnerBusinessId), 'Partner agreement requested.')}><Handshake size={16}/>Request agreement</button><button className="secondary" disabled={!context?.agreementId} onClick={() => mutate(() => lifecycle.acceptAgreement(context.agreementId), 'Partner agreement accepted.')}><CheckCircle2 size={16}/>Accept agreement</button></div>}
       </section>
