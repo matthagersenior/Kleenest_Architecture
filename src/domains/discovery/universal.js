@@ -19,13 +19,14 @@ const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, categor
   return Object.freeze({ lat, lng, radius, safeCategory, safeSearch, safeLimit });
 };
 
-const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeUserId }) => [
+const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeLimit, safeUserId }) => [
   safeUserId || 'anonymous',
   lat.toFixed(3),
   lng.toFixed(3),
   Math.round(radius * 1000),
   safeCategory || '',
-  safeSearch || ''
+  safeSearch || '',
+  safeLimit
 ].join('|');
 
 const readFallback = key => {
