@@ -4,6 +4,9 @@ import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 const cards = [
   { href: '/map', title: 'Find a restroom', body: 'Use the live Kleenest map or ask naturally for what you need.' },
   { href: '/route', title: 'Plan a route', body: 'Build your trip around trusted restroom stops.' },
+  { href: '/checkin', title: 'Check in', body: 'Verify a real-world visit with GPS or a Kleenest QR.' },
+  { href: '/qr', title: 'QR engagement', body: 'Redeem an eligible Kleenest QR and continue the engagement loop.' },
+  { href: '/rewards', title: 'Rewards', body: 'See server-authoritative progression and reward history.' },
   { href: '/notifications', title: 'Stay in the loop', body: 'Arrivals, rewards, QR activity, reviews and community updates.' },
 ];
 
