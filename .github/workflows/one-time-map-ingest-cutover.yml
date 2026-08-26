@@ -1,0 +1,37 @@
+name: One-time map ingest cutover
+on:
+  push:
+    paths:
+      - .github/workflows/one-time-map-ingest-cutover.yml
+permissions:
+  contents: write
+jobs:
+  cutover:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Switch canonical map ingestion endpoint
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/domains/maps/network.js')
+          s=p.read_text()
+          old="client.functions.invoke('ingest-map-candidates'"
+          new="client.functions.invoke('ingest-map-candidates-v3'"
+          if old not in s:
+              print('endpoint already switched; nothing to do')
+          else:
+              p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit cutover and remove one-time workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/one-time-map-ingest-cutover.yml
+          git add src/domains/maps/network.js .github/workflows/one-time-map-ingest-cutover.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Switch map discovery to JWT-protected ingestion v3'
+          git push origin HEAD:main
