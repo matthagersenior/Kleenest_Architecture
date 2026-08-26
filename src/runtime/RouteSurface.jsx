@@ -40,8 +40,21 @@ export default function RouteSurface() {
     const unresolved = stops.filter(s => s?.locationId && (!s.name || s.name === 'Restroom stop'));
     if (!unresolved.length || !services?.locations?.getById) return undefined;
     let active = true;
-    Promise.all(unresolved.map(async stop => { try { const place = await services.locations.getById(stop.locationId); return place ? { ...stop, name: place.name || stop.name, address: [place.address, place.city, place.state].filter(Boolean).join(', ') || stop.address, latitude: place.latitude ?? stop.latitude, longitude: place.longitude ?? stop.longitude, bathroomStatus: place.bathroom_status ?? place.bathroomStatus ?? stop.bathroomStatus, bathroomAccess: place.bathroom_access ?? place.bathroomAccess ?? stop.bathroomAccess, bathroomConfidence: place.bathroom_confidence ?? place.bathroomConfidence ?? stop.bathroomConfidence, bathroomEvidenceCount: place.bathroom_evidence_count ?? place.bathroomEvidenceCount ?? stop.bathroomEvidenceCount, bathroomSignal: place.bathroom_signal ?? place.bathroomSignal ?? stop.bathroomSignal } : stop; } catch { return stop; } }));
-    Promise.all(unresolved.map(async stop => { try { const place = await services.locations.getById(stop.locationId); return { id: stop.locationId, place }; } catch { return { id: stop.locationId, place: null }; } })).then(results => { if (!active) return; setStops(current => current.map(stop => { const hit = results.find(r => r.id === stop.locationId)?.place; if (!hit) return stop; return { ...stop, name: hit.name || stop.name, address: [hit.address, hit.city, hit.state].filter(Boolean).join(', ') || stop.address, latitude: hit.latitude ?? stop.latitude, longitude: hit.longitude ?? stop.longitude, bathroomStatus: hit.bathroom_status ?? hit.bathroomStatus ?? stop.bathroomStatus, bathroomAccess: hit.bathroom_access ?? hit.bathroomAccess ?? stop.bathroomAccess, bathroomConfidence: hit.bathroom_confidence ?? hit.bathroomConfidence ?? stop.bathroomConfidence, bathroomEvidenceCount: hit.bathroom_evidence_count ?? hit.bathroomEvidenceCount ?? stop.bathroomEvidenceCount, bathroomSignal: hit.bathroom_signal ?? hit.bathroomSignal ?? stop.bathroomSignal }; })); });
+    Promise.all(unresolved.map(async stop => {
+      try {
+        const place = await services.locations.getById(stop.locationId);
+        return { id: stop.locationId, place };
+      } catch {
+        return { id: stop.locationId, place: null };
+      }
+    })).then(results => {
+      if (!active) return;
+      setStops(current => current.map(stop => {
+        const hit = results.find(r => r.id === stop.locationId)?.place;
+        if (!hit) return stop;
+        return { ...stop, name: hit.name || stop.name, address: [hit.address, hit.city, hit.state].filter(Boolean).join(', ') || stop.address, latitude: hit.latitude ?? stop.latitude, longitude: hit.longitude ?? stop.longitude, bathroomStatus: hit.bathroom_status ?? hit.bathroomStatus ?? stop.bathroomStatus, bathroomAccess: hit.bathroom_access ?? hit.bathroomAccess ?? stop.bathroomAccess, bathroomConfidence: hit.bathroom_confidence ?? hit.bathroomConfidence ?? stop.bathroomConfidence, bathroomEvidenceCount: hit.bathroom_evidence_count ?? hit.bathroomEvidenceCount ?? stop.bathroomEvidenceCount, bathroomSignal: hit.bathroom_signal ?? hit.bathroomSignal ?? stop.bathroomSignal };
+      }));
+    });
     return () => { active = false; };
   }, [services, stops]);
   useEffect(() => { if (origin || !navigator.geolocation) return undefined; let active = true; navigator.geolocation.getCurrentPosition(({ coords }) => active && setOrigin(`${coords.latitude},${coords.longitude}`), () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 }); return () => { active = false; }; }, [origin]);
