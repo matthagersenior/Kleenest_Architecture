@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 export { createMobileRoutingService, type MobileRoute } from './routing';
 export { createMobileEngagementService } from './engagement';
+export { createMobileIdentityService } from './identity';
 
 const storage = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
