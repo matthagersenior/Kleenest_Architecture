@@ -4,7 +4,7 @@ const DISCOVERY_MAX_CATEGORY_LENGTH = 64;
 const DISCOVERY_MAX_SEARCH_LENGTH = 160;
 const discoveryFallbackCache = new Map();
 
-const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, userId = undefined, category = undefined, search = undefined, limit = 1000 } = {}) => {
+const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, category = undefined, search = undefined, limit = 1000 } = {}) => {
   const lat = Number(latitude);
   const lng = Number(longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
@@ -16,7 +16,7 @@ const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, userId 
   const parsedLimit = Number(limit);
   const safeLimit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 1000, 25), 2000);
 
-  return Object.freeze({ lat, lng, radius, safeUserId: typeof userId === 'string' && userId.trim() ? userId.trim() : undefined, safeCategory, safeSearch, safeLimit });
+  return Object.freeze({ lat, lng, radius, safeCategory, safeSearch, safeLimit });
 };
 
 const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeUserId }) => [
@@ -52,17 +52,20 @@ const writeFallback = (key, locations) => {
 export function createUniversalDiscoveryService(client) {
   if (!client) throw new Error('Supabase client is required.');
   return Object.freeze({
-    nearby: async ({ latitude, longitude, radiusKm = 50, userId = undefined, category = undefined, search = undefined, limit = 1000, discover = false } = {}) => {
-      const request = normalizeDiscoveryRequest({ latitude, longitude, radiusKm, userId, category, search, limit });
+    nearby: async ({ latitude, longitude, radiusKm = 50, category = undefined, search = undefined, limit = 1000, discover = false } = {}) => {
+      const request = normalizeDiscoveryRequest({ latitude, longitude, radiusKm, category, search, limit });
       if (!request) return [];
       const { lat, lng, radius, safeCategory, safeSearch, safeLimit } = request;
 
-      let safeUserId = request.safeUserId;
+      let safeUserId;
       try {
-        const { data: authData } = await client.auth.getUser();
-        safeUserId = authData?.user?.id || safeUserId;
+        const { data: authData, error: authError } = await client.auth.getUser();
+        if (authError) throw authError;
+        safeUserId = authData?.user?.id;
       } catch {
-        // Preserve the caller-supplied identity only when auth lookup is unavailable.
+        // Never forward caller-supplied identity to the privileged discovery RPC.
+        // An unavailable auth session must not become an identity-selection channel.
+        return [];
       }
 
       const params = {
