@@ -1,0 +1,78 @@
+name: Mobile Store Readiness Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-store-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install workspace dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Consumer product surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            apps/consumer-mobile/app/index.tsx
+            apps/consumer-mobile/app/map.tsx
+            apps/consumer-mobile/app/route.tsx
+            apps/consumer-mobile/app/profile.tsx
+            apps/consumer-mobile/app/location/'[id].tsx'
+            apps/consumer-mobile/app/notifications.tsx
+            apps/consumer-mobile/app/family.tsx
+            apps/consumer-mobile/app/premium.tsx
+          )
+          for file in "${required[@]}"; do test -s "$file" || { echo "Missing Consumer surface: $file"; exit 1; }; done
+      - name: Verify Business product surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            apps/business-mobile/app/index.tsx
+            apps/business-mobile/app/locations.tsx
+            apps/business-mobile/app/analytics.tsx
+          )
+          for file in "${required[@]}"; do test -s "$file" || { echo "Missing Business surface: $file"; exit 1; }; done
+      - name: Verify canonical mobile security boundary
+        run: |
+          set -euo pipefail
+          grep -q 'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY' packages/mobile-core/src/index.ts
+          if grep -RniE 'service.?role|SUPABASE_SERVICE_ROLE_KEY' apps/consumer-mobile apps/business-mobile packages/mobile-core --exclude-dir=node_modules; then
+            echo 'ERROR: service-role credential reference detected in mobile product source'
+            exit 1
+          fi
+      - name: Verify Consumer Semantic AI surface
+        run: |
+          set -euo pipefail
+          grep -Rqi 'semantic_location_search\|semantic' apps/consumer-mobile
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## Kleenest Mobile Store Readiness Audit'
+            echo ''
+            echo '- Consumer route surfaces: checked'
+            echo '- Business route surfaces: checked'
+            echo '- Mobile Supabase credential boundary: checked'
+            echo '- Consumer Semantic AI surface: checked'
+            echo '- This workflow is read-only.'
+          } >> "$GITHUB_STEP_SUMMARY"
