@@ -44,9 +44,6 @@ export function createUniversalDiscoveryService(client) {
       const safeSearch = typeof search === 'string' && search.trim() ? search.trim() : undefined;
       const safeLimit = Math.min(Math.max(Number(limit) || 1000, 25), 2000);
 
-      // Resolve identity from the live Supabase session immediately before the RPC.
-      // Do not fall back to a caller-supplied user id: a stale AppContext/session value
-      // must never become the identity used by universal discovery.
       let safeUserId;
       try {
         const { data: authData } = await client.auth.getUser();
@@ -78,10 +75,6 @@ export function createUniversalDiscoveryService(client) {
       try {
         locations = await execute();
       } catch (error) {
-        // A transient RPC failure must never turn an already-populated map into
-        // an authoritative-looking empty state. Return the last known-good result
-        // for the same user/area/filter tuple when one exists; otherwise preserve
-        // the original error so the initial empty state remains distinguishable.
         const cached = fallback();
         if (cached) return cached;
         throw error;
@@ -91,12 +84,8 @@ export function createUniversalDiscoveryService(client) {
         writeFallback(cacheKey, locations);
         return locations;
       }
-      if (!discover || typeof client.functions?.invoke !== 'function') return locations;
+      if (!discover || typeof client.functions?.invoke !== 'function') return fallback() || locations;
 
-      // Empty canonical results are not treated as proof that the market is empty.
-      // Perform one bounded live discovery/ingestion pass, then ask the same canonical
-      // RPC again. This keeps the map on one authoritative result surface while allowing
-      // a new area to self-populate when no records have been ingested yet.
       try {
         const { error: ingestError } = await client.functions.invoke('ingest-map-candidates-v2', {
           body: { latitude: lat, longitude: lng, radiusKm: radius }
@@ -110,15 +99,20 @@ export function createUniversalDiscoveryService(client) {
           throw error;
         }
       } catch (error) {
-        // Discovery is an enhancement, never a reason to make the canonical map crash.
-        // If there is no bounded-discovery fallback, propagate the failure so the map
-        // surface retains its last successful locations instead of replacing them with [] .
         const cached = fallback();
         if (cached) return cached;
         throw error;
       }
-      if (locations.length) writeFallback(cacheKey, locations);
-      return locations;
+
+      // A successful retry returning zero rows can still be a transient ingestion/RPC
+      // race. If this query already has a known-good result, preserve it rather than
+      // converting the map into an authoritative-looking empty state. Only a genuinely
+      // uncached empty discovery is allowed to reach the map as an empty result.
+      if (locations.length) {
+        writeFallback(cacheKey, locations);
+        return locations;
+      }
+      return fallback() || locations;
     }
   });
 }
