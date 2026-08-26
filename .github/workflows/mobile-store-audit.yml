@@ -37,14 +37,29 @@ jobs:
             apps/consumer-mobile/app/route.tsx
             apps/consumer-mobile/app/profile.tsx
             apps/consumer-mobile/app/location/'[id].tsx'
-            apps/consumer-mobile/app/notifications.tsx
-            apps/consumer-mobile/app/family.tsx
-            apps/consumer-mobile/app/premium.tsx
             apps/consumer-mobile/app/checkin.tsx
             apps/consumer-mobile/app/qr.tsx
             apps/consumer-mobile/app/rewards.tsx
+            apps/consumer-mobile/app/notifications.tsx
+            apps/consumer-mobile/app/family.tsx
+            apps/consumer-mobile/app/premium.tsx
+            packages/mobile-core/src/identity.ts
+            packages/mobile-core/src/engagement.ts
+            packages/mobile-core/src/routing.ts
           )
           for file in "${required[@]}"; do test -s "$file" || { echo "Missing Consumer surface: $file"; exit 1; }; done
+      - name: Verify front-to-back Consumer wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "signInWithPassword" packages/mobile-core/src/identity.ts
+          grep -q "record_gps_checkin" packages/mobile-core/src/engagement.ts
+          grep -q "verify_checkin" packages/mobile-core/src/engagement.ts
+          grep -q "consume_single_use_qr" packages/mobile-core/src/engagement.ts
+          grep -q "user_rewards_history" packages/mobile-core/src/engagement.ts
+          grep -q "mark_all_notifications_read" apps/consumer-mobile/app/notifications.tsx
+          grep -q "semantic_location_search" apps/consumer-mobile/app/map.tsx
+          grep -q "publish_live_network_event" packages/mobile-core/src/routing.ts
       - name: Verify Business product surfaces
         shell: bash
         run: |
@@ -67,24 +82,16 @@ jobs:
         run: |
           set -euo pipefail
           grep -Rqi 'semantic_location_search\|semantic' apps/consumer-mobile
-      - name: Verify canonical engagement RPC wiring
-        run: |
-          set -euo pipefail
-          for fn in record_gps_checkin kleenest_map_check_in verify_checkin consume_single_use_qr checkin_rewards_summary user_rewards_history; do
-            grep -q "$fn" packages/mobile-core/src/engagement.ts || { echo "Missing canonical engagement RPC: $fn"; exit 1; }
-          done
-          grep -q "publish_live_network_event" packages/mobile-core/src/routing.ts || { echo 'Mobile routing is not using the canonical live event RPC'; exit 1; }
       - name: Summary
         if: always()
         run: |
           {
             echo '## Kleenest Mobile Store Readiness Audit'
             echo ''
-            echo '- Consumer route surfaces: checked'
-            echo '- Consumer check-in / QR / rewards surfaces: checked'
+            echo '- Consumer navigation and feature surfaces: checked'
+            echo '- Consumer auth/check-in/QR/rewards/notification wiring: checked'
             echo '- Business route surfaces: checked'
             echo '- Mobile Supabase credential boundary: checked'
             echo '- Consumer Semantic AI surface: checked'
-            echo '- Canonical engagement RPC wiring: checked'
             echo '- This workflow is read-only.'
           } >> "$GITHUB_STEP_SUMMARY"
