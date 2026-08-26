@@ -2,20 +2,19 @@ import { useEffect, useRef } from 'react';
 import { useAppContext } from '../AppContext.jsx';
 
 export default function UniversalDiscoveryBootstrap() {
-  const { configured, services } = useAppContext();
+  const { configured, loading, user, services } = useAppContext();
   const started = useRef(false);
 
   useEffect(() => {
-    if (!configured || !services?.maps || started.current) return;
+    // Canonical map RPCs and ingestion are authenticated. Do not race the
+    // initial auth/profile load with background discovery.
+    if (!configured || loading || !user || !services?.maps || started.current) return;
     started.current = true;
     if (!navigator.geolocation) return;
 
     let active = true;
     navigator.geolocation.getCurrentPosition(async ({ coords }) => {
       if (!active) return;
-      // Warm the canonical discovery path once. MapSurfaceV3 already performs
-      // bounded discovery when its canonical query is empty, so do not run the
-      // older ingest and prepare calls back-to-back and race the active map.
       try {
         await services.maps.nearby({
           latitude: coords.latitude,
@@ -26,13 +25,12 @@ export default function UniversalDiscoveryBootstrap() {
           discover: true
         });
       } catch {
-        // Bootstrap is opportunistic. The active map owns user-visible errors
-        // and must never depend on this background warm-up succeeding.
+        // Bootstrap is opportunistic. The active map owns user-visible errors.
       }
     }, () => {}, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
 
     return () => { active = false; };
-  }, [configured, services]);
+  }, [configured, loading, user, services]);
 
   return null;
 }
