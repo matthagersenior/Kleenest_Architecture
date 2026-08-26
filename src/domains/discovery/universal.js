@@ -101,7 +101,7 @@ export function createUniversalDiscoveryService(client) {
         const { error: ingestError } = await client.functions.invoke('ingest-map-candidates-v2', {
           body: { latitude: lat, longitude: lng, radiusKm: radius }
         });
-        if (ingestError) return fallback() || locations;
+        if (ingestError) throw ingestError;
         try {
           locations = await execute();
         } catch (error) {
@@ -111,9 +111,11 @@ export function createUniversalDiscoveryService(client) {
         }
       } catch (error) {
         // Discovery is an enhancement, never a reason to make the canonical map crash.
+        // If there is no bounded-discovery fallback, propagate the failure so the map
+        // surface retains its last successful locations instead of replacing them with [] .
         const cached = fallback();
         if (cached) return cached;
-        if (error) return locations;
+        throw error;
       }
       if (locations.length) writeFallback(cacheKey, locations);
       return locations;
