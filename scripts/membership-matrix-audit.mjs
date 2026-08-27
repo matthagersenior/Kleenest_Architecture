@@ -1,4 +1,4 @@
-import { PRODUCT_TIERS, getProductTier, normalizeProductTier, capabilityAccess, capabilityState } from '../src/architecture/productModel.js';
+import { PRODUCT_TIERS, getProductTier, normalizeProductTier } from '../src/architecture/productModel.js';
 import { CAPABILITY_REGISTRY } from '../src/architecture/capabilityRegistry.js';
 
 const WORKSPACE_DOMAINS = Object.freeze({
@@ -17,32 +17,34 @@ const CAPABILITY_TO_DOMAIN = Object.freeze({
 
 const errors = [];
 const checks = [];
+const assert = (condition, message) => { if (!condition) errors.push(message); };
 
 for (const [groupName, tiers] of Object.entries(PRODUCT_TIERS)) {
   for (const [tierName, tier] of Object.entries(tiers)) {
     checks.push({ tier: tier.id, group: groupName, label: tier.label });
-    if (getProductTier(tier.id)?.id !== tier.id) errors.push(`${tier.id}: normalize/getProductTier round-trip failed`);
+    assert(getProductTier(tier.id)?.id === tier.id, `${tier.id}: normalize/getProductTier round-trip failed`);
 
     for (const workspace of tier.workspaces) {
-      if (!WORKSPACE_DOMAINS[workspace]) {
-        errors.push(`${tier.id}: unknown workspace '${workspace}'`);
-        continue;
-      }
-      for (const domain of WORKSPACE_DOMAINS[workspace]) {
-        if (!CAPABILITY_REGISTRY[domain]) errors.push(`${tier.id}: workspace '${workspace}' references missing capability domain '${domain}'`);
-      }
+      const domains = WORKSPACE_DOMAINS[workspace];
+      assert(Boolean(domains), `${tier.id}: unknown workspace '${workspace}'`);
+      if (!domains) continue;
+      for (const domain of domains) assert(Boolean(CAPABILITY_REGISTRY[domain]), `${tier.id}: workspace '${workspace}' references missing capability domain '${domain}'`);
     }
 
     for (const capability of [...tier.capabilities, ...tier.lockedCapabilities]) {
       const domain = CAPABILITY_TO_DOMAIN[capability];
-      if (!domain || !CAPABILITY_REGISTRY[domain]) errors.push(`${tier.id}: capability '${capability}' has no canonical capability-domain mapping`);
+      assert(Boolean(domain && CAPABILITY_REGISTRY[domain]), `${tier.id}: capability '${capability}' has no canonical capability-domain mapping`);
+      if (!domain || !CAPABILITY_REGISTRY[domain]) continue;
+      for (const workspace of tier.workspaces) {
+        const ui = CAPABILITY_REGISTRY[domain]?.ui || [];
+        assert(ui.includes('all') || ui.includes(workspace), `${tier.id}: capability '${capability}' maps to '${domain}', but '${workspace}' is not an exposed UI workspace`);
+      }
     }
 
     const overlapping = tier.capabilities.filter((capability) => tier.lockedCapabilities.includes(capability));
-    if (overlapping.length) errors.push(`${tier.id}: capability is both enabled and locked: ${overlapping.join(', ')}`);
-
-    if (tier.ads && tier.capabilities.includes('premium')) errors.push(`${tier.id}: ad-supported tier cannot have premium capability`);
-    if (!tier.ads && tier.id === 'user_free') errors.push(`${tier.id}: free tier must remain ad-supported`);
+    assert(!overlapping.length, `${tier.id}: capability is both enabled and locked: ${overlapping.join(', ')}`);
+    assert(!(tier.ads && tier.capabilities.includes('premium')), `${tier.id}: ad-supported tier cannot have premium capability`);
+    assert(!(tier.id === 'user_free' && !tier.ads), `${tier.id}: free tier must remain ad-supported`);
   }
 }
 
@@ -52,7 +54,7 @@ const tierSamples = [
 ];
 for (const [raw, expected] of tierSamples) {
   const normalized = normalizeProductTier(raw);
-  if (getProductTier(normalized).id !== expected) errors.push(`normalization '${raw}' resolved to '${getProductTier(normalized).id}', expected '${expected}'`);
+  assert(getProductTier(normalized)?.id === expected, `normalization '${raw}' resolved to '${getProductTier(normalized)?.id}', expected '${expected}'`);
 }
 
 const report = {
