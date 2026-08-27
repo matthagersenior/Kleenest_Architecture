@@ -2,28 +2,30 @@ const arr=value=>Array.isArray(value)?value:[];
 const idOf=value=>value?.business_id??value?.id??'';
 const active=value=>String(value?.status??'active').toLowerCase()==='active';
 const firstId=(value,...keys)=>{for(const key of keys){if(value?.[key])return String(value[key]);}return '';};
+const emit=(type,detail={})=>{if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('kleenest:enterprise-updated',{detail:{type,...detail}}));};
 
 export function createEnterpriseLifecycleService(services){
   if(!services?.enterpriseIntelligence||!services?.partners||!services?.enterprise)throw new Error('Enterprise services are required.');
   const resolveContext=({selectedBusinessId,memberships=[]}={})=>{const rows=arr(memberships).filter(active);const selected=rows.find(row=>String(idOf(row))===String(selectedBusinessId||''));const membership=selected||rows[0]||null;return Object.freeze({membership,partnerBusinessId:firstId(membership,'business_id','partner_business_id'),agreementId:firstId(membership,'agreement_id','partner_agreement_id'),programId:firstId(membership,'partner_program_id','program_id','partner_program_uuid')});};
   const campaignId=campaign=>firstId(campaign,'campaign_id','id');
+  const after=async(type,fn,detail={})=>{const result=await fn();emit(type,{...detail,result});return result;};
   return Object.freeze({
     resolveContext,campaignId,
     listNetworks:businessId=>services.enterprise.listOwnedNetworks(businessId),
     listCampaigns:networkId=>services.enterprise.listCampaigns(networkId),
     listPartners:businessId=>services.enterprise.listPartnerBusinesses(businessId),
     listMembers:networkId=>services.enterprise.listNetworkMembers(networkId),
-    createNetwork:name=>services.enterprise.createNetwork(name),
-    createCampaign:(networkId,name,type='engagement',goal=null)=>services.enterpriseIntelligence.createCampaign(networkId,name,type,goal),
-    activateCampaign:id=>services.enterpriseIntelligence.activateCampaign(id),
-    pauseCampaign:id=>services.enterpriseIntelligence.pauseCampaign(id),
-    recordCampaignOutcome:(id,businessId,metrics={})=>services.enterpriseIntelligence.recordCampaignOutcome(id,businessId,metrics),
-    recordNetworkMetric:(networkId,date,metrics={})=>services.enterpriseIntelligence.recordMetric(networkId,date,metrics),
-    createAllocation:(networkId,partnerBusinessId,campaignId,type,quantity,budgetCents,rationale)=>services.enterprise.createAllocation(networkId,partnerBusinessId,campaignId,type,quantity,budgetCents,rationale),
-    activateAllocation:id=>services.enterprise.activateAllocation(id),
-    requestAgreement:(programId,businessId)=>services.partners.requestAgreement(programId,businessId),
-    acceptAgreement:id=>services.partners.acceptAgreement(id),
-    invitePartner:(networkId,businessId)=>services.enterprise.invitePartner(networkId,businessId),
-    setMembershipStatus:(membershipId,status)=>services.enterprise.setMembershipStatus(membershipId,status)
+    createNetwork:name=>after('network_created',()=>services.enterprise.createNetwork(name)),
+    createCampaign:(networkId,name,type='engagement',goal=null)=>after('campaign_created',()=>services.enterpriseIntelligence.createCampaign(networkId,name,type,goal),{networkId}),
+    activateCampaign:id=>after('campaign_activated',()=>services.enterpriseIntelligence.activateCampaign(id),{campaignId:id}),
+    pauseCampaign:id=>after('campaign_paused',()=>services.enterpriseIntelligence.pauseCampaign(id),{campaignId:id}),
+    recordCampaignOutcome:(id,businessId,metrics={})=>after('campaign_outcome_recorded',()=>services.enterpriseIntelligence.recordCampaignOutcome(id,businessId,metrics),{campaignId:id,partnerBusinessId:businessId}),
+    recordNetworkMetric:(networkId,date,metrics={})=>after('network_metric_recorded',()=>services.enterpriseIntelligence.recordMetric(networkId,date,metrics),{networkId,date}),
+    createAllocation:(networkId,partnerBusinessId,campaignId,type,quantity,budgetCents,rationale)=>after('allocation_created',()=>services.enterprise.createAllocation(networkId,partnerBusinessId,campaignId,type,quantity,budgetCents,rationale),{networkId,partnerBusinessId,campaignId}),
+    activateAllocation:id=>after('allocation_activated',()=>services.enterprise.activateAllocation(id),{allocationId:id}),
+    requestAgreement:(programId,businessId)=>after('agreement_requested',()=>services.partners.requestAgreement(programId,businessId),{programId,businessId}),
+    acceptAgreement:id=>after('agreement_accepted',()=>services.partners.acceptAgreement(id),{agreementId:id}),
+    invitePartner:(networkId,businessId)=>after('partner_invited',()=>services.enterprise.invitePartner(networkId,businessId),{networkId,businessId}),
+    setMembershipStatus:(membershipId,status)=>after('membership_status_updated',()=>services.enterprise.setMembershipStatus(membershipId,status),{membershipId,status})
   });
 }
