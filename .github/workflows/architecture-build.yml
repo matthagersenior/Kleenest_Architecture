@@ -32,6 +32,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verify Pages source ownership
         run: node scripts/pages-smoke.mjs
+      - name: Audit canonical architecture
+        run: npm run audit:runner
       - name: Audit canonical route contract
         run: npm run audit:routes
       - name: Configure GitHub Pages
