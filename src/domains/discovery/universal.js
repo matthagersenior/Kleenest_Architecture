@@ -58,15 +58,14 @@ export function createUniversalDiscoveryService(client) {
       if (!request) return [];
       const { lat, lng, radius, safeCategory, safeSearch, safeLimit } = request;
 
-      let safeUserId;
+      let safeUserId = null;
       try {
         const { data: authData, error: authError } = await client.auth.getUser();
-        if (authError) throw authError;
-        safeUserId = authData?.user?.id;
+        if (!authError) safeUserId = authData?.user?.id || null;
       } catch {
-        // Never forward caller-supplied identity to the privileged discovery RPC.
-        // An unavailable auth session must not become an identity-selection channel.
-        return [];
+        // Discovery remains available to anonymous consumers. Never accept a caller-supplied
+        // identity when the authenticated session cannot be established.
+        safeUserId = null;
       }
 
       const params = {
