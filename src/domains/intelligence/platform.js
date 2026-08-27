@@ -11,5 +11,9 @@ export function createPlatformIntelligenceService(client){
     refreshLeaderboards:()=>rpc('refresh_business_metric_leaderboards'),
     publishLocationEvent:(eventType,locationId,payload={})=>rpc('publish_location_notification',{p_event_type:eventType,p_location_id:locationId,p_payload:payload}),
     createIntelligenceNotification:(userId,locationId,surface,type,dedupeKey,title,body,data={})=>rpc('create_intelligence_notification',{p_user_id:userId,p_location_id:locationId,p_surface:surface,p_type:type,p_dedupe_key:dedupeKey,p_title:title,p_body:body,p_data:data}),
+    searchLocations:async(query,limit=8)=>rows(await rpc('search_locations',{search_text:String(query||'').trim(),max_results:Number(limit)})),
+    semanticSearch:async(query,lat=null,lng=null,radius=5000,limit=8)=>rows(await rpc('semantic_location_search',{p_query:String(query||'').trim(),p_lat:lat,p_lng:lng,p_radius_m:Number(radius),p_limit:Number(limit)})),
+    locationRecommendation:async(locationId)=>rpc('get_location_recommendation_summary',{p_location_id:locationId}),
+    bathroomIntelligence:async(locationId)=>rpc('get_public_restroom_intelligence',{p_place_id:locationId}),
   });
 }
