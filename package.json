@@ -8,11 +8,12 @@
     "build": "vite build",
     "audit:routes": "node scripts/capability-route-audit.mjs",
     "audit:membership": "node scripts/membership-matrix-audit.mjs",
+    "audit:membership-preview": "node scripts/membership-preview-audit.mjs",
     "audit:ui": "node scripts/ui-interaction-audit.mjs",
     "audit:interactions": "node scripts/interaction-route-audit.mjs",
     "audit:intelligence": "node scripts/intelligence-loop-audit.mjs",
     "audit:owner-labs": "node scripts/owner-lab-wiring-audit.mjs",
-    "audit": "npm run audit:routes && npm run audit:membership && npm run audit:ui && npm run audit:interactions && npm run audit:intelligence && npm run audit:owner-labs && npm run build",
+    "audit": "npm run audit:routes && npm run audit:membership && npm run audit:membership-preview && npm run audit:ui && npm run audit:interactions && npm run audit:intelligence && npm run audit:owner-labs && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
