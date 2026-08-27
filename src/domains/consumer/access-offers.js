@@ -12,6 +12,14 @@ export function createConsumerAccessOfferService(client) {
   };
   return Object.freeze({
     list: () => call('get_single_use_access_offers'),
+    listPurchases: async () => {
+      const { data, error } = await client
+        .from('single_use_access_purchases')
+        .select('id,offer_id,status,purchased_at,redeemed_at')
+        .order('purchased_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
     purchase: async offerId => {
       const result = await call('purchase_single_use_access', { p_offer_id: offerId });
       publish('purchase', { offerId, result });
