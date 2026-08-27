@@ -22,8 +22,8 @@ export function createAdminOperationsService(client){
     setBusinessVerification:(profile,businessId,status)=>ownerRpc(profile,'admin_set_business_verification',{p_business_id:businessId,p_status:status}),
     crud:(profile,resource,action,id=null,payload={})=>{if(!/^[-_a-z0-9]+$/.test(String(resource??'')))throw new Error('Invalid admin resource.');return ownerRpc(profile,'admin_crud_gateway',{p_resource:resource,p_action:action,p_id:id,p_payload:payload});},
     previewTiers:()=>Object.freeze(['free','premium','family','business','fleet','enterprise']),
-    getControlCapabilities:profile=>{requireOwner(profile);return Object.freeze({readAll:true,crud:true,tierPreview:true,diagnostics:true,audit:true,accountCapabilities:true,businessTier:true,businessAccess:true,businessVerification:true,userAccess:true,operationalCapabilityCatalog:true});},
-    resourceCatalog:()=>Object.freeze(['profiles','families','family_members','businesses','fleets','locations','location_evidence','routes','campaigns','contests','subscriptions','support_requests','activity_events','notifications','partner_networks','partner_campaigns','partner_allocations']),
+    getControlCapabilities:profile=>{requireOwner(profile);return Object.freeze({readAll:true,crud:true,tierPreview:true,diagnostics:true,audit:true,accountCapabilities:true,businessTier:true,businessAccess:true,businessVerification:true,userAccess:true,operationalCapabilityCatalog:true,publicDataCatalog:true});},
+    resourceCatalog:()=>Object.freeze(['profiles','families','family_members','businesses','fleets','locations','location_evidence','routes','campaigns','contests','subscriptions','support_requests','activity_events','notifications','partner_networks','partner_campaigns','partner_allocations','external_data_sources','external_data_datasets','external_location_records','external_observations']),
     operationalCapabilityCatalog:profile=>ownerRpc(profile,'admin_operational_capability_catalog'),
     invoke:(profile,operation,args={})=>{if(typeof operation!=='string'||!operation.startsWith('admin_'))throw new Error('Owner operations must use an admin_ RPC.');return ownerRpc(profile,operation,args);},
     health:profile=>ownerFunction(profile,'admin-tools',{action:'health'}),
@@ -32,5 +32,6 @@ export function createAdminOperationsService(client){
     backfillAddresses:(profile,limit=25)=>ownerFunction(profile,'backfill-location-addresses',{limit}),
     ingestMarket:(profile,source,market)=>{const city=String(market??'').toUpperCase();const normalized=String(source??'osm').toLowerCase();if(!city)throw new Error('Market is required.');return ownerFunction(profile,'market-bathroom-ingest-v5',{action:normalized==='datagov'?'datagov-city':'osm-city',city});},
     ingestTopMarkets:(profile,source='osm')=>ownerFunction(profile,'market-bathroom-ingest-v5',{action:String(source).toLowerCase()==='datagov'?'datagov-top-10':'osm-top-10'}),
+    catalogPublicDatasets:(profile,limitPerTerm=50)=>ownerFunction(profile,'public-data-catalog',{action:'discover',limit_per_term:Math.min(Math.max(Number(limitPerTerm)||50,1),100)}),
   });
 }
