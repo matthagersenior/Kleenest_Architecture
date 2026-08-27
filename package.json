@@ -8,7 +8,8 @@
     "build": "vite build",
     "audit:routes": "node scripts/capability-route-audit.mjs",
     "audit:membership": "node scripts/membership-matrix-audit.mjs",
-    "audit": "npm run audit:routes && npm run audit:membership && npm run build",
+    "audit:ui": "node scripts/ui-interaction-audit.mjs",
+    "audit": "npm run audit:routes && npm run audit:membership && npm run audit:ui && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
