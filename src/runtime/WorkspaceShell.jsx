@@ -8,6 +8,7 @@ import WorkspaceNavigation from './WorkspaceNavigation.jsx';
 import OwnerNavigation from './OwnerNavigation.jsx';
 import ConsumerMonetizationBanner from '../consumer/monetization/ConsumerMonetizationBanner.jsx';
 import './consumerEngagement.css';
+import './membershipSlices.css';
 const PREVIEW_TIERS=['free','premium','family','fleet','enterprise','business_standard','business_growth','business_fleet','business_enterprise'];
 const PREVIEW_WORKSPACE={free:'consumer',premium:'consumer',family:'consumer',fleet:'fleet',enterprise:'enterprise',business_standard:'business',business_growth:'business',business_fleet:'fleet',business_enterprise:'enterprise'};
 const PREVIEW_LABEL={free:'Free',premium:'Premium',family:'Family',fleet:'Fleet User',enterprise:'Enterprise User',business_standard:'Business Standard',business_growth:'Business Growth',business_fleet:'Business Fleet',business_enterprise:'Business Enterprise'};
