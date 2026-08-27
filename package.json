@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "audit:routes": "node scripts/capability-route-audit.mjs",
+    "audit": "npm run audit:routes && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
