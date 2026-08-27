@@ -11,7 +11,8 @@
     "audit:ui": "node scripts/ui-interaction-audit.mjs",
     "audit:interactions": "node scripts/interaction-route-audit.mjs",
     "audit:intelligence": "node scripts/intelligence-loop-audit.mjs",
-    "audit": "npm run audit:routes && npm run audit:membership && npm run audit:ui && npm run audit:interactions && npm run audit:intelligence && npm run build",
+    "audit:owner-labs": "node scripts/owner-lab-wiring-audit.mjs",
+    "audit": "npm run audit:routes && npm run audit:membership && npm run audit:ui && npm run audit:interactions && npm run audit:intelligence && npm run audit:owner-labs && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
