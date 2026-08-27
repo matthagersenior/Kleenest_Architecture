@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Handshake, Megaphone, Pause, Play, RefreshCw, Target, TrendingUp, Wallet, CheckCircle2, Activity, Building2, Users, ShieldCheck } from 'lucide-react';
+import { BarChart3, Handshake, Megaphone, Pause, Play, RefreshCw, Target, TrendingUp, Wallet, CheckCircle2, Activity, Building2, Users, ShieldCheck, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
 import { createEnterpriseLifecycleService } from '../domains/enterprise/lifecycle.js';
@@ -102,7 +102,7 @@ export default function EnterpriseOperationsPage({ mode = 'partners' }) {
 
   return <WorkspaceShell workspace="enterprise">
     <section className="page enterprise-page">
-      <div className="page-header"><div><span className="eyebrow">ENTERPRISE OPERATIONS</span><h1>{mode === 'campaigns' ? 'Partner campaigns' : mode === 'performance' ? 'Network performance' : 'Partner network'}</h1><p>Enterprise partner networks, campaigns, outcomes and intelligence.</p></div><div className="hero-actions"><button className="secondary" onClick={load}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/enterprise">Command center</Link></div></div>
+      <div className="page-header"><div><span className="eyebrow">ENTERPRISE OPERATIONS</span><h1>{mode === 'campaigns' ? 'Partner campaigns' : mode === 'performance' ? 'Network performance' : 'Partner network'}</h1><p>Enterprise partner networks, campaigns, outcomes and intelligence.</p></div><div className="hero-actions"><button className="secondary" onClick={load}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/enterprise">Command center</Link><Link className="secondary" to="/enterprise/intelligence">Intelligence</Link><Link className="secondary" to="/enterprise/reports"><FileText size={16}/>Reports</Link><Link className="secondary" to="/enterprise/reports/history">History</Link></div></div>
       {error && <p className="form-error" role="alert">{error}</p>}{message && <p className="form-success" role="status">{message}</p>}
       <RoleScopedCrudPanel role="enterprise" businessId={selectedBusinessId}/><EnterpriseMembershipCrud businessId={selectedBusinessId}/>
       <section className="detail-panel">
@@ -114,12 +114,7 @@ export default function EnterpriseOperationsPage({ mode = 'partners' }) {
             <label className="form-field"><span>Campaign type</span><select value={campaignType} onChange={e => setCampaignType(e.target.value)}><option value="engagement">Engagement</option><option value="promotion">Promotion</option><option value="access">Access</option></select></label>
             <div className="hero-actions">
               <button className="primary" onClick={createCampaign} disabled={!networkId || !campaignName.trim()}><Megaphone size={16}/>Create campaign</button>
-              {campaign ? (
-                <>
-                  <button className="secondary" onClick={() => mutate(() => lifecycle.activateCampaign(campaignId), 'Partner campaign activated.')}><Play size={16}/>Activate</button>
-                  <button className="secondary" onClick={() => mutate(() => lifecycle.pauseCampaign(campaignId), 'Partner campaign paused.')}><Pause size={16}/>Pause</button>
-                </>
-              ) : null}
+              {campaign ? <><button className="secondary" onClick={() => mutate(() => lifecycle.activateCampaign(campaignId), 'Partner campaign activated.')}><Play size={16}/>Activate</button><button className="secondary" onClick={() => mutate(() => lifecycle.pauseCampaign(campaignId), 'Partner campaign paused.')}><Pause size={16}/>Pause</button></> : null}
             </div>
             {campaign ? <button className="secondary" onClick={loadCampaignRoi}><TrendingUp size={16}/>Load campaign ROI</button> : null}
           </>
