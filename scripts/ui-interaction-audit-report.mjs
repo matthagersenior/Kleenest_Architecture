@@ -85,7 +85,7 @@ for (const file of files) {
     const attrs = match.attrs;
     const line = scanText.slice(0, match.start).split('\n').length;
     const interactive = /\bonClick\s*=/.test(attrs) || /\btype\s*=\s*["']submit["']/.test(attrs) || /\bformAction\s*=/.test(attrs);
-    const explicitlyStatic = /\bdisabled\s*=\s*\{?true\}?/.test(attrs) || /\baria-disabled\s*=\s*["']true["']/.test(attrs);
+    const explicitlyStatic = /\bdisabled\s*(?:=\s*(?:\{[^}]*\}|["'][^"']*["']))?/.test(attrs) || /\baria-disabled\s*=\s*["']true["']/.test(attrs);
     const delegated = /\{\.\.\.[A-Za-z_$][\w$]*\}/.test(attrs);
     const implicitSubmit = !/\btype\s*=/.test(attrs) && isInsideForm(scanText, match.start);
     if (!interactive && !explicitlyStatic && !delegated && !implicitSubmit) findings.push({file:relative,line,kind:'button-without-action'});
