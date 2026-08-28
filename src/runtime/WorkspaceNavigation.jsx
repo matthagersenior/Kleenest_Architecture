@@ -1,6 +1,7 @@
 import { Bell, ChevronDown, Shield, Sparkles, Users, Truck, Building2, UserCircle, LogIn, Lock, Database, Route, BarChart3, BriefcaseBusiness, MapPin } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { getWorkspaceNavigationModel, WORKSPACE_NAV_ICONS, NAV_SECTION_ICONS, withPreview } from './workspace/workspaceNavigationModel.js';
+import { getWorkspace } from '../domain/workspaces.js';
+import { getWorkspaceNavigationModel, withPreview } from './workspace/workspaceNavigationModel.js';
 
 const icons = { consumer: Sparkles, business: Building2, fleet: Truck, enterprise: Users, admin: Shield };
 const sectionIcons = { Manage: BriefcaseBusiness, Engage: Sparkles, Insights: BarChart3, Account: UserCircle, Operate: Route, Governance: Shield, Platform: Database };
@@ -39,7 +40,7 @@ export default function WorkspaceNavigation({ workspace = 'consumer', capabiliti
         </nav>
       )}
       <div className="workspace-actions">
-        {availableWorkspaces.length > 1 && <label className="workspace-switcher"><span className="sr-only">Switch workspace</span><select value={model.current.id} onChange={event => onWorkspaceChange?.(event.target.value)}>{availableWorkspaces.map(id => <option key={id} value={id}>{id}</option>)}</select><ChevronDown size={15} aria-hidden="true" /></label>}
+        {availableWorkspaces.length > 1 && <label className="workspace-switcher"><span className="sr-only">Switch workspace</span><select value={model.current.id} onChange={event => onWorkspaceChange?.(event.target.value)}>{availableWorkspaces.map(id => <option key={id} value={id}>{getWorkspace(id).label}</option>)}</select><ChevronDown size={15} aria-hidden="true" /></label>}
         {authenticated ? <Link to={withPreview('/profile', previewTier)} className="workspace-icon-action" aria-label="Account" title="Account"><UserCircle size={18} /></Link> : <Link to="/auth" className="workspace-signin" aria-label="Sign in"><LogIn size={16} />Sign in</Link>}
         <Link to={withPreview('/notifications', previewTier)} className="workspace-icon-action" aria-label="Notifications" title="Notifications"><Bell size={18} /></Link>
       </div>
