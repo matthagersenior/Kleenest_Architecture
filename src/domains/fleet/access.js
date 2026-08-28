@@ -1,10 +1,13 @@
 const CONTROLLER_ROLES=new Set(['owner','admin','manager','fleet_owner','fleet_manager','enterprise_owner','enterprise_admin','enterprise_manager']);
 const OBSERVER_TIERS=new Set(['fleet','business_fleet','business_enterprise','enterprise']);
 const TARGET_KINDS=Object.freeze(['fleet','driver','vehicle','route']);
+const TARGET_LABELS=Object.freeze({fleet:'Fleet',driver:'Driver',vehicle:'Vehicle',route:'Route'});
 const normalize=v=>String(v??'').trim().toLowerCase().replace(/[-\s]+/g,'_');
 export function normalizeFleetRole(value){return normalize(value)}
 export function isFleetControllerRole(value){return CONTROLLER_ROLES.has(normalize(value))}
 export function fleetTargetKinds(){return TARGET_KINDS.slice()}
+export function fleetTargetLabel(kind){return TARGET_LABELS[normalize(kind)]||'Target'}
+export function fleetTargetFromRow(row={}){const type=normalize(row.target_type||row.type||'');return {id:row.target_id||row.id||'',type,label:row.target_name||row.name||row.display_name||row.driver_name||row.unit_code||row.route_name||row.vehicle_name||row.business_name||fleetTargetLabel(type)}}
 export function fleetAccessLabel(access={}){if(access.configure)return 'Fleet controller';if(access.observe)return 'Fleet viewer';return 'No Fleet access'}
 export function fleetAccessState({isPlatformOwner=false,role='',businessTier='',canObserve=false,canOperate=false,canConfigure=false}={}){
   if(isPlatformOwner)return Object.freeze({observe:true,operate:true,configure:true,reason:'platform_owner'});
