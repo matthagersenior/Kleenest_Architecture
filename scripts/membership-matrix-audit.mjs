@@ -31,9 +31,6 @@ for (const [groupName, tiers] of Object.entries(PRODUCT_TIERS)) {
       for (const domain of domains) assert(Boolean(CAPABILITY_REGISTRY[domain]), `${tier.id}: workspace '${workspace}' references missing capability domain '${domain}'`);
     }
 
-    // Enabled capabilities must be represented in at least one workspace exposed by the tier.
-    // Locked capabilities only need a canonical domain mapping: they are intentionally not
-    // required to appear in the tier's exposed UI workspaces.
     for (const capability of tier.capabilities) {
       const domain = CAPABILITY_TO_DOMAIN[capability];
       assert(Boolean(domain && CAPABILITY_REGISTRY[domain]), `${tier.id}: enabled capability '${capability}' has no canonical capability-domain mapping`);
