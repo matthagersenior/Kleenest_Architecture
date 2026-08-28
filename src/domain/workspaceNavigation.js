@@ -19,3 +19,17 @@ export const WORKSPACE_NAVIGATION = Object.freeze({
 export function getNavigationForWorkspace(workspace, canUse = true) {
   return canUse ? (WORKSPACE_NAVIGATION[workspace] || []) : [];
 }
+
+export function getWorkspaceNavigationPrefixes(workspace) {
+  const items = getNavigationForWorkspace(workspace);
+  const prefixes = items.map(item => item.path).filter(Boolean);
+  return workspace === 'consumer'
+    ? prefixes
+    : prefixes.filter(path => path !== '/notifications');
+}
+
+export function isCanonicalWorkspaceDestination(workspace, path) {
+  const current = String(path || '/');
+  const prefixes = getWorkspaceNavigationPrefixes(workspace);
+  return prefixes.some(prefix => prefix === '/' ? current === '/' : current === prefix || current.startsWith(`${prefix}/`));
+}
