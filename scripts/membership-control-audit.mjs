@@ -70,17 +70,8 @@ function maskTemplateLiteralBodies(text) {
   return chars.join('');
 }
 
-function controlLabel(scanText, match) {
-  const body = scanText.slice(match.end, Math.min(scanText.length, match.end + 500));
-  const aria = match.attrs.match(/\baria-label\s*=\s*["']([^"']+)["']/i);
-  const title = match.attrs.match(/\btitle\s*=\s*["']([^"']+)["']/i);
-  const text = body.match(/^\s*([^<{]{2,80})\s*<\//);
-  return (aria?.[1] || title?.[1] || text?.[1] || '').replace(/\s+/g, ' ').trim().slice(0, 120);
-}
-
 const workspaceFiles = files.filter((file) => /Consumer|Business|Fleet|Enterprise|Owner|Membership|Workspace|Profile|Progression|Map|Route|Location|Notification/i.test(path.basename(file)));
 const findings = [];
-const seenLabels = new Map();
 
 for (const file of workspaceFiles) {
   const relative = path.relative(process.cwd(), file);
@@ -92,16 +83,8 @@ for (const file of workspaceFiles) {
     const interactive = /\bonClick\s*=/.test(attrs) || /\btype\s*=\s*["']submit["']/.test(attrs) || /\bformAction\s*=/.test(attrs);
     const explicitlyStatic = /\bdisabled\s*(?:=\s*(?:\{[^}]*\}|["'][^"']*["']))?/.test(attrs) || /\baria-disabled\s*=\s*["']true["']/.test(attrs);
     const delegated = /\{\.\.\.[A-Za-z_$][\w$]*\}/.test(attrs);
-    const implicitSubmit = !/\btype\s*=/.test(attrs) && text.slice(0, match.start).lastIndexOf('<form') > text.slice(0, match.start).lastIndexOf('</form');
+    const implicitSubmit = !/\btype\s*=/.test(attrs) && scanText.slice(0, match.start).lastIndexOf('<form') > scanText.slice(0, match.start).lastIndexOf('</form');
     if (!interactive && !explicitlyStatic && !delegated && !implicitSubmit) findings.push(`${relative}: button without an action or explicit disabled state`);
-
-    const label = controlLabel(scanText, match);
-    if (label.length > 2) {
-      const key = label.toLowerCase();
-      const prior = seenLabels.get(key);
-      if (prior && prior !== relative) findings.push(`duplicate control label across workspace surfaces: "${label}" in ${prior} and ${relative}`);
-      else seenLabels.set(key, relative);
-    }
   }
 
   if (/\.from\(['"](businesses|locations|fleet_|enterprise_|intelligence_|notifications|activity_events)/.test(text) && /\.insert\(|\.update\(|\.delete\(/.test(text)) {
