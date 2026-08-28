@@ -31,14 +31,20 @@ for (const [groupName, tiers] of Object.entries(PRODUCT_TIERS)) {
       for (const domain of domains) assert(Boolean(CAPABILITY_REGISTRY[domain]), `${tier.id}: workspace '${workspace}' references missing capability domain '${domain}'`);
     }
 
-    for (const capability of [...tier.capabilities, ...tier.lockedCapabilities]) {
+    // Enabled capabilities must be represented in at least one workspace exposed by the tier.
+    // Locked capabilities only need a canonical domain mapping: they are intentionally not
+    // required to appear in the tier's exposed UI workspaces.
+    for (const capability of tier.capabilities) {
       const domain = CAPABILITY_TO_DOMAIN[capability];
-      assert(Boolean(domain && CAPABILITY_REGISTRY[domain]), `${tier.id}: capability '${capability}' has no canonical capability-domain mapping`);
+      assert(Boolean(domain && CAPABILITY_REGISTRY[domain]), `${tier.id}: enabled capability '${capability}' has no canonical capability-domain mapping`);
       if (!domain || !CAPABILITY_REGISTRY[domain]) continue;
-      for (const workspace of tier.workspaces) {
-        const ui = CAPABILITY_REGISTRY[domain]?.ui || [];
-        assert(ui.includes('all') || ui.includes(workspace), `${tier.id}: capability '${capability}' maps to '${domain}', but '${workspace}' is not an exposed UI workspace`);
-      }
+      const ui = CAPABILITY_REGISTRY[domain]?.ui || [];
+      assert(tier.workspaces.some((workspace) => ui.includes('all') || ui.includes(workspace)), `${tier.id}: enabled capability '${capability}' maps to '${domain}', but no exposed tier workspace supports that domain`);
+    }
+
+    for (const capability of tier.lockedCapabilities) {
+      const domain = CAPABILITY_TO_DOMAIN[capability];
+      assert(Boolean(domain && CAPABILITY_REGISTRY[domain]), `${tier.id}: locked capability '${capability}' has no canonical capability-domain mapping`);
     }
 
     const overlapping = tier.capabilities.filter((capability) => tier.lockedCapabilities.includes(capability));
