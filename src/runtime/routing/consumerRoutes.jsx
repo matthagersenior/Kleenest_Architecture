@@ -20,8 +20,7 @@ import AccessOffersPage from '../AccessOffersPage.jsx';
 import EngagementSurface from '../EngagementSurface.jsx';
 import ConsumerActionCenter from '../ConsumerActionCenter.jsx';
 import EngagementOrchestrator from '../EngagementOrchestrator.jsx';
-
-const PREVIEW_TIERS = ['free','premium','family','fleet','enterprise','business_standard','business_growth','business_fleet','business_enterprise'];
+import { PREVIEW_TIERS } from '../workspace/useWorkspacePreview.js';
 
 function OwnerAwareHome() {
   const { profile, loading, isPlatformOwner: contextOwner } = useAppContext();
