@@ -1,3 +1,8 @@
+function finiteCoordinate(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function normalizePlace(row = {}) {
   const locationId = row.location_id ?? null;
   const placeId = row.place_id ?? null;
@@ -9,6 +14,9 @@ export function normalizePlace(row = {}) {
   const locationVerified = locationVerificationStatus === 'verified';
   const bathroomVerified = bathroomVerificationStatus === 'verified' || bathroomVerificationStatus === 'has_bathroom';
   const isVerified = locationVerified;
+  const latitude = finiteCoordinate(row.latitude);
+  const longitude = finiteCoordinate(row.longitude);
+  const hasCanonicalCoordinates = latitude != null && longitude != null && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
 
   return Object.freeze({
     ...row,
@@ -16,9 +24,10 @@ export function normalizePlace(row = {}) {
     place_id: placeId,
     location_id: canonicalLocationId,
     has_canonical_location: hasCanonicalLocation,
+    has_canonical_coordinates: hasCanonicalCoordinates,
     name: row.name ?? 'Unknown location',
-    latitude: Number(row.latitude),
-    longitude: Number(row.longitude),
+    latitude: hasCanonicalCoordinates ? latitude : null,
+    longitude: hasCanonicalCoordinates ? longitude : null,
     bathroom_verification_status: bathroomVerificationStatus,
     location_verification_status: locationVerificationStatus,
     location_verified: locationVerified,
@@ -54,4 +63,11 @@ export function requireCanonicalLocationId(place = {}) {
   const locationId = place.location_id ?? null;
   if (!locationId) throw new Error('Canonical location identity is required for this capability.');
   return locationId;
+}
+
+export function requireCanonicalCoordinates(place = {}) {
+  if (!place?.has_canonical_coordinates || place.latitude == null || place.longitude == null) {
+    throw new Error('Canonical location coordinates are required for this capability.');
+  }
+  return { latitude: place.latitude, longitude: place.longitude };
 }
