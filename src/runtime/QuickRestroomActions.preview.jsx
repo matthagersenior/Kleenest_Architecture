@@ -6,7 +6,7 @@ import './QuickRestroomActions.css';
 const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null};
 const distance=p=>n(p.distance_meters??(n(p.distance_km)!=null?n(p.distance_km)*1000:p.distance))??Infinity;
 const clean=p=>n(p.cleanliness_pct??p.cleanliness_score??p.kleenest_score??p.trust_score)??0;
-const verified=p=>n(p.bathroom_verification_count??p.verification_count??p.verification_confidence)??(p.is_verified?1:0);
+const verified=p=>n(p.bathroom_verification_count??p.bathroom_evidence_count??p.verification_count)??(p.bathroom_verified===true||String(p.bathroom_verification_status??'').toLowerCase()==='verified'?1:0);
 const rated=p=>n(p.rating??p.average_rating??p.stars)??0;
 const fresh=p=>Date.parse(p.updated_at||p.last_verified_at||p.last_reviewed_at||p.created_at||'')||0;
 const pick=(rows,mode)=>[...(rows||[])].filter(p=>p?.id||p?.location_id).sort((a,b)=>mode==='closest'?distance(a)-distance(b):mode==='cleanest'?clean(b)-clean(a)||distance(a)-distance(b):mode==='verified'?verified(b)-verified(a)||fresh(b)-fresh(a)||distance(a)-distance(b):mode==='highest'?rated(b)-rated(a)||distance(a)-distance(b):mode==='freshest'?fresh(b)-fresh(a)||distance(a)-distance(b):clean(b)-clean(a)||verified(b)-verified(a)||rated(b)-rated(a)||fresh(b)-fresh(a)||distance(a)-distance(b))[0];
