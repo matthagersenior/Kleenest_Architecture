@@ -6,6 +6,7 @@ import OwnerCrudWorkbench from '../OwnerCrudWorkbench.jsx';
 import OwnerTierPreview from '../OwnerTierPreview.jsx';
 import OwnerAuditPage from '../OwnerAuditPage.jsx';
 import AdminMaintenancePage from '../AdminMaintenancePage.jsx';
+import CapabilityHubPage from '../CapabilityHubPage.jsx';
 import OperationalCapabilityPage from '../OperationalCapabilityPage.jsx';
 import NetworkIntelligenceSurface from '../NetworkIntelligenceSurface.jsx';
 import OwnerIntelligenceLab from '../OwnerIntelligenceLab.jsx';
@@ -20,7 +21,7 @@ function OwnerRoute({ children }) {
 
 export const ownerRoutes = [
   <Route key="admin" path="/admin" element={<OwnerRoute><OwnerControlCenter /></OwnerRoute>} />,
-  <Route key="admin-capabilities" path="/admin/capabilities" element={<OwnerRoute><OperationalCapabilityPage /></OwnerRoute>} />,
+  <Route key="admin-capabilities" path="/admin/capabilities" element={<OwnerRoute><CapabilityHubPage /></OwnerRoute>} />,
   <Route key="admin-maintenance" path="/admin/maintenance" element={<OwnerRoute><AdminMaintenancePage /></OwnerRoute>} />,
   <Route key="admin-crud" path="/admin/crud" element={<OwnerRoute><OwnerCrudWorkbench /></OwnerRoute>} />,
   <Route key="admin-operational-capabilities" path="/admin/operational-capabilities" element={<OwnerRoute><OperationalCapabilityPage /></OwnerRoute>} />,
