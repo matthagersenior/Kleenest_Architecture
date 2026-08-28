@@ -6,73 +6,88 @@
 - Production Supabase: `ssgesjzdvdsqacdtasje`
 
 ## Slice status
-OPEN. This slice is the active reconciliation gate. Findings are fixed only after runtime/backend verification.
+OPEN — active reconciliation gate. Findings are closed only after runtime/backend verification.
 
-## Confirmed findings
+## Current verification
 
 ### F1 — Account initialization direct-table failures
-Production API logs show authenticated `subscriptions` requests returning 403 and `account_service_entitlements` requests returning 400 while `get_current_user_product_entitlements` succeeds. `AppContext` loads subscription and service entitlements through `billing/catalog.js`, which currently reads those tables directly.
+The billing read-path was rewired to `user_subscription_summary` and `get_current_user_product_entitlements` in commit `2aadace2dca85bdbb3f0fdda4aa6b3573a0f3804`.
 
-Action taken: `billing/catalog.js` was rewired to use `user_subscription_summary` and `get_current_user_product_entitlements` for the current-user reads. Commit: `2aadace2dca85bdbb3f0fdda4aa6b3573a0f3804`.
-
-Verification still required: live API logs must show the boot path no longer calling the failing direct-table reads.
+Status: CODE FIXED; fresh production boot/log verification remains required.
 
 ### F2 — Feature telemetry outcome mismatch
-Production `record_feature_access` accepts `allowed`, `locked`, `denied`. Runtime coverage services were able to send `blocked`, producing observed HTTP 400s. The mismatch was confirmed in both the production function contract and API logs.
+Coverage/access services now normalize `blocked` to the authoritative `denied` outcome while retaining `original_outcome` metadata. Commits: `6041a10bdde31fc893851619a33bd9df5be91d26` and `e154492c8f62b119ab43b0258e6f9c62ac1b8670`.
 
-Action taken: `src/domains/entitlements/coverage.js` and `src/domains/entitlements/access.js` now normalize `blocked` to authoritative `denied` while preserving `original_outcome` in metadata. Commits: `6041a10bdde31fc893851619a33bd9df5be91d26` and `e154492c8f62b119ab43b0258e6f9c62ac1b8670`.
-
-Verification still required: run the affected gate paths and confirm `record_feature_access` no longer produces 400s.
+Status: CODE FIXED; fresh production-path verification remains required.
 
 ### F3 — Versioned ingestion families
-Production has active version families for `public-data-ingest`, `market-bathroom-ingest`, and `ingest-map-candidates`. Inspected versions are behaviorally different; for example `public-data-ingest-v2` contains queue functionality not present in the older base function. `ingest-map-candidates-v3` is returning successful production requests.
+Production currently has multiple active version families. Current Edge Function inventory confirms:
+- `ingest-map-candidates` v24
+- `ingest-map-candidates-v2` v3
+- `ingest-map-candidates-v3` v5, JWT disabled, current live discovery path
+- `maps-ingest` v21 after the scheduler-auth repair
+- `public-data-ingest` / v2 / v3 / v4
+- `market-bathroom-ingest` / v2 / v3 / v4 / v5
 
-Action: no destructive cleanup. Caller/auth/write/schedule matrix required before retirement.
-Status: MATRIX REQUIRED.
+Status: MATRIXED; no retirement until caller/auth/write/schedule equivalence is proven.
 
-### F4 — Scheduled Maps ingestion failure
-Production Edge Function logs show repeated HTTP 500s from `maps-ingest` v20 while `ingest-map-candidates-v3` v5 is returning HTTP 200. The runtime discovery path already calls v3, but scheduled Maps ingestion still targets `maps-ingest`.
+### F4 — Scheduled Maps ingestion authentication failure
+The original `maps-ingest` v20 required an admin JWT, while the active pg_cron jobs supplied only the publishable key plus `x-kleenest-scheduler: maps-v1`. That was a concrete scheduler/handler contract mismatch.
 
-Action: inspect `maps-ingest` v20 and its scheduled caller before changing cron or deploying a replacement.
-Status: OPEN — high priority.
+Action completed:
+- Added Vault-backed `kleenest_maps_scheduler` secret.
+- Added service-role-only `get_internal_scheduler_secret()`.
+- Deployed `maps-ingest` v21 with `verify_jwt=false` and explicit scheduler-secret authentication while preserving authenticated admin/service-role execution.
+- Rewired both active pg_cron jobs through `cron.alter_job()` to read the scheduler credential from Vault.
+- Submitted a live St. Louis invocation through the same pg_net path; the resulting `external_import_jobs` record is currently running, proving the scheduler authentication path reached the importer.
+
+Status: AUTH CONTRACT REPAIRED; import completion still needs observation after the Overpass work finishes.
 
 ### F5 — Push delivery
-`deliver-push-notification` is correctly worker-only (`verify_jwt=false`) and validates a worker secret. It writes delivery state to `notification_push_deliveries`. Client registration uses authenticated RPCs. Do not expose the worker endpoint to the browser.
+Production `deliver-push-notification` remains worker-only (`verify_jwt=false`) and uses worker-secret authorization. Delivery state is persisted in `notification_push_deliveries`.
 
-Status: NEXT SLICE — delivery state still needs a safe product/reporting read path.
+Action completed:
+- Added authenticated `my_notification_push_delivery_status()` for user-scoped delivery history.
+- Added admin-gated `admin_notification_push_delivery_summary()` for aggregate delivery reporting.
+- Added `deliveryStatus()` to the canonical notification inbox service.
+- Both new RPCs have anonymous execution revoked; the user read is authenticated-only and the scheduler secret is service-role-only.
+
+Current production delivery table has no rows yet, so the new read path correctly reports an empty state rather than inventing delivery success.
+
+Status: READ/REPORTING CONTRACT ADDED; UI/reporting consumption remains the next notification sub-slice.
 
 ### F6 — Fleet access boundary
-Production now has `fleet_observe_access`; `has_fleet_access` is a compatibility read alias and Fleet mutations remain manager/controller gated. Current Architecture preserves observe vs operate/configure separation.
+Production has `fleet_observe_access`; `has_fleet_access` remains a compatibility read alias. Fleet mutations remain manager/controller gated.
 
 Status: RESOLVED; regression watch.
 
 ### F7 — Fleet metric configuration
-Current Architecture contains controller-protected metric definition/assignment services and corresponding production migrations. Earlier audit text calling this unconfirmed is stale.
+Current Architecture and Production contain controller-protected metric definition/assignment capabilities. The remaining work is registry/documentation reconciliation and controller UI verification, not invention of a new measurement engine.
 
-Status: OPEN — reconcile registry/documentation and verify controller UI before GREEN.
-
-## Production evidence
-- Production project is ACTIVE_HEALTHY.
-- Realtime connections are succeeding.
-- `get_current_user_product_entitlements` is succeeding.
-- `admin_operational_capability_catalog` is succeeding.
-- `record_feature_access` had 400s before the telemetry normalization commits.
-- `subscriptions` had 403s and `account_service_entitlements` had 400s before the billing read-path commit.
-- `maps-ingest` has repeated 500s; `ingest-map-candidates-v3` has successful 200s.
+Status: OPEN.
 
 ## Canonical boundaries preserved
-- Location identity remains `locations.id`.
+- `locations.id` remains the canonical physical-place identity.
 - Maps persisted authority remains `locations` + `map_network_nearby_v1`; live ingestion supplements coverage.
-- Push delivery remains worker infrastructure.
+- Push delivery remains worker infrastructure and is never a browser capability.
 - Fleet observe/operate/configure remain separate.
-- No RPC overload or Edge Function generation was deleted speculatively.
+- No versioned Edge Function was deleted speculatively.
+- Notification delivery state is now exposed through an explicit user/admin read boundary instead of direct table access.
+
+## Repository changes
+- `supabase/migrations/20260828170000_notification_delivery_observability_and_maps_scheduler_secret.sql`
+- `src/domains/notifications/inbox.js`
+
+## Commits
+- `773f39e07419ecd0a0b923f9c5e593d0550f94d7` — notification observability + scheduler secret migration
+- `953b18061ec426936add2670a4ec9441313c6516` — canonical notification delivery-status service
 
 ## Next large slice
-1. Verify the two live fixes against fresh production logs.
-2. Inspect and reconcile `maps-ingest` v20 against `ingest-map-candidates-v3` and scheduled execution.
-3. Build the version-family caller/auth/write/schedule matrix.
-4. Close push delivery observability.
-5. Reconcile Fleet metric configuration documentation and UI.
+1. Observe the repaired `maps-ingest` run to completion and verify imported/updated/observation counts.
+2. Trace all versioned ingestion-family callers and scheduled jobs before any retirement.
+3. Surface push delivery status in the appropriate notification/admin reporting UI.
+4. Verify Fleet metric configuration registry/controller UI against the live RPC contracts.
+5. Re-run the two earlier live-fix verification gates (billing boot path and feature telemetry).
 
 ## Acceptance
-No finding is closed merely because code changed. Each must be retested through the canonical runtime and production backend path.
+No finding is GREEN merely because code changed. Each must terminate in authoritative production state and be rechecked through the canonical runtime/backend path.
