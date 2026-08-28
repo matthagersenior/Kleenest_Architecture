@@ -3,17 +3,21 @@ import path from 'node:path';
 const root=path.resolve('src');
 const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
 const errors=[];
-const runtime=read('runtime/CanonicalAppRuntime.jsx');
+const routes=read('runtime/routing/ownerRoutes.jsx');
+const appContext=read('AppContext.jsx');
 const crud=read('runtime/OwnerCrudWorkbench.jsx');
 const membership=read('runtime/OwnerMembershipControls.jsx');
 const intelligence=read('runtime/OwnerIntelligenceLab.jsx');
 const ownerService=read('domains/intelligence/owner.js');
 const actions=read('domains/intelligence/actions.js');
+const convergence=read('domains/intelligence/convergence.js');
 const requiredRoutes=['/owner','/owner/data','/owner/preview','/owner/audit','/owner/intelligence','/owner/reports','/owner/reports/history'];
-for(const route of requiredRoutes)if(!runtime.includes(`path="${route}"`))errors.push(`missing owner route: ${route}`);
+for(const route of requiredRoutes)if(!routes.includes(`path="${route}"`))errors.push(`missing owner route: ${route}`);
 for(const token of ['services.admin.invoke(profile','services.admin.crud(profile','services.admin.searchUsers(profile','services.admin.setAccountCapabilities(profile','services.admin.setBusinessAccess(profile'])if(!crud.includes(token)&&!membership.includes(token))errors.push(`missing governed admin service wiring: ${token}`);
-for(const token of ['services.ownerIntelligence','businessGrowthAnalytics','businessSummaryAnalytics','businessEngagementAnalytics','businessCampaignAnalytics','businessRoiAnalytics','businessBenchmarkAnalytics','businessGrowthActions','fleetDashboardSummary','fleetMetricCapabilities','fleetServiceOpportunities','enterpriseNetworkMetrics','enterpriseCampaignRoi','enterprisePartnerRoi'])if(!intelligence.includes(token)||!ownerService.includes(token))errors.push(`missing intelligence wiring: ${token}`);
-for(const token of ['execute_intelligence_action','complete_intelligence_action','process_intelligence_action_jobs','create_intelligence_notification']){const files=['domains/intelligence/actions.js','domains/intelligence/convergence.js','domains/notifications/intelligence.js'];if(!files.some(f=>read(f).includes(token)))errors.push(`missing intelligence loop capability: ${token}`)}
+const ownerIntelligenceMethods=['businessGrowthAnalytics','businessSummaryAnalytics','businessEngagementAnalytics','businessCampaignAnalytics','businessRoiAnalytics','businessBenchmarkAnalytics','businessGrowthActions','fleetDashboardSummary','fleetMetricCapabilities','fleetServiceOpportunities','enterpriseNetworkMetrics','enterpriseCampaignRoi','enterprisePartnerRoi'];
+if(!appContext.includes('ownerIntelligence:createOwnerIntelligenceService(supabase)'))errors.push('missing AppContext ownerIntelligence service composition');
+for(const token of ownerIntelligenceMethods)if(!intelligence.includes(token)||!ownerService.includes(token))errors.push(`missing intelligence wiring: ${token}`);
+for(const token of ['execute_intelligence_action','complete_intelligence_action','process_intelligence_action_jobs','create_intelligence_notification']){const files=[actions,convergence,read('domains/notifications/intelligence.js')];if(!files.some(source=>source.includes(token)))errors.push(`missing intelligence loop capability: ${token}`)}
 for(const token of ['intelligenceActions','execute','complete','action_id','/intelligence/actions/'])if(!intelligence.includes(token))errors.push(`missing direct intelligence action UI wiring: ${token}`);
 if(!membership.includes('/owner/data?resource=profiles')||!membership.includes('/owner/data?resource=businesses'))errors.push('membership controls are not linked to governed CRUD workbenches');
 const report={generatedAt:new Date().toISOString(),status:errors.length?'attention':'ok',checks:{ownerRoutes:requiredRoutes.length,crudGovernedServiceCalls:true,membershipControls:true,intelligenceServiceSurface:true,intelligenceLoop:true,directIntelligenceActions:true},errors};
