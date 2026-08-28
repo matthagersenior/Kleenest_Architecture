@@ -8,39 +8,30 @@ import WorkspaceShell from './WorkspaceShell.jsx';
 import './OperationalCapabilityPage.css';
 
 export default function OperationalCapabilityPage() {
-  const { profile, services, isPlatformOwner, loading: authLoading } = useAppContext();
+  const { profile, services, workspaceCapabilities = [], isPlatformOwner, loading: authLoading } = useAppContext();
   const [data, setData] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const ready = !authLoading && isPlatformOwner && !!profile;
-
   const load = async () => {
     if (!ready) { setLoading(false); return; }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const value = services?.admin?.operationalCapabilityCatalog ? await services.admin.operationalCapabilityCatalog(profile) : [];
       setData(Array.isArray(value) ? value : (value?.rows || value?.data || []));
-    } catch (e) {
-      setData([]);
-      setError(e?.message || 'Unable to load operational catalog telemetry.');
-    } finally { setLoading(false); }
+    } catch (e) { setData([]); setError(e?.message || 'Unable to load operational catalog telemetry.'); }
+    finally { setLoading(false); }
   };
-
   useEffect(() => { if (authLoading) return; if (ready) void load(); else setLoading(false); }, [authLoading, ready, services]);
-
-  const visibleCapabilities = services?.workspaceCapabilities || [];
-  const rows = useMemo(() => buildCapabilityPresentation({ workspace: 'admin', services, visibleCapabilities, catalog: data, contracts: [] }), [services, visibleCapabilities, data]);
+  const rows = useMemo(() => buildCapabilityPresentation({ workspace: 'admin', services, visibleCapabilities: workspaceCapabilities, catalog: data, contracts: [] }), [services, workspaceCapabilities, data]);
   const filtered = useMemo(() => rows.filter(row => !query || `${row.id} ${row.label} ${(row.facts || []).join(' ')} ${(row.services || []).join(' ')} ${(row.ui || []).join(' ')}`.toLowerCase().includes(query.toLowerCase())), [rows, query]);
   const missing = rows.filter(row => !row.serviceCovered);
   const disabled = rows.filter(row => !row.catalogEnabled);
   const wired = rows.filter(row => row.serviceCovered && row.catalogEnabled);
-  const audit = useMemo(() => auditCapabilitySurface({ workspace: 'admin', services: services || {}, visibleCapabilities, catalog: data }), [services, visibleCapabilities, data]);
-
+  const audit = useMemo(() => auditCapabilitySurface({ workspace: 'admin', services: services || {}, visibleCapabilities: workspaceCapabilities, catalog: data }), [services, workspaceCapabilities, data]);
   if (authLoading) return <WorkspaceShell workspace="owner"><section className="empty-state"><ShieldCheck size={28} /><h2>Loading capability catalog</h2><p>Waiting for the authenticated owner session before querying protected capability metadata.</p></section></WorkspaceShell>;
   if (!isPlatformOwner) return <WorkspaceShell workspace="consumer"><section className="empty-state"><ShieldCheck size={28} /><h2>Capability catalog</h2><p>Platform owner access is required.</p></section></WorkspaceShell>;
-
   return <WorkspaceShell workspace="owner"><section className="page capability-operations">
     <div className="page-header"><div><span className="eyebrow">CANONICAL CAPABILITY REGISTRY</span><h1>Operational Capabilities</h1><p>The live owner view of what Kleenest can do: canonical services, facts, workspace exposure, runtime coverage, and current UI entry points.</p></div><div className="hero-actions"><Link className="button secondary" to="/admin/capabilities"><Layers3 size={16} />Capability Hub</Link><button className="button secondary" type="button" onClick={load} disabled={loading}><RefreshCw size={16} />{loading ? 'Refreshing…' : 'Refresh telemetry'}</button></div></div>
     {error && <p className="form-error" role="alert">{error}</p>}
