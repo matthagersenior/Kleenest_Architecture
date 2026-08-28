@@ -6,6 +6,16 @@ export function createCapabilityCoverageService(client){
       if(error) throw error;
       return data??[];
     },
+    async contracts(){
+      const {data,error}=await client.from('capability_domain_contracts').select('domain,canonical_capability,canonical_rpc,owner_surface,active').eq('active',true).order('domain');
+      if(error) throw error;
+      return data??[];
+    },
+    async catalog(){
+      const {data,error}=await client.from('feature_catalog').select('feature_code,name,category,minimum_tier,enabled').order('category').order('name');
+      if(error) throw error;
+      return data??[];
+    },
     async record({featureCode,outcome,tierCode=null,destination=null,metadata={}}={}){
       if(!featureCode) throw new Error('featureCode is required.');
       const {data,error}=await client.rpc('record_feature_access',{p_feature_code:featureCode,p_outcome:outcome,p_tier_code:tierCode,p_destination:destination,p_metadata:metadata??{}});
