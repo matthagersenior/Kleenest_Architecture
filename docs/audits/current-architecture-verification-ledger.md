@@ -5,86 +5,88 @@ Branch: `runtime-workspace-stabilization`
 
 ## Purpose
 
-This document is the current-state companion to the historical Batch AO and 2026-08-24 audits. Historical audit files remain immutable records of what was known at the time. This ledger records what the current branch implements and what the latest CI has actually verified.
-
-## Status vocabulary
-
-- **VERIFIED** — implemented and passed the applicable automated gate on the referenced commit.
-- **IMPLEMENTED** — present in the current source, but the latest applicable complete verification has not yet passed.
-- **PARTIAL** — some contract stages exist, with known gaps.
-- **BLOCKED** — implementation cannot safely proceed until a dependency/authority defect is resolved.
-- **SUPERSEDED** — historical expectation replaced by the current canonical boundary.
+Current-state companion to historical architecture audits. Historical audit files remain immutable evidence of their original state. This ledger records current implementation, current verification, active interoperability findings, and the governing large-slice order.
 
 ## Current canonical boundaries
 
 | Area | Current boundary | Status |
 |---|---|---|
-| Application runtime | `CanonicalAppRuntime` + decomposed route modules | IMPLEMENTED |
-| Workspace model | workspace definitions/access/navigation separated from UI composition | IMPLEMENTED |
-| Navigation UI | workspace navigation model/config/components | IMPLEMENTED |
-| Route registry | canonical route registry + route modules | IMPLEMENTED |
-| Intelligence actions | `domains/intelligence/actions.js` | IMPLEMENTED |
-| Intelligence convergence | `domains/intelligence/convergence.js` | IMPLEMENTED |
-| Intelligence notifications | `domains/notifications/intelligence.js` | IMPLEMENTED |
-| Owner intelligence | `domains/intelligence/owner.js` | IMPLEMENTED |
-| Owner presentation preview | dedicated preview controller/surface | IMPLEMENTED |
-| UI interaction audit | JSX-aware audit boundary | IMPLEMENTED |
+| Application runtime | `CanonicalAppRuntime` + five route modules | IMPLEMENTED |
+| Workspace model/access | definitions + membership/access model | IMPLEMENTED |
+| Workspace navigation | navigation data + model + presentation/config + React shell | IMPLEMENTED |
+| Capability authority | registry + contract + shared presentation adapter | IMPLEMENTED |
+| Owner membership preview | decomposed preview surface + canonical product model | IMPLEMENTED |
+| Intelligence | action + convergence + notification + owner services | IMPLEMENTED |
+| UI interaction audit | JSX-aware boundary | IMPLEMENTED |
+| Current interoperability audit | route/workspace/capability destination gate | IMPLEMENTED / NEW |
 
 ## Latest verified CI baseline
 
-The latest complete run available before the current audit/documentation changes verified:
+The latest complete GitHub Actions baseline before this new audit layer completed successfully through:
 
-- 107 canonical routes across 5 route modules.
-- 9 membership tiers / 31 capability domains.
-- membership preview audit passed.
-- UI interaction audit passed across 202 source files.
-- interaction destination audit passed across 107 destinations.
-- intelligence loop audit passed.
+- canonical architecture audit;
+- canonical route contract;
+- production configuration;
+- production build;
+- correct Kleenest React artifact verification.
 
-The subsequent Owner Labs/architecture gate did not complete the full pipeline. Therefore the branch must not be described as fully production-verified until the complete canonical architecture gate passes again.
+The latest successful run was `33152594483` (run 1475). The branch's new interoperability-audit commits have not yet received a fresh workflow result, so they are **NOT VERIFIED** until CI executes them.
 
-## Audit interpretation rules
+## New current audit
 
-1. Audits validate canonical responsibilities, not historical file placement.
-2. A refactor must not be reverted merely to satisfy an audit that still assumes the old monolith.
-3. Generated HTML used by Leaflet is not React JSX and must be audited by its runtime-specific interaction contract.
-4. Disabled JSX controls are valid controls when the disabled state is intentional and represented by the component contract.
-5. Intelligence action, notification, and convergence responsibilities may be split across modules; the audit follows the service graph.
-6. Route discovery must inspect canonical route modules rather than only `CanonicalAppRuntime.jsx`.
-7. A passing audit is not equivalent to production verification unless the complete CI chain reaches the production build gate.
+`2026-08-28-current-interoperability-audit.md` is the authoritative current-state interoperability audit for this stabilization phase.
 
-## Current blockers / next large slices
+`2026-08-28-interoperability-matrix.md` is the current dependency/authority matrix used to order large implementation slices.
 
-### 1. Canonical architecture gate
+The new automated gate is `npm run audit:interoperability`, backed by `scripts/current-interoperability-audit.mjs`.
 
-**Status: BLOCKED / REAUDIT REQUIRED**
+It checks:
 
-The latest intelligence-audit correction passed its targeted responsibility inspection but the complete workflow subsequently stopped at the broader canonical architecture gate. The next slice must reconcile that gate against the current decomposed runtime/workspace/owner boundaries before any product-domain claims are promoted to VERIFIED.
+- capability destination → canonical route;
+- workspace-contextual capability destination → canonical route;
+- workspace navigation destination → canonical route;
+- capability registry → presentation coverage;
+- presence of the decomposed runtime/workspace/capability boundaries.
 
-### 2. Owner workspace
+## Important current finding
 
-**Status: IMPLEMENTED / REAUDIT REQUIRED**
+The earlier global capability destination map contained stale/nonexistent `/reporting` routing and privileged/generic destinations that were not appropriate for business/fleet/enterprise contexts. Capability destinations are now workspace-aware. This is a product/navigation correctness issue, not merely an audit issue.
 
-Owner routing and intelligence are present, but Owner Labs verification must be run against the current route/service composition. Platform CRUD remains a first-class UX requirement and must be evaluated as an end-to-end workflow, not merely as route existence.
+## Monolith assessment
 
-### 3. Product implementation sequence
+### CanonicalAppRuntime.jsx
 
-After the architecture gate is green, continue in the governing dependency order:
+**Do not decompose further.** It is already a thin composition root. Further fragmentation would increase indirection without reducing state or responsibility.
 
-1. Consumer evidence loop.
-2. Progression/trust engagement.
-3. Business growth loop.
-4. Fleet operations.
-5. Enterprise network/allocation/outcomes.
-6. Owner Platform CRUD/governance.
-7. Admin/intelligence/notifications/analytics.
-8. Offline/realtime interoperability.
-9. Duplicate retirement, visual QA, full coverage verification.
+### WorkspaceShell.jsx
 
-## Historical audit relationship
+**Hold further decomposition.** Preview, access, navigation, and workspace presentation are already extracted. Re-splitting the coordinator before the next audit would create unnecessary indirection. Revisit only if new mutable workflow state enters the shell.
 
-`batch-ao-full-architecture-audit.md` and the 2026-08-24 interoperability/mass-implementation audits remain historical evidence. Do not rewrite them to make them agree with today's branch. Use this ledger to record current state and link future verification commits.
+### Next candidate
+
+`OwnerIntelligenceLab.jsx` is currently a dense candidate for measured decomposition because scope selection, canonical service dispatch, action execution, event-driven refresh, result presentation, and navigation are combined in one component. Treat this as one owner-intelligence UI slice after the interoperability gate passes.
+
+## Governing large-slice order
+
+1. **Interoperability foundation** — destination authority, workspace context, capability presentation, navigation, membership/preview consistency.
+2. **Consumer evidence loop** — location → canonical check-in → evidence/review → progression/reputation → intelligence → notification.
+3. **Progression/trust engagement** — rewards/quests/contests/verification with duplicate-effect protection.
+4. **Business growth loop** — location/assets → QR/campaign/event → engagement/redemption → analytics/intelligence → action/outcome.
+5. **Fleet operations** — route → stop → service event → measurement → scorecard → intelligence.
+6. **Enterprise network** — partner → campaign/allocation → outcome → ROI/intelligence.
+7. **Owner Platform CRUD/governance** — privileged read/write workflows and auditability.
+8. **Admin/intelligence/notifications/reporting** — derived read/action/delivery convergence.
+9. **Offline/realtime interoperability** — replay against canonical commands and event/read-model convergence.
+10. **Retirement + visual QA + E2E** — duplicate path removal, responsive/mobile flow verification, full coverage, production gate.
+
+## Acceptance rule
+
+A large slice is complete only when its full chain is accounted for:
+
+`UI entry → workspace access → canonical read → authoritative command → server effects → events/read model → notification/CTA → offline/replay if applicable → audit → production build`
+
+A route, card, RPC wrapper, or page by itself is never sufficient evidence of completion.
 
 ## Reclamation rule
 
-The runtime/workspace stabilization work retains its pre-refactor reclamation point. No large-slice change should remove that recovery boundary until the complete CI/build verification chain is green.
+The runtime/workspace stabilization reclamation point remains protected. No change may remove it until the complete audit/build chain is green after the current interoperability layer is incorporated.
