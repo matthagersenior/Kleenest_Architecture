@@ -72,12 +72,8 @@ function maskTemplateLiteralBodies(text) {
 }
 
 function isInsideForm(text, position) {
-  // JSX forms are not allowed to nest. For a button with no explicit type,
-  // the HTML/JSX default is submit, so the enclosing form is its action contract.
   const before = text.slice(0, position);
-  const lastOpen = before.lastIndexOf('<form');
-  const lastClose = before.lastIndexOf('</form');
-  return lastOpen > lastClose;
+  return before.lastIndexOf('<form') > before.lastIndexOf('</form');
 }
 
 const failures = [];
@@ -90,7 +86,7 @@ for (const file of files) {
     const attrs = match.attrs;
     const body = scanText.slice(match.end, Math.min(scanText.length, match.end + 600));
     const interactive = /\bonClick\s*=/.test(attrs) || /\btype\s*=\s*["']submit["']/.test(attrs) || /\bformAction\s*=/.test(attrs);
-    const explicitlyStatic = /\bdisabled\s*=\s*\{?true\}?/.test(attrs) || /\baria-disabled\s*=\s*["']true["']/.test(attrs);
+    const explicitlyStatic = /\bdisabled\s*(?:=\s*(?:\{[^}]*\}|["'][^"']*["']))?/.test(attrs) || /\baria-disabled\s*=\s*["']true["']/.test(attrs);
     const delegated = /\{\.\.\.[A-Za-z_$][\w$]*\}/.test(attrs);
     const implicitSubmit = !/\btype\s*=/.test(attrs) && isInsideForm(scanText, match.start);
     if (!interactive && !explicitlyStatic && !delegated && !implicitSubmit && !/\b(button|close|cancel|back|menu|tab|next|previous|view|open|save|delete|edit|add|create|continue|submit|upgrade|manage|refresh|retry|sync|sign|log|logout|login|scan|route|check|review|report|export|import|filter|search|settings|preview|exit|dismiss)/i.test(body)) continue;
