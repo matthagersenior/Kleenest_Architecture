@@ -6,7 +6,9 @@ export function normalizePlace(row = {}) {
   const canonicalLocationId = locationId || (!placeId ? row.id ?? null : null);
   const bathroomVerificationStatus = row.bathroom_verification_status ?? row.bathroomVerificationStatus ?? null;
   const locationVerificationStatus = row.verification_status ?? row.location_verification_status ?? row.locationVerificationStatus ?? null;
-  const isVerified = bathroomVerificationStatus === 'verified' || bathroomVerificationStatus === 'has_bathroom' || locationVerificationStatus === 'verified';
+  const locationVerified = locationVerificationStatus === 'verified';
+  const bathroomVerified = bathroomVerificationStatus === 'verified' || bathroomVerificationStatus === 'has_bathroom';
+  const isVerified = locationVerified;
 
   return Object.freeze({
     ...row,
@@ -19,6 +21,8 @@ export function normalizePlace(row = {}) {
     longitude: Number(row.longitude),
     bathroom_verification_status: bathroomVerificationStatus,
     location_verification_status: locationVerificationStatus,
+    location_verified: locationVerified,
+    bathroom_verified: bathroomVerified,
     is_verified: isVerified,
     verified: isVerified,
     bathroom_verification_count: row.bathroom_verification_count ?? null,
@@ -35,6 +39,15 @@ export function normalizePlace(row = {}) {
     has_recent_conflict: row.has_recent_conflict ?? false,
     last_observed_at: row.last_observed_at ?? null
   });
+}
+
+/** Location verification and bathroom verification are separate signals. */
+export function isLocationVerified(place = {}) {
+  return place?.location_verified === true || String(place?.location_verification_status ?? place?.verification_status ?? '').toLowerCase() === 'verified';
+}
+
+export function isBathroomVerified(place = {}) {
+  return place?.bathroom_verified === true || ['verified', 'has_bathroom'].includes(String(place?.bathroom_verification_status ?? '').toLowerCase());
 }
 
 export function requireCanonicalLocationId(place = {}) {
