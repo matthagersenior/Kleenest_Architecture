@@ -10,16 +10,16 @@ export function createCheckInService(client,{quests=null}={}) {
     const resolvedLocationId=locationId || data?.location_id || data?.place_id || null;
     emit('checkin-completed', { method, checkIn: data, locationId: resolvedLocationId });
     emit('progression-updated', { type: 'checkin_completed', method, checkIn: data });
-    if (quests) {
-      try { await quests.dispatchEvent('checkin', { locationId: resolvedLocationId, checkinId: data?.id || data?.check_in_id || data?.checkin_id || null, metadata:{method} }); } catch {}
-    }
+    if (quests) { try { await quests.dispatchEvent('checkin', { locationId: resolvedLocationId, checkinId: data?.id || data?.check_in_id || data?.checkin_id || null, metadata:{method} }); } catch {} }
     return data;
   }
+  async function leaveLocation({locationId,latitude,longitude}) { await requireUser(); if(!locationId) throw new Error('Location is required.'); const lat=Number(latitude),lng=Number(longitude); if(!Number.isFinite(lat)||!Number.isFinite(lng)) throw new Error('Current location is required to leave.'); const {data,error}=await client.rpc('record_location_departure',{p_location_id:locationId,p_lat:lat,p_lng:lng}); if(error) throw error; emit('location-departed',{locationId,...data}); emit('progression-updated',{type:'location_departed',locationId}); return data; }
   return Object.freeze({
     byQr: async ({ placeId, qrToken }) => { await requireUser(); if (!placeId || !qrToken) throw new Error('Place and QR token are required.'); const { data, error } = await client.rpc('create_check_in', { p_place_id: placeId, p_qr_token: qrToken }); if (error) throw error; await publishCheckIn(placeId, { method: 'qr', result: data }); return completed('qr', data, placeId); },
     byGps: async ({ latitude, longitude, locationId = null }) => { await requireUser(); if (!locationId) throw new Error('Select a canonical location before using GPS verification.'); const { data, error } = await client.rpc('kleenest_map_check_in', { p_location_id: locationId, p_lat: Number(latitude), p_lng: Number(longitude) }); if (error) throw error; await publishCheckIn(locationId, { method: 'gps', latitude: Number(latitude), longitude: Number(longitude), result: data }); return completed('gps', data, locationId); },
     fromMap: async ({ locationId, latitude, longitude }) => { await requireUser(); if (!locationId) throw new Error('Location is required.'); const { data, error } = await client.rpc('kleenest_map_check_in', { p_location_id: locationId, p_lat: Number(latitude), p_lng: Number(longitude) }); if (error) throw error; await publishCheckIn(locationId, { method: 'map', latitude: Number(latitude), longitude: Number(longitude), result: data }); return completed('map', data, locationId); },
     verifyQr: async ({ qrCode, latitude, longitude }) => { await requireUser(); const { data, error } = await client.rpc('verify_checkin', { p_qr_code: qrCode, p_lat: Number(latitude), p_lng: Number(longitude) }); if (error) throw error; const resolvedLocationId=data?.location_id || data?.place_id || null; await publishCheckIn(resolvedLocationId, { method: 'verified_qr', latitude: Number(latitude), longitude: Number(longitude), result: data }); return completed('verified_qr', data, resolvedLocationId); },
+    leaveLocation,
     rewardsSummary: async checkInId => { const { data, error } = await client.rpc('checkin_rewards_summary', { p_checkin_id: checkInId }); if (error) throw error; return data; },
     leaderboard: (limit = 25) => client.rpc('get_user_leaderboard', { p_limit: Number(limit) }).then(({ data, error }) => { if (error) throw error; return data; }),
     platformLeaderboard: (leaderboardKey, limit = 25) => client.rpc('get_platform_leaderboard', { p_leaderboard_key: leaderboardKey, p_limit: Number(limit) }).then(({ data, error }) => { if (error) throw error; return data; })
