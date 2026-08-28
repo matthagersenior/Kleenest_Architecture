@@ -33,7 +33,7 @@ export function createUniversalDiscoveryService(client) {
       let safeUserId = null;
       try { const { data: authData, error: authError } = await client.auth.getUser(); if (!authError) safeUserId = authData?.user?.id || null; } catch { safeUserId = null; }
       const params = { p_lat: lat, p_lng: lng, p_radius_m: Math.round(radius * 1000), p_user_id: safeUserId, p_category: safeCategory, p_search: safeSearch, p_limit: safeLimit };
-      const cacheKey = fallbackKey({ ...request, safeUserId });
+      const cacheKey = fallbackKey({ lat, lng, radius, safeCategory, safeSearch, safeLimit, safeUserId });
       const fallback = () => readFallback(cacheKey);
       const execute = async () => { const { data, error } = await client.rpc('prepare_universal_location_discovery', params); if (error) throw error; return canonicalize(data?.locations); };
       let locations;
