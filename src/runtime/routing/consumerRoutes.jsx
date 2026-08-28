@@ -1,4 +1,4 @@
-import { Navigate, Route } from 'react-router-dom';
+import { Navigate, Route, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../AppContext.jsx';
 import { isPlatformOwner } from '../../domains/entitlements/access.js';
 import Home from '../Home.jsx';
@@ -25,8 +25,13 @@ const PREVIEW_TIERS = ['free','premium','family','fleet','enterprise','business_
 
 function OwnerAwareHome() {
   const { profile, loading, isPlatformOwner: contextOwner } = useAppContext();
+  const [params] = useSearchParams();
+  const preview = params.get('preview');
+  const validPreview = PREVIEW_TIERS.includes(preview);
   const owner = contextOwner || isPlatformOwner(profile);
-  return loading ? <Home /> : owner ? <Navigate to="/owner" replace /> : <Home />;
+  if (loading) return <Home />;
+  if (owner && validPreview) return <Home />;
+  return owner ? <Navigate to="/owner" replace /> : <Home />;
 }
 
 export const consumerRoutes = [
@@ -58,5 +63,3 @@ export const consumerRoutes = [
   <Route key="consumer-actions" path="/consumer/actions" element={<ConsumerActionCenter />} />,
   <Route key="engagement-orchestrate" path="/engagement/orchestrate" element={<EngagementOrchestrator />} />,
 ];
-
-export { PREVIEW_TIERS };
