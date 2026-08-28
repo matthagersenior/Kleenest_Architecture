@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 import { isPlatformOwner } from '../domains/entitlements/access.js';
 import { getNavigationForWorkspace } from '../domain/workspaces.js';
+import { canAccessMembershipWorkspace } from '../domain/membershipUiContract.js';
 import WorkspaceNavigation from './WorkspaceNavigation.jsx';
 import OwnerNavigation from './OwnerNavigation.jsx';
 import ConsumerMonetizationBanner from '../consumer/monetization/ConsumerMonetizationBanner.jsx';
@@ -32,6 +33,7 @@ export default function WorkspaceShell({ children, workspace = 'consumer' }) {
     }
     if (nextWorkspace === 'admin' && !owner) return;
     if (nextWorkspace === 'consumer' && !user) { navigate('/auth'); return; }
+    if (!canAccessMembershipWorkspace({ membership: activeMembership, workspace: nextWorkspace, capabilities: effectiveCapabilities })) return;
     const links = getNavigationForWorkspace(nextWorkspace, effectiveCapabilities);
     if (nextWorkspace === 'admin') { navigate('/owner'); return; }
     if (links[0]?.path) navigate(links[0].path);
