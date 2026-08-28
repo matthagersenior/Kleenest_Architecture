@@ -3,7 +3,7 @@ export function createReviewService(client,{quests=null}={}) {
   function emit(type, detail) { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(`kleenest:${type}`, { detail })); }
   return Object.freeze({
     create: async ({ locationId, checkInId = null, stars, cleanlinessPct = null, comment = null }) => {
-      if (!locationId || !Number.isFinite(Number(stars))) throw new Error('Location and rating are required.');
+      if (!locationId || !checkInId || !Number.isFinite(Number(stars))) throw new Error('A verified check-in and rating are required to publish a review.');
       const { data, error } = await client.rpc('create_review', { p_location_id: locationId, p_check_in_id: checkInId, p_stars: Number(stars), p_cleanliness_pct: cleanlinessPct == null ? null : Number(cleanlinessPct), p_comment: comment });
       if (error) throw error;
       const reviewId=data?.id || data?.review_id || null;
