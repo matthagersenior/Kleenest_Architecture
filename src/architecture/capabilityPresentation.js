@@ -6,8 +6,15 @@ export const CAPABILITY_ROUTES = Object.freeze({
   progression: '/play', quests: '/play/quest', rewards: '/rewards', reputation: '/profile', leaderboards: '/leaderboards',
   business: '/business', businessLifecycle: '/business', access: '/access', monetization: '/pricing',
   fleet: '/fleet', enterprise: '/enterprise', social: '/community', family: '/family', notifications: '/notifications',
-  analytics: '/intelligence', liveNetwork: '/intelligence', intelligence: '/intelligence', reporting: '/reporting',
-  externalData: '/admin', offline: '/route', support: '/support', admin: '/admin',
+  analytics: '/intelligence', liveNetwork: '/intelligence', intelligence: '/intelligence', reporting: '/integration',
+  externalData: '/integration', offline: '/offline', support: '/support', admin: '/admin',
+});
+
+export const CAPABILITY_WORKSPACE_ROUTES = Object.freeze({
+  business: Object.freeze({ reviews: '/business/reviews', analytics: '/business/analytics', intelligence: '/business/intelligence', reporting: '/business/reports', externalData: '/integration' }),
+  fleet: Object.freeze({ analytics: '/fleet/performance', intelligence: '/fleet/intelligence', reporting: '/fleet/reports', externalData: '/integration' }),
+  enterprise: Object.freeze({ analytics: '/enterprise/performance', intelligence: '/enterprise/network-intelligence', reporting: '/enterprise/reports', externalData: '/integration' }),
+  admin: Object.freeze({ analytics: '/admin/intelligence', intelligence: '/admin/intelligence', reporting: '/admin/reports', externalData: '/admin' }),
 });
 
 export const CAPABILITY_LABELS = Object.freeze({
@@ -21,8 +28,8 @@ export function capabilityLabel(id, capability = {}) {
     .replace(/\b\w/g, value => value.toUpperCase());
 }
 
-export function capabilityRoute(id) {
-  return CAPABILITY_ROUTES[id] || '/integration';
+export function capabilityRoute(id, workspace = 'consumer') {
+  return CAPABILITY_WORKSPACE_ROUTES[workspace]?.[id] || CAPABILITY_ROUTES[id] || '/integration';
 }
 
 export function capabilityCatalogState(catalog, id) {
@@ -52,7 +59,7 @@ export function buildCapabilityPresentation({ workspace = 'consumer', services =
       id,
       ...capability,
       label: capabilityLabel(id, capability),
-      route: capabilityRoute(id),
+      route: capabilityRoute(id, workspace),
       serviceCovered: service.covered,
       missingServices: service.missing,
       exposed,
