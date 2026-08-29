@@ -14,12 +14,21 @@ export function createLocationEvidenceService(client,{quests=null}={}) {
       return routeResult;
     }catch{return null;}
   }
+  async function convergeTrust(values){
+    if(!values?.locationId)return null;
+    try{
+      const trust=await rpc('refresh_location_trust_state',{p_location_id:values.locationId});
+      emit('location-trust-refreshed',{locationId:values.locationId,result:trust});
+      return trust;
+    }catch{return null;}
+  }
   async function dispatch(type,values,result){
     await convergeRouteStop(values,result);
-    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, evidenceId:evidenceId(result), result });
-    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type });
+    const trust=await convergeTrust(values);
+    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, evidenceId:evidenceId(result), result, trust });
+    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type, trust });
     if(!quests)return;
-    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,result}})}catch{}
+    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,result,trust}})}catch{}
   }
   return Object.freeze({
     restroomObservation: async values => { const result=await rpc('submit_restroom_observation', { p_location_id: values.locationId, p_check_in_id: values.checkInId || null, p_observation_type: values.observationType, p_cleanliness_pct: numberOrNull(values.cleanlinessPct), p_note: values.note || null }); await dispatch('evidence',values,result); return result; },
