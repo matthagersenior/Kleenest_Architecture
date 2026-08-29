@@ -2,10 +2,14 @@ export function createOperationalIntelligenceLoopService({fleet,businessIntellig
   if(!fleet||!intelligenceConvergence)throw new Error('Operational intelligence loop requires fleet and intelligence convergence services.');
   const emit=(name,detail)=>{if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent(name,{detail}))};
   const requireBusinessId=id=>{if(!id)throw new Error('Business is required.');return String(id)};
-  const run=async(businessId,{surface='fleet',limit=25}={})=>{
+  const run=async(businessId,{surface='fleet',limit=25,start=null,end=null}={})=>{
     const id=requireBusinessId(businessId);
-    const intelligence=surface==='business'&&businessIntelligence?await businessIntelligence.dashboard(id):await fleet.intelligence(id);
-    const signals=surface==='business'&&businessIntelligence?intelligence?.locationIntelligence??intelligence?.intelligence??[]:intelligence?.recommendations??[];
+    const intelligence=surface==='business'&&businessIntelligence
+      ? (businessIntelligence.authorityBundle?await businessIntelligence.authorityBundle(id,start,end):await businessIntelligence.dashboard(id,start,end))
+      : await fleet.intelligence(id);
+    const signals=surface==='business'&&businessIntelligence
+      ? intelligence?.location_intelligence??intelligence?.locationIntelligence??intelligence?.intelligence??[]
+      : intelligence?.recommendations??[];
     const candidates=surface==='fleet'?await fleet.notificationCandidates(id):[];
     const processed=await intelligenceConvergence.processJobs(limit);
     const result={businessId:id,surface,intelligence,signals,candidates,processed};
