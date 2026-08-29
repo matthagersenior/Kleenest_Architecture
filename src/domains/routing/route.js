@@ -18,6 +18,7 @@ export function createRoutingService(client){if(!client)throw new Error('Supabas
  async start({locationId=null,route}={}){if(!route)throw new Error('A valid route is required.');const active=route.routeId?route:await this.persist({route,stopsCount:(route.stopLocationIds||[]).length});const id=resolveLocationId(locationId,active);const next=withLocation(active,id);cache.setActive(next);return live.publish({type:LIVE_EVENT_TYPES.USER_ROUTE_STARTED,locationId:id,payload:{route:next,routeId:active.routeId,routeStopIds:active.routeStopIds||[]}});},
  async approaching({locationId=null,route}={}){const id=resolveLocationId(locationId,route);return live.publish({type:LIVE_EVENT_TYPES.USER_APPROACHING_LOCATION,locationId:id,payload:{route:withLocation(route,id)}});},
  async arrived({locationId=null,route}={}){const id=resolveLocationId(locationId,route);return live.publish({type:LIVE_EVENT_TYPES.USER_ARRIVED,locationId:id,payload:{route:withLocation(route,id)}});},
- async departed({locationId=null,route}={}){const id=resolveLocationId(locationId,route);return live.publish({type:LIVE_EVENT_TYPES.USER_DEPARTED,locationId:id,payload:{route:withLocation(route,id)}}),
- cache};
- return Object.freeze(service);}
+ async departed({locationId=null,route}={}){const id=resolveLocationId(locationId,route);return live.publish({type:LIVE_EVENT_TYPES.USER_DEPARTED,locationId:id,payload:{route:withLocation(route,id)}});}
+};
+service.cache=cache;
+return Object.freeze(service);}
