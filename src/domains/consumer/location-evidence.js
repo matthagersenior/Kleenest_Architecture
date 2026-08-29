@@ -25,13 +25,14 @@ export function createLocationEvidenceService(client,{quests=null}={}) {
   async function dispatch(type,values,result){
     await convergeRouteStop(values,result);
     const trust=await convergeTrust(values);
-    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, evidenceId:evidenceId(result), result, trust });
-    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type, trust });
+    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, photoId:values.photoId||null, evidenceId:evidenceId(result), result, trust });
+    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type, photoId:values.photoId||null, trust });
     if(!quests)return;
-    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,result,trust}})}catch{}
+    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,photoId:values.photoId||null,result,trust}})}catch{}
   }
   return Object.freeze({
     restroomObservation: async values => { const result=await rpc('submit_restroom_observation', { p_location_id: values.locationId, p_check_in_id: values.checkInId || null, p_observation_type: values.observationType, p_cleanliness_pct: numberOrNull(values.cleanlinessPct), p_note: values.note || null }); await dispatch('evidence',values,result); return result; },
+    restroomObservationWithPhoto: async values => { const result=await rpc('submit_restroom_observation_with_photo', { p_location_id: values.locationId, p_check_in_id: values.checkInId, p_observation_type: values.observationType, p_cleanliness_pct: numberOrNull(values.cleanlinessPct), p_note: values.note || null, p_photo_id: values.photoId }); await dispatch('evidence',values,result); return result; },
     amenityObservation: async values => { const result=await rpc('submit_amenity_observation', { p_location_id: values.locationId, p_amenity_id: values.amenityId, p_status: values.status, p_confidence: numberOrNull(values.confidence), p_verification_method: values.verificationMethod || null, p_check_in_id: values.checkInId || null, p_photo_id: values.photoId || null, p_notes: values.notes || null, p_metadata: values.metadata || {} }); await dispatch('amenity_observation',values,result); return result; },
     qualityObservation: async values => { const result=await rpc('submit_location_quality_observation', { p_location_id: values.locationId, p_stars: Number(values.stars), p_cleanliness: numberOrNull(values.cleanliness), p_accessibility: numberOrNull(values.accessibility), p_safety: numberOrNull(values.safety), p_availability: numberOrNull(values.availability), p_condition: numberOrNull(values.condition), p_feedback: values.feedback || null, p_check_in_id: values.checkInId || null, p_photo_id: values.photoId || null, p_metadata: values.metadata || {} }); await dispatch('quality_observation',values,result); return result; },
     verification: async values => { const result=await rpc('submit_location_verification', { p_location_id: values.locationId, p_is_open: booleanValue(values.isOpen), p_has_bathroom: booleanValue(values.hasBathroom), p_note: values.note || null }); await dispatch('verification',values,result); return result; },
