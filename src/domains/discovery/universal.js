@@ -12,16 +12,27 @@ const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, categor
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   const parsedRadius = Number(radiusKm);
   const radius = Math.min(Math.max(Number.isFinite(parsedRadius) ? parsedRadius : 50, 1), 80.467);
-  const safeCategory = typeof category === 'string' ? category.trim().slice(0, DISCOVERY_MAX_CATEGORY_LENGTH) || undefined : undefined;
+  const safeCategory = typeof category === 'string' && category.trim().toLowerCase() !== 'all' ? category.trim().slice(0, DISCOVERY_MAX_CATEGORY_LENGTH) || undefined : undefined;
   const safeSearch = typeof search === 'string' ? search.trim().slice(0, DISCOVERY_MAX_SEARCH_LENGTH) || undefined : undefined;
   const parsedLimit = Number(limit);
   const safeLimit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 1000, 25), 2000);
   return Object.freeze({ lat, lng, radius, safeCategory, safeSearch, safeLimit });
 };
-const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeLimit, safeUserId }) => [safeUserId || 'anonymous',lat.toFixed(3),lng.toFixed(3),Math.round(radius * 1000),safeCategory || '',safeSearch || '',safeLimit].join('|');
+
+const canonicalLocationId = place => String(place?.location_id ?? place?.id ?? '').trim() || null;
+const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeLimit, safeUserId }) => [safeUserId || 'anonymous', lat.toFixed(3), lng.toFixed(3), Math.round(radius * 1000), safeCategory || '', safeSearch || '', safeLimit].join('|');
 const readFallback = key => { const entry = discoveryFallbackCache.get(key); if (!entry) return null; if (Date.now() - entry.savedAt > DISCOVERY_FALLBACK_TTL_MS) { discoveryFallbackCache.delete(key); return null; } return entry.locations; };
 const writeFallback = (key, locations) => { if (!Array.isArray(locations) || !locations.length) return; discoveryFallbackCache.delete(key); discoveryFallbackCache.set(key, { locations, savedAt: Date.now() }); while (discoveryFallbackCache.size > DISCOVERY_FALLBACK_MAX_ENTRIES) { const oldestKey = discoveryFallbackCache.keys().next().value; if (oldestKey === undefined) break; discoveryFallbackCache.delete(oldestKey); } };
-const canonicalize = locations => (Array.isArray(locations) ? locations : []).map(normalizePlace).filter(place => place.id && place.has_canonical_location);
+
+const canonicalize = locations => {
+  const seen = new Set();
+  return (Array.isArray(locations) ? locations : []).map(normalizePlace).filter(place => {
+    const id = canonicalLocationId(place);
+    if (!id || !place.has_canonical_location || !place.has_canonical_coordinates || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+};
 
 export function createUniversalDiscoveryService(client) {
   if (!client) throw new Error('Supabase client is required.');
