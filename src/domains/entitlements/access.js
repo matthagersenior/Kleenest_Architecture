@@ -6,7 +6,7 @@ export function normalizeCapability(value){const normalized=String(value??'').tr
 export function hasCapability(capabilities,capability){return Array.isArray(capabilities)&&capabilities.includes(normalizeCapability(capability));}
 export function hasAnyCapability(capabilities,required=[]){return required.length===0||required.some(value=>hasCapability(capabilities,value));}
 export function hasAllCapabilities(capabilities,required=[]){return required.every(value=>hasCapability(capabilities,value));}
-export function isPlatformOwner(profile){const role=String(profile?.role??'').trim().toLowerCase();return Boolean(profile?.is_admin)||['owner','platform_admin','super_admin','admin'].includes(role);}
+export function isPlatformOwner(profile){const role=String(profile?.role??'').trim().toLowerCase();return Boolean(profile?.is_platform_owner||profile?.is_admin)||['owner','platform_admin','super_admin','admin'].includes(role);}
 function normalizeTier(value){return String(value??'').trim().toLowerCase().replaceAll(' ','_').replaceAll('-','_');}
 export function normalizeUserTier(value){const tier=normalizeTier(value);if(tier.includes('enterprise'))return USER_TIERS.ENTERPRISE;if(tier.includes('fleet'))return USER_TIERS.FLEET;if(tier.includes('family'))return USER_TIERS.FAMILY;if(tier.includes('premium')||tier.includes('pro'))return USER_TIERS.PREMIUM;return USER_TIERS.FREE;}
 export function normalizeBusinessTier(value){const tier=normalizeTier(value);if(tier.includes('enterprise'))return BUSINESS_TIERS.ENTERPRISE;if(tier.includes('fleet'))return BUSINESS_TIERS.FLEET;if(tier.includes('growth'))return BUSINESS_TIERS.GROWTH;return BUSINESS_TIERS.STANDARD;}
