@@ -8,8 +8,14 @@ alter table public.route_stops
   add column if not exists completed_at timestamptz,
   add column if not exists evidence_id uuid;
 
--- Replace the legacy seven-argument function so the existing seven-argument
--- callers remain valid while the canonical route-stop list can be persisted.
+-- Arrival is a first-class route event; preserve the existing stop_completed
+-- event contract while adding the missing arrival state.
+alter table public.route_events drop constraint if exists route_events_event_type_check;
+alter table public.route_events add constraint route_events_event_type_check
+  check (event_type = any (array['started','stop_arrived','stop_completed','route_completed','route_shared']));
+
+-- Replace the legacy seven-argument function so existing seven-argument
+-- callers remain valid while canonical route stops are persisted.
 drop function if exists public.create_route_plan(text,double precision,double precision,double precision,double precision,numeric,integer);
 
 create or replace function public.create_route_plan(
@@ -59,6 +65,9 @@ begin
   return rid;
 end $function$;
 
+grant execute on function public.create_route_plan(text,double precision,double precision,double precision,double precision,numeric,integer,uuid[]) to authenticated;
+revoke execute on function public.create_route_plan(text,double precision,double precision,double precision,double precision,numeric,integer,uuid[]) from anon;
+
 create or replace function public.arrive_route_stop(
   p_route_id uuid,
   p_route_stop_id uuid,
@@ -80,20 +89,24 @@ begin
   if r.status <> 'active' then raise exception 'route is not active'; end if;
   select * into s from public.route_stops where id=p_route_stop_id and route_id=r.id for update;
   if not found then raise exception 'route stop not found'; end if;
-  select * into c from public.check_ins where id=p_check_in_id and user_id=auth.uid();
+  select * into c from public.check_ins where id=p_check_in_id and user_id=auth.uid() for share;
   if not found or c.location_id<>s.location_id then raise exception 'verified check-in does not match route stop'; end if;
   if coalesce(c.verification_method,'') not in ('gps','qr','place') then raise exception 'check-in is not verified'; end if;
+  if c.distance_meters is not null and c.distance_meters > 250 then raise exception 'check-in is not within qualifying arrival distance'; end if;
+  if s.checked_in_at is not null then
+    return jsonb_build_object('route_id',r.id,'route_stop_id',s.id,'location_id',s.location_id,'already_arrived',true,'completed',s.completed_at is not null);
+  end if;
 
-  v_arrived := coalesce(s.arrived_at, c.checked_in_at, now());
+  v_arrived := coalesce(c.checked_in_at,now());
   update public.route_stops
     set arrived_at=v_arrived,
-        checked_in_at=coalesce(checked_in_at,c.checked_in_at,v_arrived)
+        checked_in_at=v_arrived
   where id=s.id;
 
   insert into public.route_events(route_id,user_id,event_type,route_stop_id,points_awarded,metadata)
   values(r.id,auth.uid(),'stop_arrived',s.id,0,jsonb_build_object('check_in_id',c.id,'location_id',s.location_id,'server_authoritative',true));
 
-  return jsonb_build_object('route_id',r.id,'route_stop_id',s.id,'location_id',s.location_id,'check_in_id',c.id,'arrived_at',v_arrived,'completed',s.completed_at is not null);
+  return jsonb_build_object('route_id',r.id,'route_stop_id',s.id,'location_id',s.location_id,'check_in_id',c.id,'arrived_at',v_arrived,'completed',false);
 end $function$;
 
 grant execute on function public.arrive_route_stop(uuid,uuid,uuid) to authenticated;
@@ -167,7 +180,7 @@ begin
     raise exception 'evidence is not an authoritative contribution for this verified visit';
   end if;
 
-  select rp.id as route_id, rs.id as route_stop_id, rs.points_value, rs.completed_at
+  select rp.id as route_id, rs.id as route_stop_id, rs.points_value
     into r
   from public.route_plans rp
   join public.route_stops rs on rs.route_id=rp.id
@@ -227,7 +240,5 @@ begin
   return jsonb_build_object('route_id',r.id,'points',pts,'already_completed',false,'stops_count',v_stop_count,'completed_stops_count',v_completed_count);
 end $function$;
 
-grant execute on function public.create_route_plan(text,double precision,double precision,double precision,double precision,numeric,integer,uuid[]) to authenticated;
-revoke execute on function public.create_route_plan(text,double precision,double precision,double precision,double precision,numeric,integer,uuid[]) from anon;
 grant execute on function public.complete_route(uuid) to authenticated;
 revoke execute on function public.complete_route(uuid) from anon;
