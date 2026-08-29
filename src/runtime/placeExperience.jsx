@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MapPin, Navigation, Route, ExternalLink } from 'lucide-react';
 import { brandIconUrl, placeLogo } from './MapMarkerSystem.jsx';
 
@@ -12,7 +13,8 @@ export const placeStatus = (place) => {
 export const statusLabel = (status) => ({ verified:'Verified', open:'Open now', premium:'Featured', reported:'Community reported', unknown:'Status unknown' }[status] || 'Status unknown');
 export function PlaceIdentity({ place, size='md' }) {
   const url = placeIconUrl(place);
-  return url ? <img className={`place-identity place-identity-${size}`} src={url} alt="" loading="lazy" onError={event=>{event.currentTarget.onerror=null;event.currentTarget.replaceWith(Object.assign(document.createElement('span'),{className:`place-identity place-identity-${size} place-identity-fallback`}));}} /> : <span className={`place-identity place-identity-${size} place-identity-fallback`}><MapPin size={size==='lg'?24:18}/></span>;
+  const [failed,setFailed]=useState(false);
+  return url && !failed ? <img className={`place-identity place-identity-${size}`} src={url} alt="" loading="lazy" onError={()=>setFailed(true)} /> : <span className={`place-identity place-identity-${size} place-identity-fallback`}><MapPin size={size==='lg'?24:18}/></span>;
 }
 export function PlaceActions({ place, onDetails, onRoute, onNavigate }) {
   const id = place?.location_id || place?.id;
