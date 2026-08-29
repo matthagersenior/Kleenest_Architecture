@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, MapPin, Route, ShieldCheck, Trophy, QrCode, Radio, Building2, BarChart3, Truck, Globe2, Bell, Settings, Search, AlertTriangle, Database, Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
-import { auditCapabilitySurface } from '../architecture/capabilityContract.js';
-import { getCapabilitiesForWorkspace, getCapabilityRegistry } from '../architecture/capabilityRegistry.js';
+import { auditCapabilitySurface, getCapabilityContractForWorkspace } from '../architecture/capabilityContract.js';
+import { getCapabilityRegistry } from '../architecture/capabilityRegistry.js';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import './CapabilityHubPage.css';
 
@@ -18,7 +18,7 @@ export default function CapabilityHubPage(){
  const workspace=normalizeWorkspace(activeWorkspace||membershipTier);
  useEffect(()=>{let active=true;if(!configured||!services?.capabilityCoverage)return undefined;Promise.all([services.capabilityCoverage.list(),services.capabilityCoverage.catalog(),services.capabilityCoverage.contracts()]).then(([coverage,cat,contractRows])=>{if(!active)return;setCatalog(Array.isArray(cat)?cat:Array.isArray(coverage)?coverage:[]);setContracts(Array.isArray(contractRows)?contractRows:[])}).catch(()=>{if(active){setCatalog([]);setContracts([])}});return()=>{active=false};},[configured,services]);
  const visibleIds=useMemo(()=>new Set((workspaceCapabilities||[]).map(v=>typeof v==='string'?v:v?.code||v?.feature_code||v?.key).filter(Boolean)),[workspaceCapabilities]);
- const capabilities=useMemo(()=>getCapabilitiesForWorkspace(workspace).map(key=>({key,...(registry[key]||{})})).filter(item=>{const q=query.trim().toLowerCase();return !q||`${item.key} ${LABELS[item.key]||item.key} ${(item.facts||[]).join(' ')} ${(item.services||[]).join(' ')} ${item.flow||''}`.toLowerCase().includes(q)}).filter(item=>workspace==='owner'||workspace==='admin'||visibleIds.size===0||visibleIds.has(item.key)||!catalog.length||!catalog.find(v=>v?.feature_code===item.key)||catalog.find(v=>v?.feature_code===item.key)?.enabled!==false),[registry,workspace,visibleIds,catalog,query]);
+ const capabilities=useMemo(()=>getCapabilityContractForWorkspace(workspace).map(cap=>({key:cap.id,...(registry[cap.id]||{})})).filter(item=>{const q=query.trim().toLowerCase();return !q||`${item.key} ${LABELS[item.key]||item.key} ${(item.facts||[]).join(' ')} ${(item.services||[]).join(' ')} ${item.flow||''}`.toLowerCase().includes(q)}).filter(item=>workspace==='owner'||workspace==='admin'||visibleIds.size===0||visibleIds.has(item.key)||!catalog.length||!catalog.find(v=>v?.feature_code===item.key)||catalog.find(v=>v?.feature_code===item.key)?.enabled!==false),[registry,workspace,visibleIds,catalog,query]);
  const runtimeAudit=useMemo(()=>auditCapabilitySurface({workspace,services:services||{},visibleCapabilities:workspaceCapabilities||[],catalog}),[workspace,services,workspaceCapabilities,catalog]);
  const supabaseFiltered=contracts.filter(c=>{const q=query.trim().toLowerCase();return !q||`${c.domain} ${c.canonical_capability} ${c.canonical_rpc} ${c.owner_surface}`.toLowerCase().includes(q)});
  const gapCount=runtimeAudit.missingServices.length+runtimeAudit.hidden.length+runtimeAudit.disabled.length;
