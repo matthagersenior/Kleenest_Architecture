@@ -15,7 +15,9 @@ const map=texts.get('domains/maps/network.js')||'';for(const forbidden of ['demo
 const surface=texts.get('runtime/MapSurfaceProduction.jsx')||'';for(const forbidden of ['demoLocations','sampleLocations','mockLocations','demo accounts','fakeLocations'])if(surface.toLowerCase().includes(forbidden.toLowerCase()))missing.push(`runtime/MapSurfaceProduction.jsx: forbidden demo fallback ${forbidden}`);
 if(surface.includes('MAP_CATEGORIES.filter')||surface.includes('category selector'))missing.push('runtime/MapSurfaceProduction.jsx: map must not use location type as the primary discovery filter');
 if(!/AMENITIES\.map\s*\(/.test(surface))missing.push('runtime/MapSurfaceProduction.jsx: amenity filter controls missing');
-const amenityRequest=/amenities\s*:\s*amenity\s*\?\s*\{\s*\[amenity\]\s*:\s*true\s*\}\s*:\s*\{\s*\}/.test(surface);
+// The production surface supports multiple simultaneous amenities. The canonical request
+// is therefore the object built from all selected amenities, while category remains `all`.
+const amenityRequest=/amenities\s*:\s*(?:amenity\s*\?\s*\{\s*\[amenity\]\s*:\s*true\s*\}\s*:\s*\{\s*\}|amenityFilter)/.test(surface);
 if(!amenityRequest||!/category\s*:\s*['"]all['"]/.test(surface))missing.push('runtime/MapSurfaceProduction.jsx: nearby request must be amenity-first with category=all');
 if(!/discover\s*:\s*true/.test(surface))missing.push('runtime/MapSurfaceProduction.jsx: discover:true missing');
 if(!/RADII=\[1,2,5,10,25,50\]/.test(surface))missing.push('runtime/MapSurfaceProduction.jsx: bounded radius options missing');
