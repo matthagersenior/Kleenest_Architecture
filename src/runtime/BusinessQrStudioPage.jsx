@@ -1,1 +1,1 @@
-export { default } from './BusinessQrStudioPageV2.jsx';
+export { default } from './BusinessQrStudioPageV3.jsx';
