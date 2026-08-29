@@ -9,7 +9,7 @@ const checks = [
   ['Visit surface exposes photo evidence', /Photo evidence/, 'src/runtime/VisitSurface.jsx'],
   ['Visit surface reaches photo-aware evidence mutation', /restroomObservationWithPhoto/, 'src/runtime/VisitSurface.jsx'],
   ['Canonical evidence service exposes photo observation', /restroomObservationWithPhoto/, 'src/domains/consumer/location-evidence.js'],
-  ['Evidence service refreshes trust/intelligence after observation', /refreshTrust|refreshIntelligence/, 'src/domains/consumer/location-evidence.js'],
+  ['Evidence service refreshes trust/intelligence after observation', /refresh_(location_)?trust_state|refresh_(location_)?intelligence|refreshTrust|refreshIntelligence/, 'src/domains/consumer/location-evidence.js'],
   ['Evidence service dispatches progression/quest consequences', /quest|progression/i, 'src/domains/consumer/location-evidence.js'],
   ['Review service is wired into the trust surface', /services\.reviews\.create/, 'src/runtime/VisitSurface.jsx'],
   ['Helpful review interaction is wired', /services\.reviews\.like/, 'src/runtime/VisitSurface.jsx'],
