@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AppProvider } from './AppContext.jsx';
 import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
@@ -18,7 +18,7 @@ import './runtime/productionSurfaceFixes.css';
 const root = document.getElementById('root');
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <HashRouter>
+    <BrowserRouter basename="/Kleenest_Architecture">
       <RuntimeErrorBoundary>
         <AppProvider>
           <ScrollToTop />
@@ -26,6 +26,6 @@ ReactDOM.createRoot(root).render(
           <CanonicalAppRuntime />
         </AppProvider>
       </RuntimeErrorBoundary>
-    </HashRouter>
+    </BrowserRouter>
   </React.StrictMode>
 );
