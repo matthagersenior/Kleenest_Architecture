@@ -1,5 +1,5 @@
-import RouteSurfaceFixed from './RouteSurfaceFixed.jsx';
+import RouteSurfaceMobileFixed from './RouteSurfaceMobileFixed.jsx';
 
 export default function RouteSurface() {
-  return <RouteSurfaceFixed />;
+  return <RouteSurfaceMobileFixed />;
 }
