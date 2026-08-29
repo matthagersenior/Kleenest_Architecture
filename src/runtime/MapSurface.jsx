@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppContext, AppContext } from '../AppContext.jsx';
 import MapSurfaceV3 from './MapSurfaceV3.jsx';
 
@@ -9,9 +9,20 @@ import MapSurfaceV3 from './MapSurfaceV3.jsx';
 // mutations still resolve authentication through Supabase inside their services.
 export default function MapSurface() {
   const context = useAppContext();
+  const [refreshGeneration, setRefreshGeneration] = useState(0);
   const publicContext = useMemo(() => {
     if (context.user) return context;
     return { ...context, user: { id: 'anonymous-map-bootstrap', isAnonymous: true } };
   }, [context]);
-  return <AppContext.Provider value={publicContext}><MapSurfaceV3 /></AppContext.Provider>;
+
+  useEffect(() => {
+    const onLocationRefresh = event => {
+      if (!event?.detail?.locationId) return;
+      setRefreshGeneration(value => value + 1);
+    };
+    window.addEventListener('kleenest:location-intelligence-refresh-requested', onLocationRefresh);
+    return () => window.removeEventListener('kleenest:location-intelligence-refresh-requested', onLocationRefresh);
+  }, []);
+
+  return <AppContext.Provider value={publicContext}><MapSurfaceV3 key={refreshGeneration} /></AppContext.Provider>;
 }
