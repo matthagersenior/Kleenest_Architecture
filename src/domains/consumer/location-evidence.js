@@ -1,4 +1,4 @@
-export function createLocationEvidenceService(client,{quests=null}={}) {
+export function createLocationEvidenceService(client,{quests=null,intelligence=null}={}) {
   if (!client) throw new Error('Supabase client is required.');
   const rpc = async (name, params) => { const { data, error } = await client.rpc(name, params); if (error) throw error; return data; };
   const booleanValue = value => value === true || value === 'true' || value === '1' || value === 1;
@@ -22,13 +22,25 @@ export function createLocationEvidenceService(client,{quests=null}={}) {
       return trust;
     }catch{return null;}
   }
+  async function convergeIntelligence(values,trust,result,type){
+    if(!values?.locationId)return null;
+    if(intelligence?.refreshLocation){
+      try{return await intelligence.refreshLocation({locationId:values.locationId,evidenceType:type,trust,result});}catch{}
+    }
+    try{
+      const intelligenceResult=await rpc('refresh_location_intelligence',{p_location_id:values.locationId});
+      emit('location-intelligence-refreshed',{locationId:values.locationId,result:intelligenceResult});
+      return intelligenceResult;
+    }catch{return null;}
+  }
   async function dispatch(type,values,result){
     await convergeRouteStop(values,result);
     const trust=await convergeTrust(values);
-    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, photoId:values.photoId||null, evidenceId:evidenceId(result), result, trust });
-    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type, photoId:values.photoId||null, trust });
+    const intelligenceResult=await convergeIntelligence(values,trust,result,type);
+    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, photoId:values.photoId||null, evidenceId:evidenceId(result), result, trust, intelligence:intelligenceResult });
+    emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type, photoId:values.photoId||null, trust, intelligence:intelligenceResult });
     if(!quests)return;
-    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,photoId:values.photoId||null,result,trust}})}catch{}
+    try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,photoId:values.photoId||null,result,trust,intelligence:intelligenceResult}})}catch{}
   }
   return Object.freeze({
     restroomObservation: async values => { const result=await rpc('submit_restroom_observation', { p_location_id: values.locationId, p_check_in_id: values.checkInId || null, p_observation_type: values.observationType, p_cleanliness_pct: numberOrNull(values.cleanlinessPct), p_note: values.note || null }); await dispatch('evidence',values,result); return result; },
