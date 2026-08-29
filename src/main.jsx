@@ -14,6 +14,7 @@ import './runtime/mobileWorkspaceFix.css';
 import './runtime/role-crud.css';
 import './runtime/detailPages.css';
 import './runtime/productionSurfaceFixes.css';
+import './runtime/uiPolish.css';
 
 const root = document.getElementById('root');
 ReactDOM.createRoot(root).render(
