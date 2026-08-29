@@ -18,6 +18,17 @@ export function createConsumerAccessOfferService(client) {
       publish('purchase', { offerId, result });
       return result;
     },
+    checkout: async (offerId, { successUrl, cancelUrl } = {}) => {
+      if (!offerId) throw new Error('An access offer is required.');
+      const { data, error } = await client.functions.invoke('stripe-create-checkout', {
+        body: { accessOfferId: offerId, successUrl, cancelUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error('Stripe checkout did not return a checkout URL.');
+      publish('checkout', { offerId, sessionId: data.sessionId ?? null });
+      return data;
+    },
     redeem: async purchaseId => {
       const result = await call('redeem_single_use_access', { p_purchase_id: purchaseId });
       publish('redeem', { purchaseId, result });
