@@ -1,12 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { emptyAcquisitionResult, ingestionError, scheduledResult } from "../_shared/map-ingestion-contract.ts";
+import { ingestionError, scheduledResult } from "../_shared/map-ingestion-contract.ts";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SOURCE_ID = "52b2f51b-5749-470f-90fe-abf7a3173356";
-const VERSION = 24;
+const VERSION = 25;
 const ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
@@ -95,13 +95,17 @@ async function run(body: any) {
         imported += Number(out.data?.imported_locations || 0); updated += Number(out.data?.updated_locations || 0); obs += Number(out.data?.observations_upserted || 0);
       }
     }
+    // Partial acquisition is recorded as a warning/error detail but does not
+    // erase successful canonical persistence. The job succeeds when every
+    // acquired row was reconciled successfully, even if some source tiles
+    // were unavailable.
     const acquisition_status = rows.length ? "success" : "empty";
-    const errors = failures.length ? [ingestionError("acquisition", "UPSTREAM_PARTIAL_FAILURE", "One or more acquisition tiles failed", { provider: "overpass", retryable: true, details: { failures, failed_tiles: failures.length, total_tiles: tiles.length } })] : [];
-    const result = scheduledResult({ acquisition_status, persistence_status: "succeeded", job_status: errors.length ? "failed" : "completed", discovered: rows.length, imported, updated, observations_upserted: obs, errors });
+    const errors = failures.length ? [ingestionError("acquisition", "UPSTREAM_PARTIAL_FAILURE", "One or more acquisition tiles failed; successful tiles were reconciled", { provider: "overpass", retryable: true, details: { failures, failed_tiles: failures.length, total_tiles: tiles.length } })] : [];
+    const result = scheduledResult({ acquisition_status, persistence_status: "succeeded", job_status: "completed", discovered: rows.length, imported, updated, observations_upserted: obs, errors: [] });
     await serviceClient.from("external_import_jobs").update({ status: result.job_status, finished_at: new Date().toISOString(), records_seen: rows.length, records_imported: imported, observations_imported: obs, errors: errors.length, error_detail: errors }).eq("id", jobId);
-    return { ...result, market, version: VERSION, tiles: tiles.length, successful_tiles: tiles.length - failures.length, job_id: jobId };
+    return { ...result, acquisition_warnings: errors, market, version: VERSION, tiles: tiles.length, successful_tiles: tiles.length - failures.length, job_id: jobId };
   } catch (e) {
-    const error = ingestionError("persistence", "CANONICAL_PERSISTENCE_FAILED", e instanceof Error ? e.message : String(e), { retryable: true });
+    const error = ingestionError("persistence", "CANONICAL_PERSISTENCE_FAILED", e instanceof Error ? e.message : String(e), { retryable: true, details: e });
     await serviceClient.from("external_import_jobs").update({ status: "failed", finished_at: new Date().toISOString(), errors: 1, error_detail: [error] }).eq("id", jobId);
     return scheduledResult({ acquisition_status: "success", persistence_status: "failed", job_status: "failed", discovered: 0, imported: 0, updated: 0, observations_upserted: 0, errors: [error] });
   }
