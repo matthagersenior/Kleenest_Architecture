@@ -4,7 +4,7 @@ export function createLocationEvidenceService(client,{quests=null}={}) {
   const booleanValue = value => value === true || value === 'true' || value === '1' || value === 1;
   const numberOrNull = value => value == null || value === '' ? null : Number(value);
   const emit = (type, detail) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(`kleenest:${type}`, { detail })); };
-  const evidenceId = result => result?.observation_id || result?.amenity_observation_id || result?.quality_observation_id || result?.evidence_id || null;
+  const evidenceId = result => result?.observation_id || result?.amenity_observation_id || result?.quality_observation_id || result?.evidence_id || result?.id || null;
   async function convergeRouteStop(values,result){
     const checkInId=values.checkInId||null, locationId=values.locationId||null, id=evidenceId(result);
     if(!checkInId||!locationId||!id)return null;
