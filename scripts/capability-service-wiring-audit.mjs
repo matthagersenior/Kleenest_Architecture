@@ -7,12 +7,19 @@ const end = appContext.indexOf('};base.intelligenceConvergence', start);
 if (start < 0 || end < 0) throw new Error('Unable to locate AppContext service registry.');
 
 const baseSource = appContext.slice(start, end);
+const objectStart = baseSource.indexOf('{');
+const objectSource = objectStart >= 0 ? baseSource.slice(objectStart + 1) : '';
 const serviceKeys = new Set();
-// AppContext uses both explicit properties (`foo: service`) and shorthand
-// properties (`foo,`). Include the object opening brace so the first
-// canonical property is audited as well.
-const propertyPattern = /(?:^|[,{])\s*([A-Za-z_$][\w$]*)\s*(?=:|,)/g;
-for (const match of baseSource.matchAll(propertyPattern)) serviceKeys.add(match[1]);
+
+// Accept both explicit object properties (`foo: service`) and shorthand
+// properties (`foo,`). The previous delimiter-sensitive parser could fail
+// against compact/minified source even when AppContext was correctly wired.
+for (const match of objectSource.matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?=:|,|$)/g)) {
+  serviceKeys.add(match[1]);
+}
+for (const match of objectSource.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
+  serviceKeys.add(match[1]);
+}
 
 const missing = [];
 const domains = Object.entries(CAPABILITY_REGISTRY);
