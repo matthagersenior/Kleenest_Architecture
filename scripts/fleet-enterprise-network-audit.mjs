@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 const root=path.resolve('src');
 const required=[
+ ['domains/fleet/operations.js',['record_fleet_operational_event','kleenest:fleet-updated','kleenest:business-updated','fleet-mutation']],
  ['domains/fleet/intelligence.js',['fleet_dashboard_summary_v2','fleet_service_opportunities_for_business','get_fleet_network_leaderboard']],
  ['domains/enterprise/intelligence.js',['get_enterprise_partner_network','get_partner_network_benchmark','get_partner_campaign_roi','get_partner_allocation_roi','record_enterprise_partner_metric','record_enterprise_partner_campaign_outcome']],
  ['domains/enterprise/lifecycle.js',['createCampaign','recordCampaignOutcome','recordNetworkMetric','createAllocation','activateAllocation','resolveContext']],
  ['domains/intelligence/convergence.js',['operationalSnapshot','operationalOpportunities','subscribe','processJobs']],
+ ['domains/intelligence/operational-loop.js',['kleenest:operational-loop-updated','kleenest:business-updated','createAction','complete','notify','publish']],
  ['runtime/FleetIntelligenceSurface.jsx',['services.fleet.intelligence','services.fleet.networkLeaderboard','kleenest:fleet-updated','kleenest:business-updated']],
  ['runtime/EnterpriseOperationsPage.jsx',['services.enterpriseIntelligence.getNetwork','services.enterpriseIntelligence.allocationRoi','recordCampaignOutcome','recordNetworkMetric']]
 ];
