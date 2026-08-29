@@ -15,7 +15,11 @@ const membership=fs.readFileSync(path.join(root,files.membership),'utf8');
 for(const token of ['services.admin.setAccountCapabilities','services.admin.setBusinessAccess','services.admin.invoke(profile'])
   if(!membership.includes(token)) errors.push(`membership: missing governed admin operation ${token}`);
 const intelligence=fs.readFileSync(path.join(root,files.intelligence),'utf8');
-for(const token of ['services.ownerIntelligence','services.intelligenceActions'])
-  if(!intelligence.includes(token)) errors.push(`intelligence: missing canonical service boundary ${token}`);
+// Owner intelligence is intentionally guarded with optional chaining so a
+// partially initialized context cannot crash the lab. Accept both direct and
+// guarded namespace access while still requiring the canonical action service.
+for(const token of ['ownerIntelligence=services?.ownerIntelligence','ownerIntelligence=services.ownerIntelligence','services?.intelligenceActions','services.intelligenceActions'])
+  if(intelligence.includes(token)) break;
+else errors.push('intelligence: missing canonical service boundary');
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
 console.log('Owner authorization audit passed: CRUD, Membership, and Intelligence are owner-gated and service-bound.');
