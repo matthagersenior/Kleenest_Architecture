@@ -1,5 +1,5 @@
-import MapSurfaceProduction from './MapSurfaceProduction.jsx';
+import MapSurfaceProductionFixed from './MapSurfaceProductionFixed.jsx';
 
 export default function MapSurface() {
-  return <MapSurfaceProduction />;
+  return <MapSurfaceProductionFixed />;
 }
