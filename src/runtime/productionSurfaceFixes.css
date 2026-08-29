@@ -1,0 +1,39 @@
+/* Production surface convergence: map/result hierarchy, link affordances, and social discovery. */
+
+/* Map: mobile and desktop read naturally as map -> legend -> results. */
+.map-v3{display:flex!important;flex-direction:column!important}
+.map-v3 .map-grid{display:contents!important}
+.map-v3 .map-canvas{order:20;width:100%;min-height:410px}
+.map-v3 .map-legend-panel{order:30;width:100%;margin:0!important}
+.map-v3 .map-results{order:40;width:100%;max-height:none!important}
+.map-v3 .map-card{position:relative}
+.map-v3 .map-card-glyph{font-size:20px;min-width:42px;min-height:42px}
+.map-v3 .map-card-meta{align-items:center}
+
+/* Keep every navigational link visibly actionable. */
+.app a:not([class*="button"]):not(.brand-mark){text-decoration:none;border-bottom:1px solid currentColor;font-weight:750}
+.app a:not([class*="button"]):not(.brand-mark):hover{opacity:.82}
+.app .workspace-nav-link,.app .workspace-icon-action,.app .brand-mark{border-bottom:0!important}
+
+/* Game Center is a primary engagement destination, not a plain inline link. */
+a[href$="/games"]{display:inline-flex!important;align-items:center;justify-content:center;gap:8px;padding:11px 16px!important;border:1px solid rgba(86,54,190,.22)!important;border-radius:14px!important;background:linear-gradient(135deg,#5b32c8,#7b61ff)!important;color:#fff!important;box-shadow:0 10px 24px rgba(91,50,200,.22);font-weight:900!important;text-decoration:none!important}
+a[href$="/games"]:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(91,50,200,.28);opacity:1!important}
+
+/* Social destination gets an obvious place in consumer navigation. */
+.workspace-shell-consumer .workspace-nav-link[href$="/community"],
+.workspace-shell-consumer .workspace-nav-link[href$="/social"]{font-weight:900}
+
+/* Social capability cards. */
+.social-capability-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.social-capability-card{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #d9e1ec;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.06);text-decoration:none!important;color:inherit!important;border-bottom:0!important}
+.social-capability-card:hover{transform:translateY(-2px);border-color:#b9c7da;box-shadow:0 12px 28px rgba(16,24,40,.1)}
+.social-capability-card .social-capability-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#eef2ff;color:#3047a5}
+.social-capability-card strong{font-size:15px}
+.social-capability-card span{color:#667085;font-size:12px;line-height:1.45}
+.social-capability-card b{font-size:22px;line-height:1;color:#101828}
+.social-capability-card .social-capability-action{margin-top:auto;color:#3047a5;font-size:12px;font-weight:900}
+@media(max-width:900px){.social-capability-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.social-capability-grid{grid-template-columns:1fr}.map-v3 .map-canvas{min-height:410px}.map-v3 .map-card{padding:14px}}
+
+/* Never allow the loading treatment to cover an initialized map after a resize. */
+.map-v3 .leaflet-container~.map-loading{pointer-events:none}
