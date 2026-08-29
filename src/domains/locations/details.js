@@ -156,15 +156,7 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
         const row = asObject(item?.review) || asObject(item) || {};
         const profile = asObject(item?.profile);
         const reputation = asObject(item?.reputation);
-        return {
-          ...row,
-          ...(profile ? { profiles: profile } : {}),
-          rating: row.stars,
-          body: row.comment,
-          photos: Array.isArray(item?.photos) ? item.photos : [],
-          verified: Boolean(row.check_in_id),
-          reputation: reputation || null,
-        };
+        return { ...row, ...(profile ? { profiles: profile } : {}), rating: row.stars, body: row.comment, photos: Array.isArray(item?.photos) ? item.photos : [], verified: Boolean(row.check_in_id), reputation: reputation || null };
       });
   }
 
@@ -172,20 +164,14 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     await requireUser();
     const bundle = await fetchAuthorityBundle(locationId);
     const interaction = asObject(bundle.interaction) || {};
-    return {
-      favorited: Boolean(interaction.favorited),
-      checkedIn: Boolean(interaction.checked_in),
-      latestCheckIn: interaction.latest_check_in || null,
-    };
+    return { favorited: Boolean(interaction.favorited), checkedIn: Boolean(interaction.checked_in), latestCheckIn: interaction.latest_check_in || null };
   }
 
   async function trustState(locationId) {
     if (!locationId) return null;
     try {
-      return await client.rpc('get_location_trust_state', { p_location_id: locationId }).then(({ data, error }) => {
-        if (error) throw error;
-        return data || null;
-      });
+      const bundle = await fetchAuthorityBundle(locationId);
+      return asObject(bundle.trust) || null;
     } catch { return null; }
   }
 
@@ -194,18 +180,9 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return null;
     return client.rpc('record_data_feature_event', {
-      p_event_type: 'location_view',
-      p_feature_code: 'location_view',
-      p_subject_type: 'location',
-      p_subject_id: locationId,
-      p_location_id: locationId,
-      p_business_id: null,
-      p_fleet_vehicle_id: null,
-      p_source_table: 'client',
-      p_source_id: null,
-      p_value_numeric: null,
-      p_value_text: null,
-      p_metadata: metadata,
+      p_event_type: 'location_view', p_feature_code: 'location_view', p_subject_type: 'location', p_subject_id: locationId,
+      p_location_id: locationId, p_business_id: null, p_fleet_vehicle_id: null, p_source_table: 'client', p_source_id: null,
+      p_value_numeric: null, p_value_text: null, p_metadata: metadata,
     }).then(({ data, error }) => { if (error) throw error; return data; });
   }
 
