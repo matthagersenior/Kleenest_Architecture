@@ -6,6 +6,8 @@ import WorkspaceShell from './WorkspaceShell.jsx';
 
 const rows = value => Array.isArray(value) ? value : [];
 const name = profile => profile?.display_name || profile?.full_name || profile?.username || 'Kleenest member';
+const SOCIAL_REFRESH_EVENTS = ['kleenest:social-updated','kleenest:community-updated'];
+const emitSocialRefresh = type => window.dispatchEvent(new CustomEvent(type, { detail: { at: Date.now() } }));
 
 export default function SocialPage() {
   const { services, user } = useAppContext();
@@ -37,8 +39,9 @@ export default function SocialPage() {
   useEffect(() => { void load(); }, [user?.id]);
   useEffect(() => {
     const refresh = () => void load();
-    ['kleenest:checkin-completed','kleenest:location-activity','kleenest:rewards-updated','kleenest:progression-updated'].forEach(n => window.addEventListener(n, refresh));
-    return () => ['kleenest:checkin-completed','kleenest:location-activity','kleenest:rewards-updated','kleenest:progression-updated'].forEach(n => window.removeEventListener(n, refresh));
+    const names = ['kleenest:checkin-completed','kleenest:location-activity','kleenest:rewards-updated','kleenest:progression-updated',...SOCIAL_REFRESH_EVENTS];
+    names.forEach(n => window.addEventListener(n, refresh));
+    return () => names.forEach(n => window.removeEventListener(n, refresh));
   }, [user?.id]);
 
   const friends = useMemo(() => { const ids = new Set(following.map(x => x.following_id)); return followers.filter(x => ids.has(x.follower_id)); }, [followers, following]);
@@ -48,9 +51,9 @@ export default function SocialPage() {
     return [...map.values()];
   }, [messages, user?.id]);
 
-  const publish = async event => { event.preventDefault(); const content = post.trim(); if (!user || !content) return; setAction('Publishing…'); try { await services.community.publishPost({ content }); setPost(''); setAction('Post published.'); await load(); } catch (e) { setAction(e?.message || 'Unable to publish post.'); } };
-  const follow = async id => { setAction('Updating connection…'); try { await services.community.followUser(id); await load(); setAction('Connection updated.'); } catch (e) { setAction(e?.message || 'Unable to update connection.'); } };
-  const sendMessage = async event => { event.preventDefault(); const recipient = params.get('to'); const content = message.trim(); if (!user || !recipient || !content) return; setAction('Sending…'); try { await services.community.sendMessage({ toId: recipient, content }); setMessage(''); setAction('Message sent.'); await load(); } catch (e) { setAction(e?.message || 'Unable to send message.'); } };
+  const publish = async event => { event.preventDefault(); const content = post.trim(); if (!user || !content) return; setAction('Publishing…'); try { await services.community.publishPost({ content }); setPost(''); setAction('Post published.'); emitSocialRefresh('kleenest:social-updated'); emitSocialRefresh('kleenest:community-updated'); await load(); } catch (e) { setAction(e?.message || 'Unable to publish post.'); } };
+  const follow = async id => { setAction('Updating connection…'); try { await services.community.followUser(id); setAction('Connection updated.'); emitSocialRefresh('kleenest:social-updated'); emitSocialRefresh('kleenest:community-updated'); await load(); } catch (e) { setAction(e?.message || 'Unable to update connection.'); } };
+  const sendMessage = async event => { event.preventDefault(); const recipient = params.get('to'); const content = message.trim(); if (!user || !recipient || !content) return; setAction('Sending…'); try { await services.community.sendMessage({ toId: recipient, content }); setMessage(''); setAction('Message sent.'); emitSocialRefresh('kleenest:social-updated'); emitSocialRefresh('kleenest:community-updated'); await load(); } catch (e) { setAction(e?.message || 'Unable to send message.'); } };
 
   return <WorkspaceShell workspace="consumer"><main className="page community-page">
     <div className="page-header"><div><span className="eyebrow">KLEENEST COMMUNITY</span><h1>Social network</h1><p>Find contributors, share trusted discoveries, and keep people connected to places.</p></div><div className="hero-actions"><button className="secondary" onClick={load} disabled={loading}><RefreshCw size={16}/>Refresh</button><Link className="secondary" to="/map"><MapPin size={16}/>Explore map</Link></div></div>
