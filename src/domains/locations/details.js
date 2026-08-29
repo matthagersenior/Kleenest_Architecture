@@ -93,23 +93,25 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     return null;
   }
 
+  async function fetchAuthorityBundle(locationId) {
+    const { data, error } = await client.rpc('get_location_authority_bundle', { p_location_id: locationId });
+    if (error) throw error;
+    return asObject(data) || {};
+  }
+
   async function getById(placeId) {
     if (!placeId) throw new Error('Place is required.');
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return cachedById(placeId);
 
-    const { data, error } = await client.rpc('get_location_authority_bundle', { p_location_id: placeId });
-    if (error) throw error;
-
-    const place = normalizeAuthorityBundle(data);
+    const bundle = await fetchAuthorityBundle(placeId);
+    const place = normalizeAuthorityBundle(bundle);
     if (!place) return cachedById(placeId);
     return place;
   }
 
   async function reviews(locationId, limit = 30) {
     if (!locationId) return [];
-    const { data, error } = await client.rpc('get_location_authority_bundle', { p_location_id: locationId });
-    if (error) throw error;
-    const bundle = asObject(data) || {};
+    const bundle = await fetchAuthorityBundle(locationId);
     return (Array.isArray(bundle.reviews) ? bundle.reviews : [])
       .slice(0, Math.min(Math.max(Number(limit) || 30, 1), 100))
       .map(item => {
@@ -130,9 +132,8 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
 
   async function interactionState(locationId) {
     await requireUser();
-    const { data, error } = await client.rpc('get_location_authority_bundle', { p_location_id: locationId });
-    if (error) throw error;
-    const interaction = asObject(asObject(data)?.interaction) || {};
+    const bundle = await fetchAuthorityBundle(locationId);
+    const interaction = asObject(bundle.interaction) || {};
     return {
       favorited: Boolean(interaction.favorited),
       checkedIn: Boolean(interaction.checked_in),
@@ -143,9 +144,8 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
   async function trustState(locationId) {
     if (!locationId) return null;
     try {
-      const { data, error } = await client.rpc('get_location_trust_state', { p_location_id: locationId });
-      if (error) throw error;
-      return data || null;
+      const bundle = await fetchAuthorityBundle(locationId);
+      return bundle.trust || null;
     } catch { return null; }
   }
 
