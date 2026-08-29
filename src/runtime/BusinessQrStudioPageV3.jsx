@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BarChart3, Check, Copy, Download, ExternalLink, ImagePlus, Link2, Palette, Plus, Printer, QrCode, RefreshCw, ShieldCheck, Trash2, ToggleLeft, ToggleRight, Users, X } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
-import { supabase } from '../infrastructure/supabase/client.js';
+import { uploadBusinessQrBrandingLogo } from '../domains/business/qr-branding.js';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import './qr-studio.css';
 
@@ -101,17 +101,10 @@ export default function BusinessQrStudioPageV3() {
 
   const uploadLogo = async file => {
     if (!file || standard) return;
-    if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type) || file.size > 2 * 1024 * 1024) {
-      setError('QR logos must be PNG, JPEG, WebP, or SVG and 2 MB or smaller.'); return;
-    }
     setBusy('logo'); setError('');
     try {
-      const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace('jpeg', 'jpg');
-      const path = `${businessId}/${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('qr-branding').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
-      if (uploadError) throw uploadError;
-      const url = supabase.storage.from('qr-branding').getPublicUrl(path).data.publicUrl;
-      setLogoUrl(url); setLogoFile(file); setNotice('Custom logo uploaded and ready for QR branding.');
+      const result = await uploadBusinessQrBrandingLogo({ businessId, file });
+      setLogoUrl(result.publicUrl); setLogoFile(file); setNotice('Custom logo uploaded and ready for QR branding.');
     } catch (e) { setError(e?.message || 'Unable to upload QR logo.'); }
     finally { setBusy(''); }
   };
