@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, MapPin, Route, ShieldCheck, Trophy, QrCode, Radio, Building2, BarChart3, Truck, Globe2, Bell, Settings, Search, AlertTriangle, Database, Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
-import { getCapabilitiesForWorkspace, auditCapabilitySurface } from '../architecture/capabilityContract.js';
-import { getCapabilityRegistry } from '../architecture/capabilityRegistry.js';
+import { auditCapabilitySurface } from '../architecture/capabilityContract.js';
+import { getCapabilitiesForWorkspace, getCapabilityRegistry } from '../architecture/capabilityRegistry.js';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import './CapabilityHubPage.css';
 
