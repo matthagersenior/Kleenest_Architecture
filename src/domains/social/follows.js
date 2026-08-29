@@ -6,31 +6,30 @@ export function createFollowService(client) {
     if (!user) throw new Error('Sign in to continue.');
     return user;
   }
+  const rpc = async (name, args = {}) => {
+    const { data, error } = await client.rpc(name, args);
+    if (error) throw error;
+    return data;
+  };
   return Object.freeze({
     follow: async (targetUserId) => {
       const me = await user();
       if (!targetUserId || targetUserId === me.id) throw new Error('A different user is required.');
-      const { data, error } = await client.rpc('follow_user', { p_user_id: targetUserId });
-      if (error) throw error;
-      return data;
+      return rpc('follow_user', { p_user_id: targetUserId });
     },
     unfollow: async (targetUserId) => {
-      const me = await user();
-      const { error } = await client.from('follows').delete().eq('follower_id', me.id).eq('following_id', targetUserId);
-      if (error) throw error;
+      await user();
+      if (!targetUserId) throw new Error('A user is required.');
+      return rpc('unfollow_user', { p_target_user_id: targetUserId });
     },
-    listFollowing: async () => {
-      const me = await user();
-      const { data, error } = await client.from('follows').select('following_id,created_at').eq('follower_id', me.id).order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+    listFollowing: async (limit = 100) => {
+      await user();
+      return (await rpc('list_following_users', { p_limit: limit })) ?? [];
     },
     isFollowing: async (targetUserId) => {
-      const me = await user();
+      await user();
       if (!targetUserId) return false;
-      const { data, error } = await client.from('follows').select('follower_id').eq('follower_id', me.id).eq('following_id', targetUserId).maybeSingle();
-      if (error) throw error;
-      return Boolean(data);
+      return Boolean(await rpc('is_following_user', { p_target_user_id: targetUserId }));
     }
   });
 }
