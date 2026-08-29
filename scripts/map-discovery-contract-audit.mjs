@@ -6,7 +6,7 @@ const required = [
   ['domains/maps/network.js', ['createMapNetworkService', 'map_network_nearby_v1', 'ingest-map-candidates-v3', 'prepare_universal_location_discovery', 'record_location_discovery_event', 'amenityNamesFrom']],
   ['domains/maps/networkDiscoveryPolicy.js', ['NETWORK_DISCOVERY_POLICY', 'collectOnOpen', 'enrichExisting', 'shareNetworkEvents']],
   ['runtime/MapSurface.jsx', ['MapSurfaceProduction']],
-  ['runtime/MapSurfaceProduction.jsx', ['services.maps.nearby', 'discover', 'DEFAULT_CENTER', 'ready', 'visible', 'AMENITIES', 'Amenities', './MapSurfaceV3.css']],
+  ['runtime/MapSurfaceProduction.jsx', ['services.maps.nearby', 'discover', 'DEFAULT_CENTER', 'ready', 'visible', 'AMENITIES', './MapSurfaceV3.css']],
   ['AppContext.jsx', ['createMapNetworkService', 'maps:createMapNetworkService']],
 ];
 const missing = [];
