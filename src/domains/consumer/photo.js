@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase.js';
+import { supabase } from '../../supabase/client.js';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -15,7 +15,7 @@ export async function uploadEvidencePhoto({ file, userId, checkInId, locationId 
 
   const extension = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1];
   const path = `${userId}/evidence/${checkInId}/${crypto.randomUUID()}.${extension}`;
-  const { error: uploadError } = await supabase.storage.from('location-photos').upload(path, file, {
+  const { error: uploadError } = supabase.storage.from('location-photos').upload(path, file, {
     contentType: file.type,
     upsert: false,
   });
