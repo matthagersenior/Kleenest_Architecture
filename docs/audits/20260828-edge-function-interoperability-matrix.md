@@ -38,6 +38,10 @@ A successful pg_cron `net.http_post` only proves the request was accepted by the
 
 A version cannot be removed because its name looks old. Retirement requires evidence for caller absence, equivalent responsibility, equivalent authorization, equivalent writes, and successful replacement verification.
 
+`v3` is the current successful runtime discovery path.
+
+No destructive cleanup performed. Any retirement remains non-destructive until caller, authorization, write-equivalence, and replacement evidence are complete.
+
 ## Immediate corrective path
 
 1. Keep `ingest-map-candidates-v3` as the canonical current runtime discovery function.
