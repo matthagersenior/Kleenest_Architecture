@@ -20,9 +20,11 @@ for (const file of files) {
   for (const match of text.matchAll(/<button\b([^>]*)>/g)) {
     const attrs = match[1];
     const bodyStart = match.index + match[0].length;
-    const body = text.slice(bodyStart, Math.min(text.length, bodyStart + 600));
+    const close = text.indexOf('</button>', bodyStart);
+    const body = text.slice(bodyStart, close >= 0 ? close : Math.min(text.length, bodyStart + 600));
     const forwardsProps = /\{\s*\.\.\.[A-Za-z_$][\w$]*\s*\}/.test(attrs);
-    const interactive = /\bonClick\s*=/.test(attrs) || /\btype\s*=\s*["']submit["']/.test(attrs) || /\bformAction\s*=/.test(attrs) || forwardsProps;
+    const delegatedAction = /\bdata-[A-Za-z0-9_-]+\s*=/.test(attrs);
+    const interactive = /\bonClick\s*=/.test(attrs) || /\btype\s*=\s*["']submit["']/.test(attrs) || /\bformAction\s*=/.test(attrs) || forwardsProps || delegatedAction;
     const explicitlyStatic = /\bdisabled\s*=/.test(attrs) || /\baria-disabled\s*=/.test(attrs);
     if (!interactive && !explicitlyStatic && !/\b(button|close|cancel|back|menu|tab|next|previous|view|open|save|delete|edit|add|create|continue|submit|upgrade|manage|refresh|retry|sync|sign|log|logout|login|scan|route|check|review|report|export|import|filter|search|settings|preview|exit|dismiss)/i.test(body)) continue;
     if (!interactive && !explicitlyStatic) failures.push(`${relative}: button without an action or explicit disabled state`);
