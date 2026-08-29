@@ -18,21 +18,11 @@ const normalizeDiscoveryRequest = ({ latitude, longitude, radiusKm = 50, categor
   const safeLimit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 1000, 25), 2000);
   return Object.freeze({ lat, lng, radius, safeCategory, safeSearch, safeLimit });
 };
-
 const canonicalLocationId = place => String(place?.location_id ?? place?.id ?? '').trim() || null;
 const fallbackKey = ({ lat, lng, radius, safeCategory, safeSearch, safeLimit, safeUserId }) => [safeUserId || 'anonymous', lat.toFixed(3), lng.toFixed(3), Math.round(radius * 1000), safeCategory || '', safeSearch || '', safeLimit].join('|');
 const readFallback = key => { const entry = discoveryFallbackCache.get(key); if (!entry) return null; if (Date.now() - entry.savedAt > DISCOVERY_FALLBACK_TTL_MS) { discoveryFallbackCache.delete(key); return null; } return entry.locations; };
 const writeFallback = (key, locations) => { if (!Array.isArray(locations) || !locations.length) return; discoveryFallbackCache.delete(key); discoveryFallbackCache.set(key, { locations, savedAt: Date.now() }); while (discoveryFallbackCache.size > DISCOVERY_FALLBACK_MAX_ENTRIES) { const oldestKey = discoveryFallbackCache.keys().next().value; if (oldestKey === undefined) break; discoveryFallbackCache.delete(oldestKey); } };
-
-const canonicalize = locations => {
-  const seen = new Set();
-  return (Array.isArray(locations) ? locations : []).map(normalizePlace).filter(place => {
-    const id = canonicalLocationId(place);
-    if (!id || !place.has_canonical_location || !place.has_canonical_coordinates || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-};
+const canonicalize = locations => { const seen = new Set(); return (Array.isArray(locations) ? locations : []).map(normalizePlace).filter(place => { const id = canonicalLocationId(place); if (!id || !place.has_canonical_location || !place.has_canonical_coordinates || seen.has(id)) return false; seen.add(id); return true; }); };
 
 export function createUniversalDiscoveryService(client) {
   if (!client) throw new Error('Supabase client is required.');
@@ -51,8 +41,15 @@ export function createUniversalDiscoveryService(client) {
       try { locations = await execute(); } catch (error) { const cached = fallback(); if (cached) return cached; throw error; }
       if (locations.length) { writeFallback(cacheKey, locations); return locations; }
       if (!discover || typeof client.functions?.invoke !== 'function') return fallback() || locations;
-      try { const { error: ingestError } = await client.functions.invoke('ingest-map-candidates-v3', { body: { latitude: lat, longitude: lng, radiusKm: radius } }); if (ingestError) throw ingestError; locations = await execute(); }
-      catch (error) { const cached = fallback(); if (cached) return cached; throw error; }
+      try {
+        const { error: ingestError } = await client.functions.invoke('map-bootstrap-ingest', { body: { latitude: lat, longitude: lng, radiusKm: Math.min(radius, 25) } });
+        if (ingestError) throw ingestError;
+        locations = await execute();
+      } catch (error) {
+        const cached = fallback();
+        if (cached) return cached;
+        throw error;
+      }
       if (locations.length) { writeFallback(cacheKey, locations); return locations; }
       return fallback() || locations;
     }
