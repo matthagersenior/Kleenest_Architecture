@@ -8,7 +8,10 @@ if (start < 0 || end < 0) throw new Error('Unable to locate AppContext service r
 
 const baseSource = appContext.slice(start, end);
 const serviceKeys = new Set();
-const propertyPattern = /(?:^|,)([A-Za-z_$][\w$]*)\s*(?::|,)/g;
+// AppContext uses both explicit properties (`foo: service`) and shorthand
+// properties (`foo,`). Include the object opening brace so the first
+// canonical property is audited as well.
+const propertyPattern = /(?:^|[,{])\s*([A-Za-z_$][\w$]*)\s*(?=:|,)/g;
 for (const match of baseSource.matchAll(propertyPattern)) serviceKeys.add(match[1]);
 
 const missing = [];
