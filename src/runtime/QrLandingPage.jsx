@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Download, MapPin, QrCode, ShieldCheck, Star } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { supabase } from '../infrastructure/supabase/client.js';
+import { getPublicQrLanding } from '../domains/qr/public-landing.js';
 import { useAppContext } from '../AppContext.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import './qr-studio.css';
@@ -9,7 +9,7 @@ import './qr-landing.css';
 
 export default function QrLandingPage({ code: codeProp = '' }){
   const params = useParams(); const code = codeProp || params.code || ''; const { user } = useAppContext(); const [data,setData]=useState(null); const [error,setError]=useState('');
-  useEffect(()=>{let alive=true;(async()=>{try{const {data:row,error:e}=await supabase.rpc('get_public_qr_landing',{p_qr_code:code});if(e)throw e;if(alive)setData(row)}catch(e){if(alive)setError(e?.message||'This QR code is unavailable.')}})();return()=>{alive=false}},[code]);
+  useEffect(()=>{let alive=true;(async()=>{try{const row=await getPublicQrLanding(code);if(alive)setData(row)}catch(e){if(alive)setError(e?.message||'This QR code is unavailable.')}})();return()=>{alive=false}},[code]);
   const c=data?.customization||{}; const logo=c.logo_url||data?.business_logo_url||null; const appUrl=c.app_download_url||`${window.location.origin}${import.meta.env.BASE_URL||'/'}`; const reviewUrl=c.review_url||''; const visitUrl=useMemo(()=>`/check-in?locationId=${encodeURIComponent(data?.location_id||'')}&qr=${encodeURIComponent(data?.code||code||'')}`,[data,code]);
   if(error)return <WorkspaceShell workspace="consumer"><main className="page"><section className="detail-panel qr-empty"><QrCode size={42}/><h1>QR unavailable</h1><p>{error}</p><Link className="primary" to="/map">Explore Kleenest <ArrowRight size={15}/></Link></section></main></WorkspaceShell>;
   if(!data)return <WorkspaceShell workspace="consumer"><main className="page"><section className="detail-panel qr-empty"><QrCode size={42}/><strong>Loading Kleenest experience…</strong></section></main></WorkspaceShell>;
