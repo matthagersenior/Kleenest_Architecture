@@ -39,6 +39,13 @@ Every large implementation slice is committed and logged while integration is pe
 - Added Supabase interoperability audit protocol.
 - Strengthened audit protocol so findings must be fixed/migrated/deprecated/resolved and retested before closure.
 
+### Slice 1 — Map/Location Authority Closure (active)
+- Confirmed production `map_network_nearby_v1` returns canonical `location_id` and coordinates; live St. Louis smoke query returned 50/50 rows with canonical identity and coordinates.
+- Hardened universal discovery normalization so `all` is treated as an unfiltered category, only canonical location identities/coordinates are emitted, and duplicate identities are suppressed before fallback caching.
+- Hardened location details so a public location lookup can resolve either a `places.id` or canonical `locations.id`, then converges the result back to `location_id` before intelligence/interaction consumers use it.
+- Added a live `location-interoperability` audit script and wired it into the canonical audit runner so map RPC + universal discovery contracts are checked against the production-shaped backend during CI.
+- Verification currently includes direct production RPC execution and confirmed canonical map results. GitHub Actions verification is queued on the latest main commit and must pass before this slice is marked complete.
+
 ## Active reconciliation program
 
 ### Supabase backend
@@ -96,16 +103,16 @@ A slice is complete only when:
 
 ## Next large slices
 
-1. Supabase RPC/function reconciliation and capability classification.
-2. Edge Function version-family interoperability and caller migration.
-3. Membership/entitlement/preview/Quick Finds end-to-end sweep.
-4. Owner/Admin control-center reconciliation.
-5. Business dashboard and capability-result reconciliation.
-6. Fleet dashboard/routes/performance/maintenance/intelligence reconciliation.
-7. Enterprise/network/intelligence reconciliation.
-8. Consumer discovery/map/check-in/review/quest/reward reconciliation.
-9. Reporting/history/notifications/QR integration and result verification.
-10. Final cross-project interoperability matrices and no-gap verification.
+1. Finish Slice 1 UI map bootstrap and location-detail continuity; verify CI.
+2. Consumer Trust Loop closure: map -> place -> verified visit -> observation/photo -> review -> reputation -> progression -> Community -> intelligence -> map refresh.
+3. Route + Evidence convergence, including refresh/auth/offline/idempotency behavior.
+4. Freshness/confidence/reverification intelligence.
+5. Business Trust + Growth loop.
+6. Intelligence Recommendation/Action/Outcome OS.
+7. AI foundation and first production AI capabilities.
+8. Notifications/realtime/offline closure.
+9. Shared Business/Fleet/Enterprise intelligence.
+10. Governance/moderation/production certification.
 
 ## Commit/log discipline
 
