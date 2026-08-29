@@ -43,8 +43,16 @@ Every large implementation slice is committed and logged while integration is pe
 - Confirmed production `map_network_nearby_v1` returns canonical `location_id` and coordinates; live St. Louis smoke query returned 50/50 rows with canonical identity and coordinates.
 - Hardened universal discovery normalization so `all` is treated as an unfiltered category, only canonical location identities/coordinates are emitted, and duplicate identities are suppressed before fallback caching.
 - Hardened location details so a public location lookup can resolve either a `places.id` or canonical `locations.id`, then converges the result back to `location_id` before intelligence/interaction consumers use it.
+- Removed the authentication dependency from the map bootstrap gate at the `MapSurface` boundary: public discovery can now initialize before sign-in while mutations continue to resolve real authentication through their services.
 - Added a live `location-interoperability` audit script and wired it into the canonical audit runner so map RPC + universal discovery contracts are checked against the production-shaped backend during CI.
-- Verification currently includes direct production RPC execution and confirmed canonical map results. GitHub Actions verification is queued on the latest main commit and must pass before this slice is marked complete.
+- Verification includes direct production RPC execution and confirmed canonical map results. Latest GitHub Actions runs are executing the updated audit suite; Slice 1 remains open until the UI/CI gate is green.
+
+### Consumer Trust propagation batch — active
+- Observation, amenity observation, quality observation, verification, and bathroom verification now emit canonical evidence lifecycle events after successful authoritative RPC execution.
+- Evidence events explicitly request downstream location-intelligence refresh without creating a second intelligence store.
+- Review creation and review amenity feedback now emit location-intelligence refresh requests in addition to existing progression/review events.
+- This establishes the event contract needed for the next convergence step: one evidence mutation -> authoritative state -> intelligence refresh -> dependent surface refresh.
+- The actual downstream refresh consumer still requires end-to-end verification before this batch is closed.
 
 ## Active reconciliation program
 
