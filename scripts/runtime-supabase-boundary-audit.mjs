@@ -5,7 +5,6 @@ const root = path.resolve('src/runtime');
 const allowed = new Map([
   ['QrLandingPage.jsx', ['get_public_qr_landing']],
   ['BusinessQrStudioPageV2.jsx', ['qr-branding']],
-  ['BusinessQrStudioPageV3.jsx', ['qr-branding']],
 ]);
 const violations = [];
 
