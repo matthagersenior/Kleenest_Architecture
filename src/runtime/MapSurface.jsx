@@ -10,10 +10,37 @@ import MapSurfaceV3 from './MapSurfaceV3.jsx';
 export default function MapSurface() {
   const context = useAppContext();
   const [refreshGeneration, setRefreshGeneration] = useState(0);
+  const [layoutReady, setLayoutReady] = useState(false);
   const publicContext = useMemo(() => {
     if (context.user) return context;
     return { ...context, user: { id: 'anonymous-map-bootstrap', isAnonymous: true } };
   }, [context]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    const mountAfterLayout = () => {
+      if (cancelled) return;
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) setLayoutReady(true);
+        });
+      });
+    };
+    mountAfterLayout();
+    const onPageShow = () => {
+      if (!cancelled) setLayoutReady(false);
+      mountAfterLayout();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
 
   useEffect(() => {
     const onLocationRefresh = event => {
@@ -24,5 +51,9 @@ export default function MapSurface() {
     return () => window.removeEventListener('kleenest:location-intelligence-refresh-requested', onLocationRefresh);
   }, []);
 
-  return <AppContext.Provider value={publicContext}><MapSurfaceV3 key={refreshGeneration} /></AppContext.Provider>;
+  return (
+    <AppContext.Provider value={publicContext}>
+      {layoutReady ? <MapSurfaceV3 key={refreshGeneration} /> : null}
+    </AppContext.Provider>
+  );
 }
