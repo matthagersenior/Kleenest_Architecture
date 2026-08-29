@@ -7,23 +7,30 @@ const end = appContext.indexOf('};base.intelligenceConvergence', start);
 if (start < 0 || end < 0) throw new Error('Unable to locate AppContext service registry.');
 
 const baseSource = appContext.slice(start, end);
-const objectStart = baseSource.indexOf('{');
-const objectSource = objectStart >= 0 ? baseSource.slice(objectStart + 1) : '';
+
+// AppContext is intentionally compact and contains nested object literals.
+// Parse only the top-level keys of `base` so nested keys cannot masquerade as
+// runtime services. This also handles both `foo: service` and shorthand `foo`.
+const objectSource = baseSource.slice(baseSource.indexOf('{') + 1);
 const serviceKeys = new Set();
-
-// Accept both explicit object properties (`foo: service`) and shorthand
-// properties (`foo,`). The source is intentionally compact, so audit the
-// actual object contract rather than relying on formatting.
-for (const match of objectSource.matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?=:|,|$)/g)) {
-  serviceKeys.add(match[1]);
+let depth = 0;
+let token = '';
+let expectKey = true;
+for (let i = 0; i < objectSource.length; i += 1) {
+  const ch = objectSource[i];
+  if (ch === '{') { depth += 1; continue; }
+  if (ch === '}') { depth -= 1; continue; }
+  if (depth !== 0) continue;
+  if (/[A-Za-z0-9_$]/.test(ch)) token += ch;
+  else if (ch === ':' || ch === ',') {
+    if (expectKey && token) serviceKeys.add(token);
+    token = '';
+    expectKey = ch === ',';
+  } else if (/\s/.test(ch)) continue;
+  else { token = ''; expectKey = false; }
 }
-for (const match of objectSource.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
-  serviceKeys.add(match[1]);
-}
+if (token && expectKey) serviceKeys.add(token);
 
-// Capability names are domain-facing contracts and may intentionally differ
-// from the runtime property name when two surfaces share one canonical
-// service implementation. Keep those aliases explicit and auditable.
 const SERVICE_ALIASES = Object.freeze({
   platformAccount: 'account',
   universalDiscovery: 'maps',
