@@ -14,21 +14,28 @@ const texts = new Map();
 for (const [rel, tokens] of required) {
   const file = path.join(root, rel);
   if (!fs.existsSync(file)) { missing.push(`${rel}: file missing`); continue; }
-  const text = fs.readFileSync(file, 'utf8'); texts.set(rel, text);
+  const text = fs.readFileSync(file, 'utf8');
+  texts.set(rel, text);
   for (const token of tokens) if (!text.includes(token)) missing.push(`${rel}: missing ${token}`);
 }
 const map = texts.get('domains/maps/network.js') || '';
-for (const forbidden of ['demoLocations', 'sampleLocations', 'mockLocations', 'fallbackDemo', 'demo accounts']) if (map.toLowerCase().includes(forbidden.toLowerCase())) missing.push(`domains/maps/network.js: forbidden demo fallback ${forbidden}`);
+for (const forbidden of ['demoLocations', 'sampleLocations', 'mockLocations', 'fallbackDemo', 'demo accounts']) {
+  if (map.toLowerCase().includes(forbidden.toLowerCase())) missing.push(`domains/maps/network.js: forbidden demo fallback ${forbidden}`);
+}
 const surface = texts.get('runtime/MapSurfaceStable.jsx') || '';
-for (const forbidden of ['demoLocations', 'sampleLocations', 'mockLocations', 'demo accounts', 'fakeLocations']) if (surface.toLowerCase().includes(forbidden.toLowerCase())) missing.push(`runtime/MapSurfaceStable.jsx: forbidden demo fallback ${forbidden}`);
+for (const forbidden of ['demoLocations', 'sampleLocations', 'mockLocations', 'demo accounts', 'fakeLocations']) {
+  if (surface.toLowerCase().includes(forbidden.toLowerCase())) missing.push(`runtime/MapSurfaceStable.jsx: forbidden demo fallback ${forbidden}`);
+}
 if (surface.includes('MAP_CATEGORIES.filter') || surface.includes('category selector')) missing.push('runtime/MapSurfaceStable.jsx: map must not use location type as the primary discovery filter');
 if (!surface.includes('AMENITIES.map') || !surface.includes('toggleAmenity')) missing.push('runtime/MapSurfaceStable.jsx: amenity filter controls missing');
 if (!surface.includes('amenities: Object.fromEntries') || !surface.includes("category: 'all'")) missing.push('runtime/MapSurfaceStable.jsx: nearby request must be amenity-first with category=all');
 if (!surface.includes('View details') && !surface.includes('Open full details')) missing.push('runtime/MapSurfaceStable.jsx: missing location-details CTA');
 if (!map.includes('Array.isArray(discovered?.locations)')) missing.push('domains/maps/network.js: live discovery candidates must remain usable when persistence is unavailable');
-if (!map.includes('p_amenity_names: amenityNames.length ? amenityNames : null')) missing.push('domains/maps/network.js: canonical RPC must receive amenity filters');
-if (!map.includes('amenity_names: amenityNames')) missing.push('domains/maps/network.js: live ingestion must receive amenity filters');
+// Match semantic RPC arguments rather than whitespace/formatting so prettier/minification does not create false failures.
+if (!/p_amenity_names\s*:\s*amenityNames\.length\s*\?\s*amenityNames\s*:\s*null/.test(map)) missing.push('domains/maps/network.js: canonical RPC must receive amenity filters');
+if (!/amenity_names\s*:\s*amenityNames/.test(map)) missing.push('domains/maps/network.js: live ingestion must receive amenity filters');
+if (!surface.includes("./MapSurfaceV3.css") && !surface.includes('MapSurfaceV3')) missing.push('runtime/MapSurfaceStable.jsx: V3 styling baseline missing');
 const context = texts.get('AppContext.jsx') || '';
 for (const forbidden of ['createUniversalDiscoveryService', 'universalDiscovery']) if (context.includes(forbidden)) missing.push(`AppContext.jsx: redundant discovery service ${forbidden}`);
 if (missing.length) { console.error(missing.join('\n')); process.exit(1); }
-console.log('Canonical Map discovery audit passed: stable runtime, amenity-first discovery, bounded OSM/Overpass ingestion, direct live-candidate convergence, 2-mile default radius, selected-location details, visible legend/markers, route continuity, non-demo fallback, and single discovery ownership are present.');
+console.log('Canonical Map discovery audit passed: MapSurfaceStable/V3 styling baseline, amenity-first discovery, bounded OSM/Overpass ingestion, direct live-candidate convergence, 2-mile default radius, selected-location details, visible legend/markers, route continuity, non-demo fallback, and single discovery ownership are present.');
