@@ -7,8 +7,22 @@ export function createIntelligenceOutcomeChainService(client,{convergence,action
   const recordOutcome=async({actionId,locationId,businessId,outcomeType,status='completed',metadata={}}={})=>{
     if(!actionId)throw new Error('Intelligence action is required.');
     const result=await rpc('record_intelligence_action_outcome',{p_action_id:actionId,p_location_id:locationId||null,p_business_id:businessId||null,p_outcome_type:outcomeType||'completed',p_status:status,p_metadata:metadata});
-    emit('kleenest:intelligence-outcome',{actionId,locationId,businessId,outcomeType,status,result});
-    return result;
+    const featureEvent=convergence?.recordEvent
+      ? await convergence.recordEvent({
+          eventType:`intelligence_action_${status}`,
+          featureCode:'intelligence.action.outcome',
+          subjectType:'location',
+          subjectId:locationId||null,
+          locationId:locationId||null,
+          businessId:businessId||null,
+          sourceTable:'intelligence_action_outcomes',
+          sourceId:actionId,
+          valueText:outcomeType||'completed',
+          metadata:{action_id:actionId,status,outcome_type:outcomeType||'completed',...metadata},
+        })
+      : null;
+    emit('kleenest:intelligence-outcome',{actionId,locationId,businessId,outcomeType,status,result,featureEvent});
+    return {result,featureEvent};
   };
   const execute=async({actionId,locationId,businessId,metadata={}}={})=>{
     const result=await (actions?.execute?actions.execute(actionId):rpc('execute_intelligence_action',{p_action_id:actionId}));
