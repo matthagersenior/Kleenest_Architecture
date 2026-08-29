@@ -25,15 +25,20 @@ The service now has one `fetchAuthorityBundle()` path. `trustState()` no longer 
 
 The normalized read object preserves canonical location identity while projecting source, dataset, external IDs, raw source payload, raw tags/OSM tags, and source provenance. This keeps OSM/Overpass evidence available instead of flattening it into lossy location fields.
 
+### Interoperability smoke verification
+
+- Canonical map discovery returned 50 rows for the audit origin, all 50 with canonical `location_id` and valid coordinates.
+- Map → detail identity continuity passed: the first map result's `location_id` exactly matched the `get_location_authority_bundle` location ID.
+- Route stop → detail identity continuity passed for an existing route stop; the route stop `location_id` exactly matched the authority bundle location ID.
+- The canonical authority bundle exposed place and trust data for both tested detail paths.
+
 ## Remaining Slice A work
 
-The current runtime details path is closed, but the complete slice acceptance gate still requires:
+The current runtime details path and live map/route identity checks are closed, but the complete slice acceptance gate still requires:
 
-1. map selection → detail identity regression verification;
-2. route destination/stop ID continuity verification;
-3. offline/online snapshot normalization equivalence verification;
-4. telemetry verification for authoritative read/fallback/error states;
-5. CI guard for new protected-table direct access.
+1. offline/online snapshot normalization equivalence verification;
+2. telemetry verification for authoritative read/fallback/error states;
+3. CI guard for new protected-table direct access.
 
 These are the next implementation checks before declaring Slice A fully closed.
 
