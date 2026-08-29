@@ -16,7 +16,6 @@ Every large implementation slice is committed and logged while integration is pe
 
 ### Owner UI stabilization
 - Repaired Owner Command Center rendering/structure so its control surface renders reliably.
-- Continued Owner UI review rather than treating rendering success as completion.
 
 ### Operational Capabilities reconciliation
 - Replaced stale capability-archaeology presentation with a registry-driven operational capability view.
@@ -28,109 +27,81 @@ Every large implementation slice is committed and logged while integration is pe
 - Reconciled feature-catalog naming to the live schema (`minimum_tier`).
 
 ### Membership Preview
-- Found and repaired canonical preview-key mismatch affecting membership preview buttons.
-- Preview controls now use canonical runtime preview vocabulary instead of raw tier IDs.
-- Premium/Family/Fleet/Enterprise/Business preview links are required to reach the actual application context.
+- Repaired canonical preview-key mismatch and required preview controls to reach the actual application context.
 
 ### Audit infrastructure
-- Added UI interaction audit tooling.
-- Added route consistency audit tooling.
-- Added durable project progress/audit documentation.
-- Added Supabase interoperability audit protocol.
+- Added UI interaction, route consistency, durable progress, and Supabase interoperability audit tooling.
 - Strengthened audit protocol so findings must be fixed/migrated/deprecated/resolved and retested before closure.
 
 ### Slice 1 — Map/Location Authority Closure (active)
 - Confirmed production `map_network_nearby_v1` returns canonical `location_id` and coordinates; live St. Louis smoke query returned 50/50 rows with canonical identity and coordinates.
-- Hardened universal discovery normalization so `all` is treated as an unfiltered category, only canonical location identities/coordinates are emitted, and duplicate identities are suppressed before fallback caching.
-- Hardened location details so a public location lookup can resolve either a `places.id` or canonical `locations.id`, then converges the result back to `location_id` before intelligence/interaction consumers use it.
-- Removed the authentication dependency from the map bootstrap gate at the `MapSurface` boundary: public discovery can now initialize before sign-in while mutations continue to resolve real authentication through their services.
-- Added a live `location-interoperability` audit script and wired it into the canonical audit runner so map RPC + universal discovery contracts are checked against the production-shaped backend during CI.
-- Verification includes direct production RPC execution and confirmed canonical map results. Latest GitHub Actions runs are executing the updated audit suite; Slice 1 remains open until the UI/CI gate is green.
+- Hardened universal discovery normalization and canonical identity suppression.
+- Hardened location details to converge `places.id` or `locations.id` to canonical `location_id`.
+- Removed authentication dependency from public map bootstrap while keeping mutations authenticated.
+- Added a live location-interoperability audit to the canonical audit runner.
+- Direct production RPC verification is positive; CI/UI gate remains the closure criterion.
 
-### Consumer Trust propagation batch — active
-- Observation, amenity observation, quality observation, verification, and bathroom verification now emit canonical evidence lifecycle events after successful authoritative RPC execution.
-- Evidence events explicitly request downstream location-intelligence refresh without creating a second intelligence store.
-- Review creation and review amenity feedback now emit location-intelligence refresh requests in addition to existing progression/review events.
-- This establishes the event contract needed for the next convergence step: one evidence mutation -> authoritative state -> intelligence refresh -> dependent surface refresh.
-- The actual downstream refresh consumer still requires end-to-end verification before this batch is closed.
+### Consumer Trust propagation — active
+- Evidence, amenity, quality, verification, and bathroom verification paths emit canonical lifecycle/refresh signals after successful authoritative execution.
+- Review and review-amenity paths request location-intelligence refresh while retaining existing progression/review events.
+- Consumer surfaces already refresh from the lifecycle event vocabulary; the current reconciliation target is producer consistency.
+
+## Current large-slice audit — Consumer Trust Loop
+
+### Canonical path under test
+`canonical location -> place -> verified check-in -> evidence/photo -> review -> reputation/progression -> Community/Activity -> intelligence -> map/detail refresh`
+
+### Findings
+1. `LocationDetailsPage` and `VisitSurface` both implement verified contribution paths, but the two surfaces have overlapping local event emission.
+2. `consumerEngagementBridge` defines the intended fan-out contract for check-in/evidence/review/game/challenge/route events, while the highest-value surfaces still emit some events directly.
+3. This is a refresh-contract drift risk, not an indication that Supabase should be replaced by browser events.
+4. `ActivitySurface` and `SocialPage` already consume the lifecycle vocabulary and refresh authoritative feeds/rankings.
+5. Server-side evidence progression is correctly gated to qualifying verified visits and uses deterministic idempotency; no client-authoritative reward path should be introduced.
+
+### Repair direction
+The bridge remains the canonical browser-side refresh fan-out. Domain services remain authoritative. Producer surfaces should migrate toward bridge publishing for equivalent successful actions, while preserving any specialized event only when a consumer demonstrably requires it.
+
+### Acceptance
+The loop is not marked complete until a representative mutation can be followed through authoritative persistence, progression/reputation effects, downstream intelligence refresh, and visible Community/Activity/location refresh. Current code inspection establishes the wiring but does not by itself constitute that end-to-end production verification.
 
 ## Active reconciliation program
 
-### Supabase backend
-- Inventory every connected Supabase project.
-- Inventory tables, views, RPCs/functions, triggers, RLS, Edge Functions, versions, schedules, storage dependencies, and relevant extensions.
-- Classify backend operations as canonical capability, supporting operation, internal orchestration, ingestion, scheduled/background, webhook, maintenance, deprecated candidate, duplicate/conflict, or unknown.
-- Reconcile the large set of currently uncovered/uncategorized RPCs. Uncovered does not automatically mean missing product capability.
-
-### Edge Function interoperability
-- Map every function to callers, authentication mode, inputs/outputs, data reads/writes, and UI/service consumers.
-- Investigate versioned families such as ingestion variants before deleting or deprecating anything.
-- Establish a canonical implementation, migrate callers, clean stale references, and verify the replacement.
-
-### UI/dashboard reconciliation
-Audit and repair Owner, Admin, Business, Fleet, Enterprise, and Consumer surfaces, including dashboards/control centers, Capability Hub, Operational Capabilities, Membership Preview, Quick Finds, Reporting, Intelligence, Notifications, QR, Maps, Discovery, CRUD, and maintenance surfaces.
-
-For every visible control:
-- verify intended purpose;
-- verify route/handler;
-- verify canonical identifiers;
-- verify entitlement/tier behavior;
-- verify frontend service;
-- verify Supabase dependency;
-- execute the action;
-- verify a meaningful visible/persisted/emitted result;
-- repair any finding before closure.
-
-## Interoperability matrix trigger
-
-Whenever an audit uncovers a duplicate, competing implementation, conflicting contract, naming drift, divergent tier rule, unclear ownership, version family, incompatible data model, stale caller, or UI/backend disagreement, stop normal extension of that area and create/update an interoperability matrix.
-
-The matrix must identify the canonical implementation and the corrective action. The corrective action is part of the same reconciliation program: migrate, fix, deprecate, remove safely, or explicitly resolve the conflict, then retest.
-
-## Finding lifecycle
-
-`DISCOVERED -> CLASSIFIED -> MATRIXED (if needed) -> FIXED/MIGRATED/DEPRECATED -> RETESTED -> VERIFIED -> CLOSED`
-
-No finding is closed merely because code was committed.
+- Supabase capability/function/Edge Function classification and conflict retirement.
+- Canonical map/location authority closure.
+- Consumer trust-loop closure.
+- Route/evidence convergence.
+- Freshness/confidence/reverification.
+- Business/Fleet/Enterprise operating-loop convergence.
+- Intelligence recommendation/action/outcome OS.
+- AI foundation only after canonical read-model boundaries are stable.
 
 ## No-gap acceptance gate
 
-A slice is complete only when:
-
-1. Every claimed capability has a real UI entry point.
-2. Every UI entry point reaches the correct route/control.
-3. Every control reaches the intended service/backend contract.
-4. Entitlements agree between UI and backend.
-5. Backend execution produces a meaningful result.
-6. The result is consumed/displayed where appropriate.
-7. Errors are visible and actionable.
-8. No placeholder or fake-success control remains.
-9. No schema/function is counted as implemented without a verified result path.
-10. Any deeper conflict has been matrixed and its corrective action executed.
-11. The repaired behavior has been retested end-to-end.
+1. Real UI entry point.
+2. Correct route/control.
+3. Correct service/backend contract.
+4. Entitlements agree.
+5. Backend produces meaningful state.
+6. Result is consumed/displayed.
+7. Errors are actionable.
+8. No placeholder/fake-success behavior.
+9. No schema/function counted without a result path.
+10. Conflicts are matrixed and corrected.
+11. Repaired behavior is retested end-to-end.
 
 ## Next large slices
 
-1. Finish Slice 1 UI map bootstrap and location-detail continuity; verify CI.
-2. Consumer Trust Loop closure: map -> place -> verified visit -> observation/photo -> review -> reputation -> progression -> Community -> intelligence -> map refresh.
-3. Route + Evidence convergence, including refresh/auth/offline/idempotency behavior.
-4. Freshness/confidence/reverification intelligence.
-5. Business Trust + Growth loop.
+1. Finish Map/Location Authority closure and CI/UI verification.
+2. Finish Consumer Trust Loop producer consistency and end-to-end propagation proof.
+3. Route + Evidence convergence.
+4. Freshness/confidence/reverification.
+5. Business Trust + Growth.
 6. Intelligence Recommendation/Action/Outcome OS.
-7. AI foundation and first production AI capabilities.
-8. Notifications/realtime/offline closure.
+7. AI foundation and bounded production capabilities.
+8. Notifications/realtime/offline.
 9. Shared Business/Fleet/Enterprise intelligence.
-10. Governance/moderation/production certification.
+10. Governance/production certification.
 
 ## Commit/log discipline
 
-For each large slice:
-
-- inspect the current authoritative branch;
-- implement a coherent batch, not isolated cosmetic edits;
-- commit the batch with a descriptive message;
-- update this log with findings, fixes, wiring, verification, and commit SHA;
-- continue directly into the next coherent batch;
-- never represent an incomplete slice as complete.
-
-If a tool limitation prevents a safe write or verification, record that limitation rather than fabricating a commit, result, or completion state.
+Each slice is committed and logged. Incomplete verification is reported as incomplete rather than represented as done.
