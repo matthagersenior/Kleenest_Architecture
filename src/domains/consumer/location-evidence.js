@@ -4,8 +4,19 @@ export function createLocationEvidenceService(client,{quests=null}={}) {
   const booleanValue = value => value === true || value === 'true' || value === '1' || value === 1;
   const numberOrNull = value => value == null || value === '' ? null : Number(value);
   const emit = (type, detail) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(`kleenest:${type}`, { detail })); };
+  const evidenceId = result => result?.observation_id || result?.amenity_observation_id || result?.quality_observation_id || result?.evidence_id || null;
+  async function convergeRouteStop(values,result){
+    const checkInId=values.checkInId||null, locationId=values.locationId||null, id=evidenceId(result);
+    if(!checkInId||!locationId||!id)return null;
+    try{
+      const routeResult=await rpc('complete_active_route_stop_after_evidence',{p_location_id:locationId,p_check_in_id:checkInId,p_evidence_id:id});
+      if(routeResult?.matched)emit('route-stop-completed',{locationId,checkInId,evidenceId:id,result:routeResult});
+      return routeResult;
+    }catch{return null;}
+  }
   async function dispatch(type,values,result){
-    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, result });
+    await convergeRouteStop(values,result);
+    emit('evidence-created', { evidenceType:type, locationId:values.locationId, checkInId:values.checkInId||null, evidenceId:evidenceId(result), result });
     emit('location-intelligence-refresh-requested', { locationId:values.locationId, evidenceType:type });
     if(!quests)return;
     try{await quests.dispatchEvent(type,{locationId:values.locationId,checkinId:values.checkInId||null,metadata:{observationType:values.observationType||null,amenityId:values.amenityId||null,result}})}catch{}
