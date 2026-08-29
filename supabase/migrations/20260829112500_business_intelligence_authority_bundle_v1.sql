@@ -37,5 +37,6 @@ begin
   );
 end;
 $$;
-revoke all on function public.get_business_intelligence_authority_bundle(uuid,timestamptz,timestamptz) from public;
+revoke execute on function public.get_business_intelligence_authority_bundle(uuid,timestamptz,timestamptz) from public;
+revoke execute on function public.get_business_intelligence_authority_bundle(uuid,timestamptz,timestamptz) from anon;
 grant execute on function public.get_business_intelligence_authority_bundle(uuid,timestamptz,timestamptz) to authenticated;
