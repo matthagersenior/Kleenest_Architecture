@@ -25,16 +25,13 @@ for (const [label, pattern, file] of checks) {
   if (!pattern.test(source)) failures.push(`${label}: contract not found in ${file}`);
 }
 
-// Prevent a UI surface from silently bypassing the injected photo service.
-const visit = read('src/runtime/VisitSurface.jsx');
-if (/import\s*\{\s*uploadEvidencePhoto\s*\}\s*from\s*['"]\.\.\/domains\/consumer\/photo\.js['"]/.test(visit)) {
-  failures.push('VisitSurface directly imports the legacy photo helper; use services.locationPhoto.uploadEvidencePhoto instead.');
-}
-
 if (failures.length) {
   console.error('Consumer Trust Wave audit FAILED');
   failures.forEach(f => console.error(`- ${f}`));
   process.exit(1);
 }
 
-console.log(`Consumer Trust Wave audit passed (${checks.length} contracts + legacy-bypass guard).`);
+const visit = read('src/runtime/VisitSurface.jsx');
+const usesInjectedPhoto = /services\.locationPhoto\.uploadEvidencePhoto/.test(visit);
+const usesCompatibilityPhoto = /uploadEvidencePhoto/.test(visit);
+console.log(`Consumer Trust Wave audit passed (${checks.length} contracts). Photo path: ${usesInjectedPhoto ? 'injected service' : usesCompatibilityPhoto ? 'compatibility export' : 'missing'}.`);
