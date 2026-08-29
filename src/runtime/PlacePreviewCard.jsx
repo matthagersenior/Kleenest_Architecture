@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { PlaceIdentity, PlaceActions, placeStatus, statusLabel } from './placeExperience';
+import { PlaceIdentity, PlaceActions, placeStatus, statusLabel } from './placeExperience.jsx';
 import './PlaceExperience.css';
 
 export default function PlacePreviewCard({ place, onDetails, onRoute, onNavigate }) {
