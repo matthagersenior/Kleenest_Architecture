@@ -1,3 +1,10 @@
+export async function process_intelligence_notification_jobs(client, limit = 25) {
+  if (!client) throw new Error('Supabase client is required.');
+  const { data, error } = await client.rpc('process_intelligence_notification_jobs', { p_limit: limit });
+  if (error) throw error;
+  return data ?? 0;
+}
+
 export function createIntelligenceNotificationService(client) {
   if (!client) throw new Error('Supabase client is required.');
 
@@ -26,6 +33,7 @@ export function createIntelligenceNotificationService(client) {
       });
       if (error) throw error;
       return data;
-    }
+    },
+    processJobs: async (limit = 25) => process_intelligence_notification_jobs(client, limit)
   });
 }
