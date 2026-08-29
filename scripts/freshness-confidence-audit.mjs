@@ -3,7 +3,7 @@ import path from 'node:path';
 const root=path.resolve('src');
 const required=[
  ['domains/intelligence/trust.js',['get_location_trust_state','refresh_location_trust_state','select_reverification_targets','record_verification_streak']],
- ['domains/locations/details.js',['fetchAuthorityBundle','trustState','trust_freshness_score','trust_staleness_status','trust_last_verified_at']],
+ ['domains/locations/details.js',['fetchAuthorityBundle','trustState','trust_freshness_score','trust_staleness_status','trust_last_verified_at','get_location_authority_bundle']],
  ['runtime/LocationDetailsPage.jsx',['services.locations.getById','TRUST SIGNAL','Confidence grows from verified visits']],
  ['domains/consumer/location-evidence.js',['refresh_location_trust_state','location-trust-refreshed','location-intelligence-refresh-requested']]
 ];
