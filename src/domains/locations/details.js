@@ -81,6 +81,28 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     return user;
   }
 
+  async function recordReadTelemetry(locationId, metadata = {}) {
+    if (!locationId) return;
+    try {
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+      await client.rpc('record_data_feature_event', {
+        p_event_type: 'location_authority_read',
+        p_feature_code: 'location_authority_read',
+        p_subject_type: 'location',
+        p_subject_id: locationId,
+        p_location_id: locationId,
+        p_business_id: null,
+        p_fleet_vehicle_id: null,
+        p_source_table: 'location_details_service',
+        p_source_id: null,
+        p_value_numeric: null,
+        p_value_text: metadata.source ?? null,
+        p_metadata: metadata,
+      });
+    } catch {}
+  }
+
   async function cachedById(placeId) {
     if (!offline?.cachedLocations || !offline?.cachedBusinesses) return null;
     try {
@@ -101,12 +123,28 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
 
   async function getById(placeId) {
     if (!placeId) throw new Error('Place is required.');
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return cachedById(placeId);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const cached = await cachedById(placeId);
+      await recordReadTelemetry(placeId, { source: 'offline_cache', online: false, fallback: true, found: Boolean(cached) });
+      return cached;
+    }
 
-    const bundle = await fetchAuthorityBundle(placeId);
-    const place = normalizeAuthorityBundle(bundle);
-    if (!place) return cachedById(placeId);
-    return place;
+    try {
+      const bundle = await fetchAuthorityBundle(placeId);
+      const place = normalizeAuthorityBundle(bundle);
+      if (place) {
+        await recordReadTelemetry(placeId, { source: 'authority_bundle', online: true, fallback: false, schema_version: bundle.schema_version ?? 1 });
+        return place;
+      }
+      const cached = await cachedById(placeId);
+      await recordReadTelemetry(placeId, { source: 'offline_cache', online: true, fallback: true, reason: 'authority_bundle_empty', found: Boolean(cached) });
+      return cached;
+    } catch (error) {
+      const cached = await cachedById(placeId);
+      await recordReadTelemetry(placeId, { source: 'offline_cache', online: true, fallback: true, reason: 'authority_bundle_error', error_code: error?.code ?? null, found: Boolean(cached) });
+      if (cached) return cached;
+      throw error;
+    }
   }
 
   async function reviews(locationId, limit = 30) {
