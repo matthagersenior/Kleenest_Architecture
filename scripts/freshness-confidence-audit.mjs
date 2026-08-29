@@ -9,7 +9,7 @@ const required=[
 ];
 const missing=[];
 for(const [rel,tokens] of required){const file=path.join(root,rel);if(!fs.existsSync(file)){missing.push(`${rel}: file missing`);continue}const text=fs.readFileSync(file,'utf8');for(const token of tokens)if(!text.includes(token))missing.push(`${rel}: missing ${token}`)}
-const migration=path.resolve('supabase/migrations/20260829020000_freshness_confidence_reverification_streaks.sql');
-if(!fs.existsSync(migration))missing.push('freshness migration missing');else{const sql=fs.readFileSync(migration,'utf8');for(const token of ['freshness_score','staleness_status','reverification_due_at','record_verification_streak','select_reverification_targets'])if(!sql.includes(token))missing.push(`freshness migration: missing ${token}`);}
+const migrations=fs.readdirSync(path.resolve('supabase/migrations')).filter(name=>name.endsWith('.sql')&&name.includes('freshness_confidence_reverification_streaks'));
+if(!migrations.length)missing.push('freshness migration missing');else{const sql=migrations.map(name=>fs.readFileSync(path.join('supabase/migrations',name),'utf8')).join('\n');for(const token of ['freshness_score','staleness_status','reverification_due_at','record_verification_streak','select_reverification_targets'])if(!sql.includes(token))missing.push(`freshness migration: missing ${token}`);}
 if(missing.length){console.error(missing.join('\n'));process.exit(1)}
 console.log('Freshness/confidence audit passed: canonical trust state, authoritative location-bundle freshness, evidence refresh, user-facing location trust, and reverification contracts are wired.');
