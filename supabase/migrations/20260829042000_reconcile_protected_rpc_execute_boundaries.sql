@@ -1,0 +1,20 @@
+-- Reconcile explicit EXECUTE boundaries for protected analytics/network RPCs.
+-- Public access is revoked; authenticated access is explicit. The canonical
+-- map discovery RPC remains intentionally available to anon as public read.
+revoke execute on function public.get_business_attribution_funnel(uuid,timestamptz,timestamptz) from public;
+grant execute on function public.get_business_attribution_funnel(uuid,timestamptz,timestamptz) to authenticated;
+revoke execute on function public.business_roi_analytics(uuid,timestamptz,timestamptz) from public;
+grant execute on function public.business_roi_analytics(uuid,timestamptz,timestamptz) to authenticated;
+revoke execute on function public.get_enterprise_partner_network(uuid,date,date) from public;
+grant execute on function public.get_enterprise_partner_network(uuid,date,date) to authenticated;
+revoke execute on function public.get_partner_network_benchmark(uuid,date,date) from public;
+grant execute on function public.get_partner_network_benchmark(uuid,date,date) to authenticated;
+revoke execute on function public.get_partner_campaign_roi(uuid,date,date) from public;
+grant execute on function public.get_partner_campaign_roi(uuid,date,date) to authenticated;
+revoke execute on function public.get_partner_allocation_roi(uuid,date,date) from public;
+grant execute on function public.get_partner_allocation_roi(uuid,date,date) to authenticated;
+revoke execute on function public.get_fleet_network_leaderboard(text,integer) from public;
+grant execute on function public.get_fleet_network_leaderboard(text,integer) to authenticated;
+revoke execute on function public.map_network_nearby_v1(double precision,double precision,integer,integer,text,text,text[]) from public;
+grant execute on function public.map_network_nearby_v1(double precision,double precision,integer,integer,text,text,text[]) to authenticated;
+grant execute on function public.map_network_nearby_v1(double precision,double precision,integer,integer,text,text,text[]) to anon;
