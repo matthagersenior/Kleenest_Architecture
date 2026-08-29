@@ -1,5 +1,5 @@
-import MapSurfaceStable from './MapSurfaceStable.jsx';
+import MapSurfaceProduction from './MapSurfaceProduction.jsx';
 
 export default function MapSurface() {
-  return <MapSurfaceStable />;
+  return <MapSurfaceProduction />;
 }
