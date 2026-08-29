@@ -8,6 +8,25 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
   const rows=value=>Array.isArray(value)?value:[];
   const createIntelligenceActionLink=async args=>{const result=await actions?.createLink?.(args?.locationId,args?.businessId,args?.surface,args?.signalType,args?.actionType,args?.metadata||{});if(!result)throw new Error('Intelligence action service is unavailable.');return result;};
   const process_intelligence_notification_jobs=async(limit=25)=>{const{data,error}=await client.rpc('process_intelligence_notification_jobs',{p_limit:limit});if(error)throw error;return data??0;};
+  const recordEvent=async({eventType,featureCode,subjectType='location',subjectId=null,locationId=null,businessId=null,fleetVehicleId=null,sourceTable='intelligence',sourceId=null,valueNumeric=null,valueText=null,metadata={}}={})=>{
+    if(!eventType||!featureCode)throw new Error('Intelligence event type and feature code are required.');
+    const result=await rpc('record_data_feature_event',{
+      p_event_type:eventType,
+      p_feature_code:featureCode,
+      p_subject_type:subjectType,
+      p_subject_id:subjectId,
+      p_location_id:locationId,
+      p_business_id:businessId,
+      p_fleet_vehicle_id:fleetVehicleId,
+      p_source_table:sourceTable,
+      p_source_id:sourceId,
+      p_value_numeric:valueNumeric,
+      p_value_text:valueText,
+      p_metadata:{...metadata,convergence:true,event_type:eventType},
+    });
+    emit('kleenest:intelligence-event',{eventType,featureCode,subjectId,locationId,businessId,result});
+    return result;
+  };
   return Object.freeze({
     async notifyFromSignal({locationId,surface='network',type,dedupeKey,title,body,reasons=[],signals={},cooldownMinutes=120}={}){const user=await requireUser();if(notifications?.createCandidate)return notifications.createCandidate({locationId,surface,type,dedupeKey,title,body,reasons,signals,cooldownMinutes});return rpc('create_intelligence_notification',{p_user_id:user.id,p_location_id:locationId,p_surface:surface,p_type:type,p_dedupe_key:dedupeKey,p_title:title,p_body:body,p_data:{reasons,signals,generated_at:new Date().toISOString()},p_cooldown_minutes:cooldownMinutes});},
     async createAction(args={}){return createIntelligenceActionLink(args);},
@@ -18,6 +37,7 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
     async operationalOpportunities({businessId,surface='fleet'}={}){if(!businessId)throw new Error('Business is required.');const id=String(businessId);return rows(await rpc(surface==='fleet'?'fleet_service_opportunities_for_business':'business_location_intelligence',{p_business_id:id}));},
     subscribe({locationId=null,onEvent}={}){if(typeof onEvent!=='function')throw new Error('onEvent callback is required.');return live?.subscribe?live.subscribe({locationId,types:[LIVE_EVENT_TYPES.LOCATION_VERIFIED,LIVE_EVENT_TYPES.LOCATION_STALE,LIVE_EVENT_TYPES.LOCATION_CONFLICT,LIVE_EVENT_TYPES.BUSINESS_OFFER_STARTED,LIVE_EVENT_TYPES.BUSINESS_OFFER_REDEEMED,LIVE_EVENT_TYPES.CAMPAIGN_CONVERTED],onEvent}):()=>{};},
     async processJobs(limit=25){const[notificationsResult,actionsResult]=await Promise.all([client.rpc('process_intelligence_notification_jobs',{p_limit:limit}),client.rpc('process_intelligence_action_jobs',{p_limit:limit})]);if(notificationsResult.error)throw notificationsResult.error;if(actionsResult.error)throw actionsResult.error;return{notifications:notificationsResult.data??0,actions:actionsResult.data??0};},
+    recordEvent,
     createIntelligenceActionLink,
     process_intelligence_notification_jobs
   });
