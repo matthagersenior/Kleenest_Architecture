@@ -1,6 +1,7 @@
 import { MapPin, Navigation, Route, ExternalLink } from 'lucide-react';
+import { brandIconUrl, placeLogo } from './MapMarkerSystem.jsx';
 
-export const placeIconUrl = (place) => place?.logo_url || place?.business_logo_url || place?.icon_url || place?.photo_url || place?.image_url || null;
+export const placeIconUrl = (place) => placeLogo(place) || place?.icon_url || place?.photo_url || place?.image_url || brandIconUrl(place) || null;
 export const placeStatus = (place) => {
   if (place?.is_verified || place?.verified) return 'verified';
   if (place?.is_open === true || place?.open_now === true) return 'open';
@@ -8,10 +9,10 @@ export const placeStatus = (place) => {
   if (place?.community_reported || place?.reported) return 'reported';
   return 'unknown';
 };
-export const statusLabel = (status) => ({ verified:'Verified', open:'Open now', premium:'Premium', reported:'Community reported', unknown:'Status unknown' }[status] || 'Status unknown');
+export const statusLabel = (status) => ({ verified:'Verified', open:'Open now', premium:'Featured', reported:'Community reported', unknown:'Status unknown' }[status] || 'Status unknown');
 export function PlaceIdentity({ place, size='md' }) {
   const url = placeIconUrl(place);
-  return url ? <img className={`place-identity place-identity-${size}`} src={url} alt="" loading="lazy" /> : <span className={`place-identity place-identity-${size} place-identity-fallback`}><MapPin size={size==='lg'?24:18}/></span>;
+  return url ? <img className={`place-identity place-identity-${size}`} src={url} alt="" loading="lazy" onError={event=>{event.currentTarget.onerror=null;event.currentTarget.replaceWith(Object.assign(document.createElement('span'),{className:`place-identity place-identity-${size} place-identity-fallback`}));}} /> : <span className={`place-identity place-identity-${size} place-identity-fallback`}><MapPin size={size==='lg'?24:18}/></span>;
 }
 export function PlaceActions({ place, onDetails, onRoute, onNavigate }) {
   const id = place?.location_id || place?.id;
