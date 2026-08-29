@@ -7,6 +7,7 @@ const EVENTS={
  game:['kleenest:game-completed','kleenest:rewards-updated','kleenest:progression-updated','kleenest:activity-updated'],
  challenge:['kleenest:challenge-updated','kleenest:rewards-updated','kleenest:progression-updated','kleenest:activity-updated'],
  route:['kleenest:route-updated','kleenest:location-activity'],
+ routeStopArrived:['kleenest:route-stop-arrived','kleenest:route-updated','kleenest:location-activity','kleenest:progression-updated'],
 };
 export function publishConsumerActivity(kind,detail={}){for(const name of EVENTS[kind]||[]){window.dispatchEvent(new CustomEvent(name,{detail:{...detail,source:kind}}))}}
 export function withConsumerActivity(promise,kind,detail={}){return Promise.resolve(promise).then(result=>{publishConsumerActivity(kind,{...detail,result});return result})}
