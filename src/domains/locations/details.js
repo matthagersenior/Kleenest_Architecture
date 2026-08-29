@@ -26,25 +26,76 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
     if (!placeId) throw new Error('Place is required.');
     const offlineNow = typeof navigator !== 'undefined' && navigator.onLine === false;
     if (offlineNow) return cachedById(placeId);
-    const { data: place, error } = await client.from('places')
+
+    // Accept either the canonical location UUID or a place UUID at the public
+    // boundary. Internally, all downstream consumers receive location_id.
+    const requestedId = String(placeId);
+    const { data: placeById, error: placeError } = await client.from('places')
       .select('id,name,category,description,address,city,state,postal_code,latitude,longitude,rating,review_count,is_verified,location_id,created_at,updated_at')
-      .eq('id', placeId).eq('is_active', true).maybeSingle();
-    if (error) throw error;
-    if (!place) return cachedById(placeId);
+      .eq('id', requestedId).eq('is_active', true).maybeSingle();
+    if (placeError) throw placeError;
+
+    let place = placeById;
+    let locationId = place?.location_id ?? null;
+    if (!place) {
+      const { data: locationRow, error: locationLookupError } = await client.from('locations')
+        .select('id,name,place_type,address,city,state,postal_code,latitude,longitude,source,source_dataset,cleanliness,cleanliness_pct,accessible,changing_table,smart_bathroom,bathroom_verification_status,bathroom_verification_count,bathroom_positive_count,bathroom_negative_count,verification_confidence,updated_at,created_at')
+        .eq('id', requestedId).eq('is_active', true).maybeSingle();
+      if (locationLookupError) throw locationLookupError;
+      if (!locationRow) return cachedById(placeId);
+      locationId = locationRow.id;
+      place = {
+        id: locationRow.id,
+        name: locationRow.name,
+        category: locationRow.place_type,
+        address: locationRow.address,
+        city: locationRow.city,
+        state: locationRow.state,
+        postal_code: locationRow.postal_code,
+        latitude: locationRow.latitude,
+        longitude: locationRow.longitude,
+        location_id: locationRow.id,
+        source: locationRow.source,
+        source_dataset: locationRow.source_dataset,
+        cleanliness: locationRow.cleanliness,
+        cleanliness_pct: locationRow.cleanliness_pct,
+        accessible: locationRow.accessible,
+        changing_table: locationRow.changing_table,
+        smart_bathroom: locationRow.smart_bathroom,
+        bathroom_verification_status: locationRow.bathroom_verification_status,
+        bathroom_verification_count: locationRow.bathroom_verification_count,
+        bathroom_positive_count: locationRow.bathroom_positive_count,
+        bathroom_negative_count: locationRow.bathroom_negative_count,
+        verification_confidence: locationRow.verification_confidence,
+        updated_at: locationRow.updated_at,
+        created_at: locationRow.created_at,
+        is_verified: false
+      };
+    }
+
     let location = null;
-    if (place.location_id) {
+    if (locationId) {
       const { data, error: locationError } = await client.from('locations')
-        .select('id,cleanliness,cleanliness_pct,accessible,changing_table,smart_bathroom,bathroom_verification_status,bathroom_verification_count,bathroom_positive_count,bathroom_negative_count,source,source_dataset,updated_at,created_at')
-        .eq('id', place.location_id).maybeSingle();
+        .select('id,cleanliness,cleanliness_pct,accessible,changing_table,smart_bathroom,bathroom_verification_status,bathroom_verification_count,bathroom_positive_count,bathroom_negative_count,verification_confidence,source,source_dataset,updated_at,created_at')
+        .eq('id', locationId).maybeSingle();
       if (locationError) throw locationError;
       location = data;
     }
+
     let intelligence = null;
     const { data: intelligenceRows, error: intelligenceError } = await client.from('location_intelligence_snapshot')
       .select('location_id,place_id,intelligence_score,cleanliness_pct,verification_count,observation_count,reviews_30d,searches_7d,searches_30d,views_30d,directions_30d,arrivals_30d,checkins_30d,last_observed_at,calculated_at,freshness_label')
-      .eq('place_id', place.id).limit(1);
+      .eq(locationId ? 'location_id' : 'place_id', locationId || place.id).limit(1);
     if (!intelligenceError) intelligence = intelligenceRows?.[0] || null;
-    return normalizePlace({ ...place, ...(location || {}), ...(intelligence || {}), intelligence_freshness_label: intelligence?.freshness_label ?? null, review_count: place.review_count ?? intelligence?.reviews_30d ?? 0 });
+
+    return normalizePlace({
+      ...place,
+      ...(location || {}),
+      ...(intelligence || {}),
+      location_id: locationId || place.location_id || place.id,
+      intelligence_freshness_label: intelligence?.freshness_label ?? null,
+      review_count: place.review_count ?? intelligence?.reviews_30d ?? 0
+    });
   }
 
   async function reviews(locationId, limit = 30) {
