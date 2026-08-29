@@ -1,0 +1,37 @@
+/* Kleenest UI foundation: normalize legacy/plain controls and data surfaces that predate the shared design system. */
+:root{--ui-accent:#4f6cff;--ui-accent-2:#7c5cff;--ui-mint:#22c7a8;--ui-ink:#0d1526;--ui-muted:#667085;--ui-line:#dfe5ef;--ui-surface:#fff;--ui-soft:#f5f7fb;--ui-shadow:0 10px 28px rgba(13,21,38,.07)}
+main button:not(.maplibregl-ctrl button),main .primary,main .secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 15px;border:1px solid transparent;border-radius:13px;background:#fff;color:var(--ui-ink);font:inherit;font-size:13px;font-weight:850;line-height:1.1;text-decoration:none;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease}
+main button:not(.maplibregl-ctrl button):hover:not(:disabled),main .primary:hover,main .secondary:hover{transform:translateY(-1px)}
+main button:not(.maplibregl-ctrl button):focus-visible,main a:not(.maplibregl-ctrl a):focus-visible{outline:3px solid rgba(79,108,255,.2);outline-offset:2px}
+main button:disabled{opacity:.48;cursor:not-allowed;transform:none}
+main button.primary,main .primary{background:linear-gradient(135deg,#111a2e,#4f46c8);color:#fff;border-color:#202a49;box-shadow:0 10px 22px rgba(53,64,145,.18)}
+main button.secondary,main .secondary{background:linear-gradient(180deg,#fff,#f7f9fc);color:#25314a;border-color:var(--ui-line);box-shadow:0 6px 16px rgba(13,21,38,.055)}
+main button.compact,.compact{min-height:34px;padding:7px 10px;border-radius:10px;font-size:12px}
+main a:not([class]){color:#4255c7;font-weight:750;text-decoration:none;text-underline-offset:3px}main a:not([class]):hover{text-decoration:underline}
+main input,main select,main textarea{font:inherit;color:var(--ui-ink);background:#fff;border:1px solid var(--ui-line);border-radius:13px;box-shadow:0 2px 8px rgba(13,21,38,.025)}
+main input::placeholder,main textarea::placeholder{color:#98a2b3}
+main label{color:#344054;font-weight:800}
+/* Common data/result surfaces. These intentionally catch older admin/owner/runtime markup without requiring a rewrite of every page. */
+main [class*="amenity"]{font-size:13px}
+main button[class*="amenity"],main a[class*="amenity"]{border:1px solid #d8e0ee;border-radius:12px;background:linear-gradient(145deg,#fff,#f5f8ff);color:#344054;box-shadow:0 5px 14px rgba(13,21,38,.055);font-weight:800}
+main button[class*="amenity"]:hover,main a[class*="amenity"]:hover{border-color:#aebcff;background:#eef2ff;color:#253b9c}
+main [class*="leaderboard"],main [class*="ranking"]{color:var(--ui-ink)}
+main [class*="leaderboard"]>*,main [class*="ranking"]>*{box-sizing:border-box}
+main [class*="leaderboard"] [class*="row"],main [class*="leaderboard"] li,main [class*="ranking"] [class*="row"],main [class*="ranking"] li{display:flex;align-items:center;gap:12px;min-height:58px;padding:12px 14px;margin:6px 0;border:1px solid var(--ui-line);border-radius:14px;background:linear-gradient(145deg,#fff,#f8fafc);box-shadow:0 5px 15px rgba(13,21,38,.045)}
+main [class*="leaderboard"] a,main [class*="ranking"] a{color:#3448b7;font-weight:800;text-decoration:none}
+main [class*="leaderboard"] a:hover,main [class*="ranking"] a:hover{text-decoration:underline}
+main [class*="leaderboard"] strong,main [class*="ranking"] strong{font-weight:900}
+main [class*="admin"] button:not(.maplibregl-ctrl button),main [class*="owner"] button:not(.maplibregl-ctrl button),main [class*="crud"] button:not(.maplibregl-ctrl button){border-color:var(--ui-line);background:#fff;box-shadow:0 5px 15px rgba(13,21,38,.05)}
+main [class*="admin"] .primary,main [class*="owner"] .primary,main [class*="crud"] .primary{background:linear-gradient(135deg,#111a2e,#4f46c8);color:#fff;border-color:#202a49}
+main [class*="admin"] a:not([class]),main [class*="owner"] a:not([class]),main [class*="crud"] a:not([class]){color:#4255c7;font-weight:800}
+main [class*="table"]{border:1px solid var(--ui-line);border-radius:16px;overflow:hidden;background:#fff;box-shadow:var(--ui-shadow)}
+main [class*="table"] th{padding:11px 14px;background:#f5f7fb;color:#526078;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;text-align:left}
+main [class*="table"] td{padding:13px 14px;border-top:1px solid #edf0f5;color:#344054;font-size:13px}
+main [class*="table"] tr:hover td{background:#fafbfe}
+main [class*="result"]:not(.result-card),main [class*="item"]:not(.map-result-item){border-color:var(--ui-line)}
+main [class*="status"],main [class*="badge"],main [class*="chip"]{font-weight:800}
+main [class*="status"]{border-radius:10px}
+main [class*="badge"],main [class*="chip"]{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--ui-line);background:#f8fafc;color:#526078;border-radius:999px;font-size:11px}
+/* Plain text blocks inside the workspace become readable cards instead of browser-default fragments. */
+main [class*="admin"] pre,main [class*="owner"] pre,main [class*="admin"] code,main [class*="owner"] code{border-radius:12px;background:#f5f7fb;border:1px solid var(--ui-line);padding:10px 12px}
+@media(max-width:700px){main button:not(.maplibregl-ctrl button),main .primary,main .secondary{min-height:44px}.hero-actions{gap:8px}.leaderboard-row{padding:10px 11px}}
