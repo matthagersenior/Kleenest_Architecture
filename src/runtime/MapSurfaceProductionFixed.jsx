@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, LocateFixed, MapPin, Navigation, RefreshCw, Search, ShieldCheck, X, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
+import { locationAuthorityId, projectLocationAuthority } from '../domains/locations/authority.js';
 import { bathroomIntelligence, bathroomSignalLabel, placeStatus, safeText } from './MapMarkerSystem.jsx';
 import { amenityLabels, placeAddress, placeBrand, placeLogoCandidates, placeName, sourceLabel } from './osmPlaceData.js';
 import WorkspaceShell from './WorkspaceShell.jsx';
@@ -14,7 +15,7 @@ const RADII = [1,2,5,10,25,50];
 const DEFAULT_CENTER = [38.627,-90.199];
 const OSM_RASTER = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const savedCenter = () => { try { const x=JSON.parse(localStorage.getItem('kleenest.lastLocation')||'null'); return Number.isFinite(+x?.latitude)&&Number.isFinite(+x?.longitude)?[+x.latitude,+x.longitude]:null; } catch { return null; } };
-const idOf = p => String(p?.location_id||p?.id||'');
+const idOf = p => locationAuthorityId(p);
 const esc = v => safeText(v);
 
 function markerElement(place, selected) {
@@ -34,7 +35,7 @@ export default function MapSurfaceProductionFixed() {
   const [center,setCenter]=useState(()=>savedCenter()||DEFAULT_CENTER),[places,setPlaces]=useState([]),[radius,setRadius]=useState(2),[search,setSearch]=useState(''),[amenities,setAmenities]=useState([]),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[selected,setSelected]=useState(null);
   const visible=useMemo(()=>places.filter(p=>{const q=search.trim().toLowerCase();if(q&&!`${placeName(p)} ${placeBrand(p)} ${placeAddress(p)} ${amenityLabels(p).join(' ')}`.toLowerCase().includes(q))return false;if(amenities.length){const have=new Set(amenityLabels(p).map(x=>String(x).toLowerCase().replace(/[^a-z0-9]+/g,'_')));if(!amenities.every(x=>have.has(x)))return false;}return true;}),[places,search,amenities]);
 
-  const load=async(coords=center)=>{if(!services?.maps?.nearby)return;const token=++requestRef.current;setBusy(true);setError('');try{const rows=await services.maps.nearby({latitude:coords[0],longitude:coords[1],radiusKm:radius*1.609344,category:'all',search:search.trim(),amenities:Object.fromEntries(amenities.map(x=>[x,true])),discover:true,limit:500});if(token!==requestRef.current)return;setPlaces(Array.isArray(rows)?rows:[]);setCenter(coords);try{localStorage.setItem('kleenest.lastLocation',JSON.stringify({latitude:coords[0],longitude:coords[1],savedAt:Date.now()}));}catch{}}catch(e){if(token===requestRef.current)setError(e?.message||'Nearby places could not be loaded.');}finally{if(token===requestRef.current)setBusy(false);}};
+  const load=async(coords=center)=>{if(!services?.maps?.nearby)return;const token=++requestRef.current;setBusy(true);setError('');try{const rows=await services.maps.nearby({latitude:coords[0],longitude:coords[1],radiusKm:radius*1.609344,category:'all',search:search.trim(),amenities:Object.fromEntries(amenities.map(x=>[x,true])),discover:true,limit:500});if(token!==requestRef.current)return;setPlaces((Array.isArray(rows)?rows:[]).map(projectLocationAuthority));setCenter(coords);try{localStorage.setItem('kleenest.lastLocation',JSON.stringify({latitude:coords[0],longitude:coords[1],savedAt:Date.now()}));}catch{}}catch(e){if(token===requestRef.current)setError(e?.message||'Nearby places could not be loaded.');}finally{if(token===requestRef.current)setBusy(false);}};
   const locate=()=>{if(!navigator.geolocation)return void load(savedCenter()||DEFAULT_CENTER);setBusy(true);navigator.geolocation.getCurrentPosition(p=>void load([p.coords.latitude,p.coords.longitude]),()=>void load(savedCenter()||DEFAULT_CENTER),{enableHighAccuracy:true,timeout:10000,maximumAge:30000});};
   useEffect(()=>{if(configured&&!loading)void load(center);},[configured,loading,user?.id]);
   useEffect(()=>{const t=setTimeout(()=>void load(center),350);return()=>clearTimeout(t);},[radius,amenities.join('|')]);
