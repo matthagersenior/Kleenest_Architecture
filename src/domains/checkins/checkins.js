@@ -5,12 +5,23 @@ export function createCheckInService(client,{quests=null}={}) {
   const live = createLiveNetworkService(client);
   async function requireUser() { const { data: { user }, error } = await client.auth.getUser(); if (error) throw error; if (!user) throw new Error('Sign in to continue.'); return user; }
   function emit(type, detail) { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(`kleenest:${type}`, { detail })); }
+  async function reconcileRouteStop(locationId, checkInId) {
+    if (!locationId || !checkInId) return null;
+    try {
+      const { data, error } = await client.rpc('arrive_active_route_stop', { p_location_id: locationId, p_check_in_id: checkInId });
+      if (error) throw error;
+      if (data?.matched) emit('route-stop-arrived', { locationId, checkInId, result: data });
+      return data;
+    } catch { return null; }
+  }
   async function publishCheckIn(locationId, payload) { if (!locationId) return null; try { return await live.publish({ type: LIVE_EVENT_TYPES.QR_CHECK_IN, locationId, payload }); } catch { return null; } }
   async function completed(method, data, locationId) {
     const resolvedLocationId=locationId || data?.location_id || data?.place_id || null;
+    const checkInId=data?.id || data?.check_in_id || data?.checkin_id || null;
     emit('checkin-completed', { method, checkIn: data, locationId: resolvedLocationId });
+    await reconcileRouteStop(resolvedLocationId, checkInId);
     emit('progression-updated', { type: 'checkin_completed', method, checkIn: data });
-    if (quests) { try { await quests.dispatchEvent('checkin', { locationId: resolvedLocationId, checkinId: data?.id || data?.check_in_id || data?.checkin_id || null, metadata:{method} }); } catch {} }
+    if (quests) { try { await quests.dispatchEvent('checkin', { locationId: resolvedLocationId, checkinId: checkInId, metadata:{method} }); } catch {} }
     return data;
   }
   async function currentPosition() { if (typeof navigator==='undefined'||!navigator.geolocation) throw new Error('Location services are unavailable.'); return new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:30000})); }
