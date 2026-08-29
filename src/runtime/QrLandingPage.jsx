@@ -5,6 +5,7 @@ import { supabase } from '../infrastructure/supabase/client.js';
 import { useAppContext } from '../AppContext.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
 import './qr-studio.css';
+import './qr-landing.css';
 
 export default function QrLandingPage({ code: codeProp = '' }){
   const params = useParams(); const code = codeProp || params.code || ''; const { user } = useAppContext(); const [data,setData]=useState(null); const [error,setError]=useState('');
