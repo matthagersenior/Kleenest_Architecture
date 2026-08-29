@@ -7,11 +7,24 @@ if (!url || !key) throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHAB
 const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 const origin = { latitude: 38.627, longitude: -90.199 };
 const radiusMeters = 80467;
-
-const { data: mapRows, error: mapError } = await supabase.rpc('map_network_nearby_v1', {
+const mapArgs = {
   p_lat: origin.latitude, p_lng: origin.longitude, p_radius_m: radiusMeters, p_limit: 50,
   p_category: null, p_search: null, p_amenity_names: []
-});
+};
+
+// PostgREST can briefly retain a stale function privilege/schema view immediately
+// after a production migration. Retry only transient permission/schema-cache failures;
+// never turn a real application error into a passing audit.
+let mapRows = null;
+let mapError = null;
+for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const result = await supabase.rpc('map_network_nearby_v1', mapArgs);
+  mapRows = result.data;
+  mapError = result.error;
+  if (!mapError) break;
+  if (mapError.code !== '42501' || attempt === 3) break;
+  await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+}
 if (mapError) throw mapError;
 const rows = Array.isArray(mapRows) ? mapRows : [];
 if (!rows.length) throw new Error('Canonical map discovery returned no locations for the interoperability smoke origin.');
