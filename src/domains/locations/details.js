@@ -182,8 +182,10 @@ export function createLocationDetailsService(client, { offline = null } = {}) {
   async function trustState(locationId) {
     if (!locationId) return null;
     try {
-      const bundle = await fetchAuthorityBundle(locationId);
-      return bundle.trust || null;
+      return await client.rpc('get_location_trust_state', { p_location_id: locationId }).then(({ data, error }) => {
+        if (error) throw error;
+        return data || null;
+      });
     } catch { return null; }
   }
 
