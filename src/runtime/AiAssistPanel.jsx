@@ -2,6 +2,16 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Check, RefreshCw, Sparkles } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 
+const providerMessage=(result)=>{
+  if(result?.provider!=='grounded_fallback')return '';
+  if(result?.provider_status==='missing_api_key')return 'Model provider is not configured; showing Kleenest\'s deterministic grounded fallback.';
+  if(result?.provider_status==='provider_error'){
+    if(result?.provider_error_type==='insufficient_quota'||result?.provider_error_code==='credit_balance_exhausted')return 'Model provider capacity is unavailable; showing Kleenest\'s deterministic grounded fallback.';
+    return 'Model provider is temporarily unavailable; showing Kleenest\'s deterministic grounded fallback.';
+  }
+  return 'Using Kleenest\'s deterministic grounded fallback.';
+};
+
 export default function AiAssistPanel({
   task,
   context,
@@ -30,20 +40,20 @@ export default function AiAssistPanel({
   const modelAssisted=result?.provider==='openai';
   const fallback=result?.provider==='grounded_fallback';
   const providerIssue=fallback&&result?.provider_status==='provider_error';
+  const fallbackMessage=providerMessage(result);
   return <section className={`detail-panel ai-assist-panel ${className}`.trim()} data-context-key={contextKey.length}>
     <div className="panel-heading">
       <div><span className="eyebrow">AI ASSIST</span><h3>{title}</h3><p className="muted">{description}</p></div>
       <Sparkles size={20}/>
     </div>
     <div className="hero-actions">
-      <button className="button secondary" type="button" onClick={run} disabled={busy}><RefreshCw size={14}/>{busy?'Thinking…':result?'Refresh AI':'Ask AI'}</button>
+      <button className="button secondary" type="button" onClick={run} disabled={busy}><RefreshCw size={14}/>{busy?'Thinking…':result?'Refresh AI':actionLabel}</button>
       {result?.answer&&onApply&&<button className="button primary" type="button" onClick={apply}><Check size={14}/>{applyLabel}</button>}
     </div>
     {error&&<p className="form-error" role="alert">{error}</p>}
     {result?.answer&&<div className="metric-card ai-assist-answer">
       <strong>{modelAssisted?'Model-assisted recommendation':'Grounded recommendation'}</strong>
-      {providerIssue&&<small className="form-error"><AlertTriangle size={13}/> Model provider unavailable; showing Kleenest's deterministic grounded fallback.</small>}
-      {fallback&&!providerIssue&&<small>Using Kleenest's deterministic grounded fallback.</small>}
+      {fallbackMessage&&<small className={providerIssue?'form-error':''}>{providerIssue&&<AlertTriangle size={13}/>} {fallbackMessage}</small>}
       <span>{result.answer}</span>
       <small>{modelAssisted&&result.model?`Model: ${result.model} · `:''}Review required before any change is applied.</small>
     </div>}
