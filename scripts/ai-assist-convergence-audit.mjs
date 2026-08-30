@@ -3,7 +3,7 @@ import path from 'node:path';
 const required=[
  ['supabase/functions/ai-assist/index.ts',['verify','OPENAI_API_KEY','gpt-5.6-luna','allowedTasks','review_required:true','grounded_fallback','provider_status','provider_error_type','provider_error_code','provider_request_id','trace_id','business_growth','fleet_dispatch','fleet_debrief','enterprise_network','notification_copy','visit_review','evidence_interpretation','admin_moderation','admin_operations','route_plan']],
  ['src/domains/intelligence/convergence.js',["client.functions.invoke('ai-assist'",'aiAssist','kleenest:ai-assist-generated','review_required']],
- ['src/runtime/AiAssistPanel.jsx',['services.intelligenceConvergence.aiAssist','Review required before any change is applied','Grounded recommendation','Model-assisted recommendation',"result?.provider_status==='provider_error'",'providerMessage','credit_balance_exhausted',"Kleenest's deterministic grounded fallback","Model: ${result.model}"]],
+ ['src/runtime/AiAssistPanel.jsx',['services.intelligenceConvergence.aiAssist','Review required before any change is applied','Grounded recommendation','Model-assisted recommendation',"result?.provider_status==='provider_error'",'providerMessage','credit_balance_exhausted','deterministic grounded fallback',"Model: ${result.model}"]],
  ['src/runtime/FleetRouteStopPlanner.jsx',['AiAssistPanel','task="fleet_dispatch"','Fleet dispatch copilot']],
  ['src/runtime/FleetRoutePerformanceCard.jsx',['AiAssistPanel','task="fleet_debrief"','Fleet route debrief','largest measured variances','Never invent a cause']],
  ['src/runtime/BusinessGrowthEngagementPanel.jsx',['AiAssistPanel','task="business_growth"','Business growth copilot']],
