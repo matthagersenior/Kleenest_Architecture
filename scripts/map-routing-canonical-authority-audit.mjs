@@ -38,8 +38,9 @@ if(!errors.length){
  if(!map.includes('navigationHref=place=>')||!map.includes('https://www.google.com/maps/dir/?api=1&destination='))errors.push('MapSurface must expose direct one-tap external navigation.');
  const navigateButtons=(map.match(/>Navigate now<\/a>/g)||[]).length;
  if(navigateButtons<2)errors.push(`MapSurface must expose Navigate now on pin selection and result cards; found ${navigateButtons}.`);
- if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route handoff mode.');
- if(!map.includes('/route?add=')||!map.includes('/route?locationId='))errors.push('MapSurface.jsx must expose explicit stop and destination route contracts.');
+ if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route stop handoff mode.');
+ if(!map.includes('/route?add='))errors.push('MapSurface.jsx must hand every planner selection off as an ordered stop.');
+ if(map.includes('/route?locationId=')||map.includes('/route?destinationLocationId='))errors.push('MapSurface.jsx must not expose destination-specific route handoffs.');
  if(!map.includes("searchParams.get('routePreview')==='active'"))errors.push('MapSurface.jsx must own active-route preview mode.');
  for(const token of ['services?.routing?.cache?.getActive?.()','ROUTE_SOURCE','ROUTE_LAYER',"type:'geojson'","type:'line'"])if(!map.includes(token))errors.push(`MapSurface.jsx missing canonical route-preview token: ${token}`);
  if(!map.includes("from './osmPlaceData.js'"))errors.push('MapSurface.jsx must consume the canonical place identity resolver.');
@@ -53,10 +54,15 @@ if(!errors.length){
  if(!route.includes('services?.routing?.cache'))errors.push('RouteSurface.jsx must consume the routing service cache authority.');
  if(!route.includes('to="/map?routeMode=stop"'))errors.push('RouteSurface.jsx must use explicit map stop-selection mode.');
  if(!route.includes('to="/map?routePreview=active"'))errors.push('RouteSurface.jsx must hand route visualization to canonical MapSurface.');
- if(!route.includes("active?.origin&&active?.destination&&active?.geometry"))errors.push('RouteSurface.jsx must recover built route geometry, not only persisted route IDs.');
- if(cache.includes('if (!route?.routeId) return route || null'))errors.push('Route cache must not require a persisted routeId before saving active geometry.');
- if(!cache.includes("if (!route?.origin || !route?.destination) return route || null"))errors.push('Route cache must validate built routes by origin/destination before active persistence.');
+ if(!route.includes("active?.origin&&active?.geometry"))errors.push('RouteSurface.jsx must recover built route geometry without destination semantics.');
+ if(!route.includes("setStartMode('gps')")||!route.includes("'My Location'"))errors.push('RouteSurface.jsx must display GPS starts as My Location instead of raw coordinates.');
+ if(!route.includes('stopLocationIds:stops.map(s=>s.locationId)'))errors.push('RouteSurface.jsx must build from ordered stops.');
+ if(route.includes('Choose a destination before building the route')||route.includes('<label>Destination'))errors.push('RouteSurface.jsx must not require or render a separate destination.');
+ if(!cache.includes('Array.isArray(route?.stopLocationIds)&&route.stopLocationIds.length'))errors.push('Route cache must validate routes by ordered stops.');
+ if(cache.includes('!route?.destination'))errors.push('Route cache must not require destination state.');
  if(!routing.includes('createRoutingService(client,{live=null,cache=null}={})'))errors.push('Routing service must accept canonical injected live/cache authorities.');
+ if(!routing.includes('finalStopLocationId'))errors.push('Routing service must treat the final ordered stop as the internal navigation endpoint.');
+ if(!routing.includes("throw new Error('Add at least one stop before building the route.')"))errors.push('Routing service must require ordered stops rather than a destination.');
  if(!routing.includes('liveService=live||createLiveNetworkService(client)'))errors.push('Routing service must prefer injected Live Network authority.');
  if(!routing.includes('routeCache=cache||createRouteCache()'))errors.push('Routing service must own the route cache authority.');
  if(!context.includes('routing:createRoutingService(supabase,{live})'))errors.push('AppContext must inject the shared Live Network service into routing.');
@@ -76,4 +82,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface and stylesheet, transform-safe geographically pinned markers, direct one-tap navigation, one canonical brand resolver, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface and stylesheet, transform-safe geographically pinned markers, direct one-tap navigation, one canonical brand resolver, one RouteSurface, start plus ordered-stop routing, one map service, one routing service/cache/live authority, canonical active-route geometry preview, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
