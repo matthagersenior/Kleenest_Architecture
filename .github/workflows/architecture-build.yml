@@ -38,6 +38,8 @@ jobs:
         run: npm run audit:routes
       - name: Audit Enterprise control plane
         run: node scripts/enterprise-control-plane-audit.mjs
+      - name: Audit Admin control plane
+        run: node scripts/admin-control-plane-audit.mjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Verify production configuration
