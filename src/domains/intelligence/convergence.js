@@ -9,6 +9,16 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
   const requireBusinessId=id=>{if(!id)throw new Error('Business is required.');return String(id);};
   const createIntelligenceActionLink=async args=>{const result=await actions?.createLink?.(args?.locationId,args?.businessId,args?.surface,args?.signalType,args?.actionType,args?.metadata||{});if(!result)throw new Error('Intelligence action service is unavailable.');return result;};
   const process_intelligence_notification_jobs=async(limit=25)=>{const{data,error}=await client.rpc('process_intelligence_notification_jobs',{p_limit:limit});if(error)throw error;return data??0;};
+  const aiAssist=async({task,context={},instruction=''}={})=>{
+    await requireUser();
+    if(!task)throw new Error('AI task is required.');
+    const{data,error}=await client.functions.invoke('ai-assist',{body:{task,context,instruction}});
+    if(error)throw error;
+    if(data?.error)throw new Error(data.error);
+    const result={...data,task:data?.task||task,review_required:data?.review_required!==false};
+    emit('kleenest:ai-assist-generated',{task:result.task,provider:result.provider,model:result.model,reviewRequired:result.review_required});
+    return result;
+  };
   const recordEvent=async({eventType,featureCode,subjectType='location',subjectId=null,locationId=null,businessId=null,fleetVehicleId=null,sourceTable='intelligence',sourceId=null,valueNumeric=null,valueText=null,metadata={}}={})=>{
     if(!eventType||!featureCode)throw new Error('Intelligence event type and feature code are required.');
     const result=await rpc('record_data_feature_event',{
@@ -74,6 +84,7 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
     async executeAction(actionId){if(!actions?.execute)throw new Error('Intelligence action service is unavailable.');return actions.execute(actionId);},
     async completeAction(actionId,metadata={}){if(!actions?.complete)throw new Error('Intelligence action service is unavailable.');return actions.complete(actionId,metadata);},
     async publishLocationSignal({locationId,eventType,title,body,payload={},radiusM=500,dedupeKey=null}={}){return rpc('publish_intelligence_location_event',{p_location_id:locationId,p_event_type:eventType,p_title:title,p_body:body,p_payload:payload,p_radius_m:radiusM,p_dedupe_key:dedupeKey});},
+    aiAssist,
     operationalSnapshot,
     operationalOpportunities,
     runOperationalLoop,
