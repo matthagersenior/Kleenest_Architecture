@@ -13,7 +13,7 @@ const required=[
  ['src/runtime/AdminReviewModerationPage.jsx',['AiAssistPanel','task="admin_moderation"','AI moderation triage','Do not recommend or make a final enforcement decision']],
  ['src/runtime/AdminMaintenancePage.jsx',['AiAssistPanel','task="admin_operations"','Admin operations copilot','cannot run maintenance actions']],
  ['src/runtime/CapabilityHubPage.jsx',['AiAssistPanel','task="admin_operations"','Capability reconciliation copilot','cannot change capability definitions, entitlements, or service wiring']],
- ['src/runtime/RouteSurfaceFixed.jsx',['AiAssistPanel','task="route_plan"','Route planning copilot','do not change the route automatically']],
+ ['src/runtime/RouteSurface.jsx',['AiAssistPanel','task="route_plan"','Route planning copilot','do not change the route automatically']],
  ['src/runtime/VerifiedReviewDraft.jsx',['AiAssistPanel','task="visit_review"','Verified review draft','Use draft','Do not invent amenities']],
  ['src/runtime/VisitSurface.jsx',['VerifiedReviewDraft','onApply={answer=>setReview','Publish verified review']],
  ['src/runtime/LocationEvidenceInterpretation.jsx',['AiAssistPanel','task="evidence_interpretation"','Evidence confidence guide','Only call something contradictory']],
