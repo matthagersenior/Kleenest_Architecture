@@ -31,7 +31,7 @@ if(!errors.length){
  for(const tier of tiers)if(!context.includes(`'${tier}'`))errors.push(`Membership tier missing from shared runtime authority: ${tier}`);
  const runtimeFiles=[];const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,entry.name);if(entry.isDirectory())walk(full);else if(/\.(jsx?|tsx?)$/.test(entry.name))runtimeFiles.push(full)}};walk(src);
  for(const file of runtimeFiles){if(file===path.join(src,'runtime/MapSurface.jsx'))continue;const text=fs.readFileSync(file,'utf8');if(/from ['\"]maplibre-gl['\"]/.test(text))errors.push(`MapLibre engine imported outside canonical MapSurface.jsx: ${path.relative(repo,file)}`);if(/from ['\"]leaflet['\"]|from ['\"]react-leaflet['\"]|require\(['\"]leaflet['\"]\)/.test(text))errors.push(`Legacy Leaflet runtime detected: ${path.relative(repo,file)}`);}
- if(packageJson.includes('"react-leaflet"'))errors.push('react-leaflet dependency must not return.');
+ if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
 console.log('Map/routing authority audit passed: one MapSurface, one RouteSurface, one map service, one routing service, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
