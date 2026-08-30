@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, Clock3, Play, TimerReset } from 'lucide-react';
+import { Activity, Clock3, Download, Play, TimerReset, WifiOff } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 import AiAssistPanel from './AiAssistPanel.jsx';
 
@@ -13,26 +13,40 @@ export default function FleetRoutePerformanceCard({ businessId, route }) {
   const [performance,setPerformance]=useState(null);
   const [busy,setBusy]=useState('');
   const [error,setError]=useState('');
+  const [message,setMessage]=useState('');
+  const [online,setOnline]=useState(typeof navigator==='undefined'||navigator.onLine);
 
   const load=useCallback(async()=>{
     if(!businessId||!routeId)return;
-    try{setPerformance(await services.fleet.routePerformance(businessId,routeId));setError('')}catch(e){setError(e.message||'Unable to load route performance.')}
+    try{
+      if(typeof navigator!=='undefined'&&!navigator.onLine&&services?.offline?.cachedRoutes){
+        const cached=await services.offline.cachedRoutes();
+        const row=(Array.isArray(cached)?cached:[]).find(item=>String(item?.route_id||item?.route?.id||item?.route?.route_id)===String(routeId));
+        if(row?.route?.offline_performance){setPerformance(row.route.offline_performance);setError('');return;}
+      }
+      setPerformance(await services.fleet.routePerformance(businessId,routeId));setError('');
+    }catch(e){setError(e.message||'Unable to load route performance.')}
   },[services,businessId,routeId]);
 
   useEffect(()=>{void load();const refresh=()=>void load();window.addEventListener('kleenest:fleet-updated',refresh);return()=>window.removeEventListener('kleenest:fleet-updated',refresh)},[load]);
+  useEffect(()=>{if(typeof window==='undefined')return undefined;const on=()=>{setOnline(true);setMessage('Connectivity restored. Synchronize queued Fleet timing when ready.');void load();},off=()=>{setOnline(false);setMessage('Offline mode: prepared Fleet timing actions will be queued on this device.');};window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off)}},[load]);
 
-  const run=async(key,operation)=>{setBusy(key);setError('');try{await operation();await load()}catch(e){setError(e.message||'Fleet route operation failed.')}finally{setBusy('')}};
+  const run=async(key,operation,{reload=true,success=''}={})=>{setBusy(key);setError('');setMessage('');try{await operation();if(success)setMessage(success);if(reload)await load()}catch(e){setError(e.message||'Fleet route operation failed.')}finally{setBusy('')}};
   const dispatch=()=>run('dispatch',()=>services.fleet.dispatchRoute(businessId,routeId));
-  const timing=(stopId,eventType)=>run(`${stopId}:${eventType}`,()=>services.fleet.recordRouteStopTiming(businessId,routeId,stopId,eventType));
+  const prepareOffline=()=>run('offline-pack',()=>services.offline.prepareFleetRoute({businessId,route:{...route,offline_performance:performance},routeId}),{reload:false,success:'Fleet route prepared for offline stop timing on this device.'});
+  const timing=(stopId,eventType)=>{const occurredAt=new Date().toISOString();if(!online&&services?.offline?.queueFleetRouteStopTiming)return run(`${stopId}:${eventType}`,()=>services.offline.queueFleetRouteStopTiming({businessId,routeId,routeStopId:stopId,eventType,occurredAt}),{reload:false,success:`${eventType.replaceAll('_',' ')} queued offline at ${formatTime(occurredAt)}.`});return run(`${stopId}:${eventType}`,()=>services.fleet.recordRouteStopTiming(businessId,routeId,stopId,eventType,occurredAt));};
 
   const stops=Array.isArray(performance?.stops)?performance.stops:[];
   const canDispatch=['planned','paused'].includes(route?.status)&&route?.driver_id&&route?.vehicle_id;
   const hasMeasuredOutcome=Boolean(performance&&(performance.actual_duration_minutes!=null||stops.some(stop=>stop.actual_arrived_at||stop.actual_completed_at)));
   return <section className="fleet-route-performance" aria-label={`Performance for ${route?.name||'route'}`}>
     <div className="compact-actions">
-      {canDispatch&&<button className="button primary" type="button" onClick={dispatch} disabled={busy==='dispatch'}><Play size={14}/>{busy==='dispatch'?'Dispatching…':'Dispatch route'}</button>}
+      {canDispatch&&<button className="button primary" type="button" onClick={dispatch} disabled={busy==='dispatch'||!online} title={!online?'Dispatch requires connectivity so assignments and notifications are authoritative.':undefined}><Play size={14}/>{busy==='dispatch'?'Dispatching…':'Dispatch route'}</button>}
+      {services?.offline?.prepareFleetRoute&&<button className="button secondary" type="button" onClick={prepareOffline} disabled={busy==='offline-pack'||!online}><Download size={14}/>{busy==='offline-pack'?'Preparing…':'Prepare offline timing'}</button>}
       <button className="button secondary" type="button" onClick={load}><TimerReset size={14}/>Refresh metrics</button>
+      {!online&&<span className="membership-badge"><WifiOff size={13}/> Offline timing</span>}
     </div>
+    {message&&<p className="form-success" role="status">{message}</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
     {performance&&<>
       <div className="reward-stats fleet-route-metrics">
