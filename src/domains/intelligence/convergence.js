@@ -16,7 +16,16 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
     if(error)throw error;
     if(data?.error)throw new Error(data.error);
     const result={...data,task:data?.task||task,review_required:data?.review_required!==false};
-    emit('kleenest:ai-assist-generated',{task:result.task,provider:result.provider,model:result.model,reviewRequired:result.review_required});
+    emit('kleenest:ai-assist-generated',{
+      task:result.task,
+      provider:result.provider,
+      model:result.model,
+      providerStatus:result.provider_status??null,
+      providerErrorCode:result.provider_error_code??null,
+      providerErrorType:result.provider_error_type??null,
+      traceId:result.trace_id??null,
+      reviewRequired:result.review_required,
+    });
     return result;
   };
   const recordEvent=async({eventType,featureCode,subjectType='location',subjectId=null,locationId=null,businessId=null,fleetVehicleId=null,sourceTable='intelligence',sourceId=null,valueNumeric=null,valueText=null,metadata={}}={})=>{
