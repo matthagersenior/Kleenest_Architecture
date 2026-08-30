@@ -8,6 +8,7 @@ const checks=[
  ['Consumer service exposes review amenity inventory',['record_review_amenity_inventory'],'src/domains/consumer/location-evidence.js'],
  ['Consumer service exposes occupancy write authority',['submit_location_occupancy_observation'],'src/domains/consumer/location-evidence.js'],
  ['Consumer service exposes occupancy summary authority',['get_location_occupancy_summary'],'src/domains/consumer/location-evidence.js'],
+ ['Consumer service exposes occupancy trend and conflicts',['get_location_occupancy_trend','get_location_trust_conflicts','occupancyTrend','trustConflicts'],'src/domains/consumer/location-evidence.js'],
  ['Standalone amenity evidence carries quantity',['observedQuantity','observed_quantity','submit_amenity_observation'],'src/domains/consumer/location-evidence.js'],
  ['Review reads return amenity quantities',['review_amenity_feedback','observed_quantity','quantity:item.observed_quantity'],'src/domains/community/interactions.js'],
  ['Location reviews require verified visit authority',['Verify your visit before publishing a customer review','checkInId','services.reviews.create'],'src/runtime/LocationDetailsPageFixed.jsx'],
@@ -19,9 +20,17 @@ const checks=[
  ['Verified occupancy progression is idempotent',['occupancy_observation','p_check_in_id','idempotency_key'],'supabase/migrations/20260830003000_comprehensive_badges_rewards_v1.sql'],
  ['Comprehensive badges cover requested contribution classes',['amenity-scout','occupancy-scout','quest-finisher','trusted-contributor','streak-thirty','explorer-25'],'supabase/migrations/20260830003000_comprehensive_badges_rewards_v1.sql'],
  ['Badge rewards are one-time point transactions',['badge_reward','on conflict (user_id,reason,reference_id)'],'supabase/migrations/20260830003000_comprehensive_badges_rewards_v1.sql'],
- ['Progression service exposes full badge catalog',['badgeCatalog:','client.from(\'badges\')'],'src/domains/progression/service.js'],
- ['Badge catalog shows locked and earned requirements',['Every way to earn recognition','Not earned yet','reward_points'],'src/runtime/BadgeCatalogPanel.jsx'],
+ ['Progression service filters superseded badge definitions',['catalog_hidden!==true','badgeCatalog'],'src/domains/progression/service.js'],
+ ['Progression service clarifies reward history labels',['rewardLabel','Badge award · one-time','raw_reason'],'src/domains/progression/service.js'],
+ ['Badge catalog preserves historical achievements',['Historical achievements','historical achievement','catalogIds'],'src/runtime/BadgeCatalogPanel.jsx'],
  ['Progression page renders comprehensive badge catalog',['BadgeCatalogPanel'],'src/runtime/ProgressionPage.jsx'],
+ ['Consumer badge catalog reconciliation preserves history',['catalog_hidden','catalog_status','canonical','legacy'],'supabase/migrations/20260830003500_consumer_trust_progression_completion_v1.sql'],
+ ['Helpful review badges award server side',['award_helpful_review_badges','toggle_review_like','badge_reward'],'supabase/migrations/20260830003500_consumer_trust_progression_completion_v1.sql'],
+ ['Helpful badge scoring excludes reviewer self likes',['l.user_id<>r.user_id'],'supabase/migrations/20260830003600_consumer_helpful_review_self_like_guard_v1.sql'],
+ ['Occupancy trend enforces contributor privacy',['minimum_2_distinct_contributors_per_bucket','count(distinct user_id)>=2','get_location_occupancy_trend'],'supabase/migrations/20260830003500_consumer_trust_progression_completion_v1.sql'],
+ ['Trust conflicts are factual amenity disagreements',['get_location_trust_conflicts','status_conflict','quantity_conflict','present_count','absent_count'],'supabase/migrations/20260830003500_consumer_trust_progression_completion_v1.sql'],
+ ['Trust signals panel shows inventory trends and reverification',['CURRENT TRUST SIGNALS','Counted amenities','24h occupancy trend','Needs reverification','minimum 2 distinct contributors'],'src/runtime/LocationTrustSignalsPanel.jsx'],
+ ['Evidence interpretation renders trust signals beside AI',['LocationTrustSignalsPanel','Evidence confidence guide'],'src/runtime/LocationEvidenceInterpretation.jsx'],
  ['Verified occupancy reward activity is supported',['occupancy_observation',"when 'occupancy_observation' then 10",'evaluate_user_badges'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
  ['Standalone amenity quantity persists in observation authority',['observed_quantity','Present amenity quantity out of range','submit_amenity_observation'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
  ['Fleet dispatch signal policy has protected configurable thresholds',['fleet_dispatch_signal_policies','occupancy_fresh_minutes','high_utilization_pct','queue_threshold','fleet_dispatch_signal_policy_update'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
@@ -56,4 +65,4 @@ for(const [label,contracts,file] of checks){
  }
 }
 if(failures.length){console.error('Trust + Fleet Operations + Progression wave audit FAILED');failures.forEach(x=>console.error(`- ${x}`));process.exit(1)}
-console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): counted amenity evidence, privacy-safe occupancy intelligence, comprehensive automatic badge/reward evaluation, configurable occupancy-aware Fleet dispatch, event-driven owner notifications, and operational signal summaries are converged.`);
+console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): Consumer trust/progression completion, counted amenity evidence, privacy-safe occupancy intelligence, comprehensive automatic badge/reward evaluation, configurable occupancy-aware Fleet dispatch, event-driven owner notifications, and operational signal summaries are converged.`);
