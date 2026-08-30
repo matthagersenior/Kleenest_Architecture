@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Edit3, Plus, Route as RouteIcon, Save, Trash2, UserRound, Truck } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 import FleetRoutePerformanceCard from './FleetRoutePerformanceCard.jsx';
+import FleetRouteStopPlanner from './FleetRouteStopPlanner.jsx';
 
 const arr = value => Array.isArray(value) ? value : [];
 const idOf = value => value?.id || value?.route_id || '';
@@ -162,7 +163,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
         <div>
           <span className="eyebrow">FLEET DISPATCH</span>
           <h2>Routes & driver assignment</h2>
-          <p className="muted">Create, assign, dispatch, and measure Fleet routes with driver, vehicle, ETA, duration, TTL, dwell, and stop completion metrics.</p>
+          <p className="muted">Create, plan, assign, dispatch, and measure Fleet routes with driver, vehicle, ETA, duration, TTL, dwell, and stop completion metrics.</p>
         </div>
         <RouteIcon size={22} />
       </div>
@@ -218,6 +219,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
                 <button className="icon-button" title="Edit route" onClick={() => startEdit(route)}><Edit3 size={15} /></button>
                 <button className="icon-button" title="Delete route" onClick={() => remove(route)} disabled={busy === `delete-${routeId}`}><Trash2 size={15} /></button>
               </div>
+              <FleetRouteStopPlanner businessId={businessId} route={route}/>
               <FleetRoutePerformanceCard businessId={businessId} route={route}/>
             </article>
           );
