@@ -54,21 +54,48 @@ export function projectLocationAuthority(value) {
   };
 }
 
+const tagValue=(tags,...keys)=>{for(const key of keys){const value=tags?.[key];if(value!=null&&String(value).trim())return value;}return null;};
+const canonicalAddress=(place,tags)=>place.address||tagValue(tags,'addr:full')||[tagValue(tags,'addr:housenumber'),tagValue(tags,'addr:street')].filter(Boolean).join(' ')||'';
+const canonicalAmenities=(place,tags)=>{
+  if(Array.isArray(place.amenities)&&place.amenities.length)return place.amenities;
+  if(place.amenities&&typeof place.amenities==='object')return Object.entries(place.amenities).filter(([,v])=>v===true||['yes','public','customers','accessible'].includes(String(v).toLowerCase())).map(([k])=>k);
+  const candidates=['toilets','wheelchair','toilets:wheelchair','changing_table','drinking_water','shower','handwashing','internet_access','atm','parking'];
+  return candidates.filter(key=>{const v=tags?.[key];return v===true||['yes','public','customers','accessible','wlan'].includes(String(v??'').toLowerCase())});
+};
+
 export function locationAuthorityRoutePoint(value) {
   const place = projectLocationAuthority(value);
   if (!place) return null;
   const coords = locationAuthorityCoordinates(place);
+  const tags = place.raw_tags ?? place.osm_tags ?? {};
+  const trust = place.trust ?? {};
+  const provenance = place.source_provenance ?? {};
+  const name = place.name ?? place.brand ?? place.operator_name ?? tagValue(tags,'name','brand','operator') ?? 'Location';
   return {
     locationId: place.location_id,
     id: place.location_id,
-    name: place.name ?? place.brand ?? 'Location',
-    address: place.address ?? '',
+    name,
+    address: canonicalAddress(place,tags),
+    phone: place.phone ?? place.phone_number ?? tagValue(tags,'phone','contact:phone') ?? null,
+    openingHours: place.opening_hours ?? place.openingHours ?? tagValue(tags,'opening_hours') ?? null,
+    website: place.website ?? tagValue(tags,'website','contact:website') ?? null,
     latitude: coords?.latitude ?? null,
     longitude: coords?.longitude ?? null,
+    amenities: canonicalAmenities(place,tags),
+    bathroomStatus: place.bathroom_verification_status ?? place.bathroomStatus ?? (['toilets','restroom','bathroom'].includes(String(tags.amenity??'').toLowerCase())||['yes','public','customers'].includes(String(tags.toilets??'').toLowerCase())?'has_bathroom':null),
+    bathroomAccess: place.bathroom_access ?? place.bathroomAccess ?? tagValue(tags,'toilets:access','access') ?? null,
+    bathroomConfidence: place.bathroom_confidence ?? place.bathroomConfidence ?? place.verification_confidence ?? place.location_confidence_score ?? null,
+    bathroomEvidenceCount: place.bathroom_evidence_count ?? place.bathroomEvidenceCount ?? place.bathroom_verification_count ?? trust.evidenceCount ?? null,
+    trustScore: place.trust_score ?? trust.score ?? null,
+    freshnessScore: place.trust_freshness_score ?? trust.freshness ?? null,
+    stalenessStatus: place.trust_staleness_status ?? trust.staleness ?? null,
+    lastVerifiedAt: place.trust_last_verified_at ?? trust.lastVerifiedAt ?? null,
+    reverificationDueAt: place.trust_reverification_due_at ?? trust.reverificationDueAt ?? null,
+    sourceCapturedAt: provenance.captured_at ?? null,
     source: place.source ?? null,
     source_dataset: place.source_dataset ?? null,
     external_location_id: place.external_location_id ?? null,
-    raw_tags: place.raw_tags ?? place.osm_tags ?? null,
+    raw_tags: tags,
     validation: coords ? 'valid' : 'pending',
   };
 }
