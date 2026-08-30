@@ -17,7 +17,7 @@ const checks=[
  ['shared Studio uses branding boundary',files.shared.includes('uploadBusinessQrBrandingLogo')&&!files.shared.includes('infrastructure/supabase/client')],
  ['Business QR Studio uses shared authority',files.business.includes("from './QrStudioSurface.jsx'")&&files.business.includes('<QrStudioSurface business={selectedBusiness}')],
  ['Platform QR Studio uses shared authority',files.platform.includes("from './QrStudioSurface.jsx'")&&files.platform.includes('platformMode')&&files.platform.includes("services.admin.crud(profile,'businesses','list')")],
- ['Platform CRUD hands qr_codes to Studio',files.ownerCrud.includes("resource==='qr_codes'")&&files.ownerCrud.includes('<PlatformQrStudioPage embedded/>')&&!files.ownerCrud.includes("services.admin.crud(profile,'qr_codes'"))],
+ ['Platform CRUD hands qr_codes to Studio',files.ownerCrud.includes("resource==='qr_codes'")&&files.ownerCrud.includes('<PlatformQrStudioPage embedded/>')&&!files.ownerCrud.includes("services.admin.crud(profile,'qr_codes'")],
  ['legacy versioned Studio files removed',!fs.existsSync('src/runtime/BusinessQrStudioPageV2.jsx')&&!fs.existsSync('src/runtime/BusinessQrStudioPageV3.jsx')],
  ['branding domain owns qr-branding storage',files.branding.includes("storage.from('qr-branding')")&&files.branding.includes('auth.getUser()')],
  ['public landing uses QR domain boundary',files.landing.includes('getPublicQrLanding')&&!files.landing.includes('infrastructure/supabase/client')],
