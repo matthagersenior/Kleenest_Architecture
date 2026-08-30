@@ -13,7 +13,9 @@ const required=[
  ['src/runtime/AdminReviewModerationPage.jsx',['AiAssistPanel','task="admin_moderation"','AI moderation triage','Do not recommend or make a final enforcement decision']],
  ['src/runtime/AdminMaintenancePage.jsx',['AiAssistPanel','task="admin_operations"','Admin operations copilot','cannot run maintenance actions']],
  ['src/runtime/CapabilityHubPage.jsx',['AiAssistPanel','task="admin_operations"','Capability reconciliation copilot','cannot change capability definitions, entitlements, or service wiring']],
- ['src/runtime/RouteSurfaceFixed.jsx',['AiAssistPanel','task="route_plan"','Route planning copilot','do not change the route automatically']]
+ ['src/runtime/RouteSurfaceFixed.jsx',['AiAssistPanel','task="route_plan"','Route planning copilot','do not change the route automatically']],
+ ['src/runtime/VerifiedReviewDraft.jsx',['AiAssistPanel','task="visit_review"','Verified review draft','Use draft','Do not invent amenities']],
+ ['src/runtime/VisitSurface.jsx',['VerifiedReviewDraft','onApply={answer=>setReview','Publish verified review']]
 ];
 const missing=[];
 for(const [rel,tokens] of required){const file=path.resolve(rel);if(!fs.existsSync(file)){missing.push(`${rel}: missing file`);continue;}const text=fs.readFileSync(file,'utf8');for(const token of tokens)if(!text.includes(token))missing.push(`${rel}: missing ${token}`);}
@@ -21,4 +23,4 @@ const gateway=fs.readFileSync(path.resolve('supabase/functions/ai-assist/index.t
 if(gateway.includes('VITE_')||gateway.includes('dangerouslyAllowBrowser'))missing.push('AI provider credentials must remain server-side');
 if(!gateway.includes("supabaseAdmin.auth.getUser(token)"))missing.push('AI gateway must authenticate the caller');
 if(missing.length){console.error('AI Assist convergence audit failed.');for(const item of missing)console.error(`- ${item}`);process.exit(1);}
-console.log('AI Assist convergence audit passed: one authenticated gateway, centralized service boundary, Fleet pre/post intelligence, Business growth/action briefing/messaging, Enterprise analysis, Admin moderation/operations/capability reconciliation, consumer routing, grounded fallback, and human review before mutations.');
+console.log('AI Assist convergence audit passed: one authenticated gateway, centralized service boundary, Fleet pre/post intelligence, Business growth/action briefing/messaging, Enterprise analysis, Admin moderation/operations/capability reconciliation, consumer routing and verified-review drafting, grounded fallback, and human review before mutations.');
