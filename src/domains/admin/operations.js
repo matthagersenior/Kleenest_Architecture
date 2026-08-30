@@ -10,6 +10,7 @@ export function createAdminOperationsService(client,{capabilityCoverage=null}={}
   const recordOutcome=async(featureCode,outcome,metadata={})=>{try{await capabilityCoverage?.record({featureCode,outcome,destination:'/admin/crud',metadata})}catch{}};
   return Object.freeze({
     authorization:profile=>ownerRpc(profile,'admin_authorization_v1'),
+    controlPlaneSnapshot:profile=>ownerRpc(profile,'admin_control_plane_snapshot'),
     overview:profile=>ownerRpc(profile,'admin_get_overview'),
     integrity:profile=>ownerRpc(profile,'admin_data_integrity_summary'),
     pendingBusinesses:profile=>ownerRpc(profile,'admin_list_pending_businesses'),
@@ -27,7 +28,7 @@ export function createAdminOperationsService(client,{capabilityCoverage=null}={}
     setBusinessVerification:(profile,businessId,status)=>ownerRpc(profile,'admin_set_business_verification',{p_business_id:businessId,p_status:status}),
     crud:async(profile,resource,action,id=null,payload={})=>{const featureCode=`admin_crud:${resource}:${action}`;if(!/^[-_a-z0-9]+$/.test(String(resource??''))){await recordOutcome(featureCode,'blocked',{resource,action,reason:'invalid_resource'});throw new Error('Invalid admin resource.');}try{const value=await ownerRpc(profile,'admin_crud_gateway',{p_resource:resource,p_action:action,p_id:id,p_payload:payload});await recordOutcome(featureCode,'allowed',{resource,action});return value}catch(error){await recordOutcome(featureCode,'blocked',{resource,action,error:error?.message||String(error)});throw error;}},
     previewTiers:()=>Object.freeze(['free','premium','family','business','fleet','enterprise']),
-    getControlCapabilities:profile=>{requireOwner(profile);return Object.freeze({readAll:true,crud:true,tierPreview:true,diagnostics:true,audit:true,accountCapabilities:true,businessTier:true,businessAccess:true,businessVerification:true,userAccess:true,operationalCapabilityCatalog:true,backendResourceCatalog:true,publicDataCatalog:true,reviewModeration:true,reviewReports:true});},
+    getControlCapabilities:profile=>{requireOwner(profile);return Object.freeze({readAll:true,crud:true,tierPreview:true,diagnostics:true,audit:true,accountCapabilities:true,businessTier:true,businessAccess:true,businessVerification:true,userAccess:true,operationalCapabilityCatalog:true,backendResourceCatalog:true,publicDataCatalog:true,reviewModeration:true,reviewReports:true,controlPlaneSnapshot:true});},
     resourceCatalog:()=>Object.freeze(['profiles','families','family_members','businesses','fleets','locations','location_evidence','routes','campaigns','contests','subscriptions','support_requests','activity_events','notifications','partner_networks','partner_campaigns','partner_allocations','external_data_sources','external_data_datasets','external_location_records','external_observations']),
     operationalCapabilityCatalog:profile=>ownerRpc(profile,'admin_operational_capability_catalog'),
     backendResourceCatalog:profile=>ownerRpc(profile,'admin_backend_resource_catalog'),
