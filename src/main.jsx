@@ -6,6 +6,7 @@ import RuntimeErrorBoundary from './runtime/RuntimeErrorBoundary.jsx';
 import UniversalNetworkEventBridge from './runtime/UniversalNetworkEventBridge.jsx';
 import CanonicalAppRuntime from './runtime/CanonicalAppRuntime.jsx';
 import ScrollToTop from './runtime/ScrollToTop.jsx';
+import './runtime/mapLifecycleRecovery.js';
 import './styles.css';
 import './tier-experience.css';
 import './runtime/designSystem.css';
