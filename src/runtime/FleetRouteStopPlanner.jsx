@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Plus, Save, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, MapPin, Plus, Save, Search, Sparkles, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext.jsx';
 import AiAssistPanel from './AiAssistPanel.jsx';
 import FleetDispatchSignalPolicyPanel from './FleetDispatchSignalPolicyPanel.jsx';
@@ -63,10 +64,11 @@ export default function FleetRouteStopPlanner({businessId,route}){
   const candidates=Array.isArray(dispatchIntel?.candidate_stops)?dispatchIntel.candidate_stops:[];
   const readyDrivers=(dispatchIntel?.drivers||[]).filter(item=>item.ready).length;
   const readyVehicles=(dispatchIntel?.vehicles||[]).filter(item=>item.ready).length;
+  const mapHref=`/map?fleetBusinessId=${encodeURIComponent(businessId)}&fleetRouteId=${encodeURIComponent(routeId)}`;
 
   return <section className="fleet-stop-planner">
-    <div className="panel-heading"><div><span className="eyebrow">STOP PLAN</span><h3>Ordered route stops</h3><p className="muted">Search verified Kleenest locations and set planned arrival, TTL, and dwell before dispatch.</p></div></div>
-    {!locked&&<div className="compact-actions"><button className="button secondary" type="button" onClick={loadDispatchIntel} disabled={busy==='intel'}><Sparkles size={14}/>{busy==='intel'?'Analyzing…':'Dispatch intelligence'}</button>{dispatchIntel&&<span className="status-pill">{readyDrivers} ready drivers · {readyVehicles} ready vehicles · {dispatchIntel.model||'authoritative dispatch'}</span>}</div>}
+    <div className="panel-heading"><div><span className="eyebrow">STOP PLAN</span><h3>Ordered route stops</h3><p className="muted">Search verified Kleenest locations, use canonical map discovery, and set planned arrival, TTL, and dwell before dispatch.</p></div></div>
+    {!locked&&<div className="compact-actions"><Link className="button primary" to={mapHref}><MapPin size={14}/>Map discovery</Link><button className="button secondary" type="button" onClick={loadDispatchIntel} disabled={busy==='intel'}><Sparkles size={14}/>{busy==='intel'?'Analyzing…':'Dispatch intelligence'}</button>{dispatchIntel&&<span className="status-pill">{readyDrivers} ready drivers · {readyVehicles} ready vehicles · {dispatchIntel.model||'authoritative dispatch'}</span>}</div>}
     {!locked&&<FleetDispatchSignalPolicyPanel businessId={businessId} onSaved={()=>void loadDispatchIntel()}/>} 
     {dispatchIntel&&<AiAssistPanel task="fleet_dispatch" context={{route,dispatch:dispatchIntel,stops}} title="Fleet dispatch copilot" description="Explains assignment risk, stop priorities, occupancy facts, and timing considerations from current Fleet facts." instruction="Give the dispatcher the most important actions to take before dispatch. Cite current occupancy, utilization, queue, or wait facts only when supplied. Do not invent traffic or travel times."/>}
     {locked?<p className="state">Stop order is locked for this dispatched route.</p>:<form className="compact-actions" onSubmit={search}><label className="form-field"><span>Find a location</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Name, address, city, restroom…"/></label><button className="button secondary" type="submit" disabled={busy==='search'}><Search size={14}/>{busy==='search'?'Searching…':'Search'}</button></form>}
