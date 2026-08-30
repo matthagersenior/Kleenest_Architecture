@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, RefreshCw, Sparkles } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 
 export default function AiAssistPanel({
@@ -27,6 +27,9 @@ export default function AiAssistPanel({
     finally{setBusy(false);}
   };
   const apply=()=>{if(result?.answer&&typeof onApply==='function')onApply(result.answer,result);};
+  const modelAssisted=result?.provider==='openai';
+  const fallback=result?.provider==='grounded_fallback';
+  const providerIssue=fallback&&result?.provider_status==='provider_error';
   return <section className={`detail-panel ai-assist-panel ${className}`.trim()} data-context-key={contextKey.length}>
     <div className="panel-heading">
       <div><span className="eyebrow">AI ASSIST</span><h3>{title}</h3><p className="muted">{description}</p></div>
@@ -37,6 +40,12 @@ export default function AiAssistPanel({
       {result?.answer&&onApply&&<button className="button primary" type="button" onClick={apply}><Check size={14}/>{applyLabel}</button>}
     </div>
     {error&&<p className="form-error" role="alert">{error}</p>}
-    {result?.answer&&<div className="metric-card ai-assist-answer"><strong>{result.provider==='openai'?'Model-assisted recommendation':'Grounded recommendation'}</strong><span>{result.answer}</span><small>Review required before any change is applied.</small></div>}
+    {result?.answer&&<div className="metric-card ai-assist-answer">
+      <strong>{modelAssisted?'Model-assisted recommendation':'Grounded recommendation'}</strong>
+      {providerIssue&&<small className="form-error"><AlertTriangle size={13}/> Model provider unavailable; showing Kleenest's deterministic grounded fallback.</small>}
+      {fallback&&!providerIssue&&<small>Using Kleenest's deterministic grounded fallback.</small>}
+      <span>{result.answer}</span>
+      <small>{modelAssisted&&result.model?`Model: ${result.model} · `:''}Review required before any change is applied.</small>
+    </div>}
   </section>;
 }
