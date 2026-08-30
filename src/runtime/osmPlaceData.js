@@ -1,9 +1,16 @@
 const nestedTags = place => {
   const source = place?.source_metadata;
-  if (!source || typeof source !== 'object') return {};
-  if (source.tags && typeof source.tags === 'object' && !Array.isArray(source.tags)) return source.tags;
-  return source;
+  if (source && typeof source === 'object') {
+    if (source.tags && typeof source.tags === 'object' && !Array.isArray(source.tags)) return source.tags;
+    if (!Array.isArray(source) && Object.keys(source).some(key=>key.includes(':')||['amenity','brand','operator','opening_hours','phone','website','wheelchair','toilets'].includes(key))) return source;
+  }
+  if (place?.raw_tags && typeof place.raw_tags === 'object' && !Array.isArray(place.raw_tags)) return place.raw_tags;
+  if (place?.osm_tags && typeof place.osm_tags === 'object' && !Array.isArray(place.osm_tags)) return place.osm_tags;
+  if (place?.raw_data?.osm_tags && typeof place.raw_data.osm_tags === 'object') return place.raw_data.osm_tags;
+  if (place?.raw_data?.tags && typeof place.raw_data.tags === 'object') return place.raw_data.tags;
+  return {};
 };
+const metadata = place => place?.source_metadata && typeof place.source_metadata === 'object' && !Array.isArray(place.source_metadata) ? place.source_metadata : {};
 const first = (...values) => values.map(v => String(v ?? '').trim()).find(Boolean) || '';
 const normalizeBrand = value => String(value ?? '').trim().toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 const canonicalBrand = value => normalizeBrand(value).replace(/ /g, '');
@@ -70,12 +77,25 @@ export function placeAddress(place = {}) {
 }
 
 export function placeContact(place = {}) {
-  const tags = nestedTags(place);
+  const tags = nestedTags(place), meta=metadata(place);
   return {
-    phone: first(place.phone, place.phone_number, tags.phone, tags['contact:phone']),
-    website: first(place.website_url, place.website, place.websiteUrl, place.url, tags.website, tags['contact:website']),
+    phone: first(place.phone, place.phone_number, meta.phone, tags.phone, tags['contact:phone']),
+    website: first(place.website_url, place.website, place.websiteUrl, place.url, meta.website, tags.website, tags['contact:website']),
     email: first(place.email, tags.email, tags['contact:email'])
   };
+}
+
+export function placeHours(place = {}) {
+  const tags=nestedTags(place), meta=metadata(place);
+  return first(place.opening_hours,place.openingHours,meta.opening_hours,tags.opening_hours);
+}
+
+export function placeFreshness(place = {}) {
+  const trust=place?.trust||{}, meta=metadata(place), provenance=place?.source_provenance||{};
+  const score=place?.trust_freshness_score??trust.freshness??place?.freshness_score??null;
+  const staleness=place?.trust_staleness_status??trust.staleness??place?.staleness_status??null;
+  const observedAt=first(provenance.captured_at,place?.source_captured_at,meta.captured_at,place?.last_seen_at,place?.trust_last_verified_at,trust.lastVerifiedAt,place?.last_verified_at);
+  return {score,staleness,observedAt};
 }
 
 export function placeLogoCandidates(place = {}) {
@@ -92,12 +112,17 @@ export const placeLogo = place => placeLogoCandidates(place)[0] || '';
 export function amenityLabels(place = {}) {
   if (Array.isArray(place.amenity_labels) && place.amenity_labels.length) return place.amenity_labels;
   if (Array.isArray(place.amenities) && place.amenities.length) return place.amenities.map(x => typeof x === 'string' ? x : x?.label || x?.name).filter(Boolean);
+  const meta=metadata(place);
+  if(Array.isArray(meta.amenity_labels)&&meta.amenity_labels.length)return meta.amenity_labels;
+  const amenityObject=place.amenities&&typeof place.amenities==='object'&&!Array.isArray(place.amenities)?place.amenities:meta.amenities&&typeof meta.amenities==='object'?meta.amenities:null;
+  const labels={restroom:'Restroom',accessible_restroom:'Accessible restroom',wheelchair:'Wheelchair accessible',drinking_water:'Drinking water',baby_changing:'Baby changing',shower:'Shower',handwashing:'Handwashing',seating:'Seating',parking:'Parking',ev_charging:'EV charging',wifi:'Wi-Fi',atm:'ATM'};
+  if(amenityObject){const found=Object.entries(amenityObject).filter(([,enabled])=>Boolean(enabled)).map(([key])=>labels[key]||key.replaceAll('_',' '));if(found.length)return found;}
   const tags = nestedTags(place);
-  const pairs = [['wheelchair','Wheelchair'],['changing_table','Changing table'],['drinking_water','Drinking water'],['shower','Shower'],['parking','Parking'],['internet_access','Wi-Fi'],['atm','ATM'],['seating','Seating']];
-  return pairs.filter(([key]) => ['yes','true'].includes(String(tags[key] ?? '').toLowerCase())).map(([,label]) => label);
+  const pairs = [['toilets','Restroom'],['wheelchair','Wheelchair accessible'],['changing_table','Baby changing'],['drinking_water','Drinking water'],['shower','Shower'],['handwashing','Handwashing'],['parking','Parking'],['internet_access','Wi-Fi'],['atm','ATM'],['seating','Seating']];
+  return pairs.filter(([key]) => ['yes','true','public','customers','wlan'].includes(String(tags[key] ?? '').toLowerCase())).map(([,label]) => label);
 }
 
 export function sourceLabel(place = {}) {
-  const source = first(place.source_dataset, place.source, nestedTags(place).source).toLowerCase();
+  const source = first(place.source_dataset, place.source, metadata(place).source_dataset, nestedTags(place).source).toLowerCase();
   return source.includes('osm') || source.includes('openstreetmap') || source.includes('overpass') ? 'OpenStreetMap / Overpass' : 'Kleenest canonical network';
 }
