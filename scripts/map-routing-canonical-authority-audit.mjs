@@ -8,25 +8,38 @@ const forbiddenRuntimeFiles=[
   'runtime/RouteSurfaceFixed.jsx','runtime/RouteSurfaceMobileFixed.jsx'
 ];
 for(const rel of forbiddenRuntimeFiles)if(fs.existsSync(path.join(src,rel)))errors.push(`Competing runtime source still exists: src/${rel}`);
-const required=['runtime/MapSurface.jsx','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js'];
+const required=['runtime/MapSurface.jsx','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js','domains/routing/cache.js'];
 for(const rel of required)if(!fs.existsSync(path.join(src,rel)))errors.push(`Canonical authority missing: src/${rel}`);
 if(!errors.length){
  const map=fs.readFileSync(path.join(src,'runtime/MapSurface.jsx'),'utf8');
  const route=fs.readFileSync(path.join(src,'runtime/RouteSurface.jsx'),'utf8');
+ const routing=fs.readFileSync(path.join(src,'domains/routing/route.js'),'utf8');
  const runtime=fs.readFileSync(path.join(src,'runtime/CanonicalAppRuntime.jsx'),'utf8');
  const context=fs.readFileSync(path.join(src,'AppContext.jsx'),'utf8');
  const packageJson=fs.readFileSync(path.join(repo,'package.json'),'utf8');
  if(!map.includes("from 'maplibre-gl'"))errors.push('MapSurface.jsx must own the MapLibre renderer.');
  if(!map.includes('services?.maps?.nearby'))errors.push('MapSurface.jsx must consume services.maps.nearby.');
  if(/from ['\"]leaflet['\"]|from ['\"]react-leaflet['\"]|require\(['\"]leaflet['\"]\)/.test(map))errors.push('MapSurface.jsx must not use Leaflet.');
+ if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route handoff mode.');
+ if(!map.includes('/route?add=')||!map.includes('/route?locationId='))errors.push('MapSurface.jsx must expose explicit stop and destination route contracts.');
  if(!route.includes('services?.routing?.request'))errors.push('RouteSurface.jsx must consume services.routing.request.');
+ if(route.includes('createRouteCache'))errors.push('RouteSurface.jsx must not construct route cache authority.');
+ if(route.includes('kleenest.routeMapMode'))errors.push('RouteSurface.jsx must not use hidden localStorage route mode.');
+ if(!route.includes('services?.routing?.cache'))errors.push('RouteSurface.jsx must consume the routing service cache authority.');
+ if(!route.includes('to="/map?routeMode=stop"'))errors.push('RouteSurface.jsx must use explicit map stop-selection mode.');
+ if(!routing.includes('createRoutingService(client,{live=null,cache=null}={})'))errors.push('Routing service must accept canonical injected live/cache authorities.');
+ if(!routing.includes('liveService=live||createLiveNetworkService(client)'))errors.push('Routing service must prefer injected Live Network authority.');
+ if(!routing.includes('routeCache=cache||createRouteCache()'))errors.push('Routing service must own the route cache authority.');
+ if(!context.includes('routing:createRoutingService(supabase,{live})'))errors.push('AppContext must inject the shared Live Network service into routing.');
  if(!runtime.includes("import MapSurface from './MapSurface.jsx'"))errors.push('CanonicalAppRuntime must import only MapSurface.jsx.');
  if(!runtime.includes("import RouteSurface from './RouteSurface.jsx'"))errors.push('CanonicalAppRuntime must import only RouteSurface.jsx.');
  for(const token of ['<Route path="/map" element={<MapSurface/>}/>','<Route path="/discover" element={<MapSurface/>}/>','<Route path="/route" element={<RouteSurface/>}/>'])if(!runtime.includes(token))errors.push(`CanonicalAppRuntime missing canonical route binding: ${token}`);
  const mapFactories=(context.match(/createMapNetworkService\(/g)||[]).length;
  const routeFactories=(context.match(/createRoutingService\(/g)||[]).length;
+ const liveFactories=(context.match(/createLiveNetworkService\(/g)||[]).length;
  if(mapFactories!==1)errors.push(`AppContext must construct exactly one map service; found ${mapFactories}.`);
  if(routeFactories!==1)errors.push(`AppContext must construct exactly one routing service; found ${routeFactories}.`);
+ if(liveFactories!==1)errors.push(`AppContext must construct exactly one Live Network service; found ${liveFactories}.`);
  const tiers=['free','premium','family','fleet','enterprise','business_standard','business_growth','business_fleet','business_enterprise'];
  for(const tier of tiers)if(!context.includes(`'${tier}'`))errors.push(`Membership tier missing from shared runtime authority: ${tier}`);
  const runtimeFiles=[];const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,entry.name);if(entry.isDirectory())walk(full);else if(/\.(jsx?|tsx?)$/.test(entry.name))runtimeFiles.push(full)}};walk(src);
@@ -34,4 +47,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface, one RouteSurface, one map service, one routing service, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface, one RouteSurface, one map service, one routing service/cache/live authority, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
