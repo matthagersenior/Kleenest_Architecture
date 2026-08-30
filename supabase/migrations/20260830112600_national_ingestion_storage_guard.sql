@@ -1,0 +1,155 @@
+create table if not exists public.national_ingestion_storage_guard (
+  singleton boolean primary key default true check (singleton),
+  allocation_bytes bigint not null default 2147483648,
+  pause_fraction numeric not null default 0.5000 check (pause_fraction > 0 and pause_fraction < 1),
+  hard_stop_fraction numeric not null default 0.8000 check (hard_stop_fraction > pause_fraction and hard_stop_fraction <= 1),
+  paused boolean not null default false,
+  pause_reason text,
+  paused_at timestamptz,
+  resume_authorized boolean not null default false,
+  resume_authorized_at timestamptz,
+  resume_authorized_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.national_ingestion_storage_guard(singleton,allocation_bytes,pause_fraction,hard_stop_fraction)
+values(true,2147483648,0.5000,0.8000)
+on conflict(singleton) do nothing;
+
+alter table public.national_ingestion_storage_guard enable row level security;
+revoke all on public.national_ingestion_storage_guard from public, anon, authenticated;
+grant all on public.national_ingestion_storage_guard to service_role;
+
+create or replace function public.national_ingestion_storage_status()
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public','auth','extensions','pg_temp'
+as $$
+declare
+  g public.national_ingestion_storage_guard%rowtype;
+  db_bytes bigint;
+  wal_bytes bigint;
+  observed_bytes bigint;
+  observed_fraction numeric;
+  auto_pause boolean;
+  hard_stop boolean;
+begin
+  select * into g from public.national_ingestion_storage_guard where singleton=true;
+  select pg_database_size(current_database()) into db_bytes;
+  begin
+    select coalesce(sum(size),0)::bigint into wal_bytes from pg_ls_waldir();
+  exception when others then
+    wal_bytes:=0;
+  end;
+  observed_bytes:=coalesce(db_bytes,0)+coalesce(wal_bytes,0);
+  observed_fraction:=case when g.allocation_bytes>0 then observed_bytes::numeric/g.allocation_bytes else 1 end;
+  hard_stop:=observed_fraction>=g.hard_stop_fraction;
+  auto_pause:=observed_fraction>=g.pause_fraction and not g.resume_authorized;
+
+  if hard_stop then
+    update public.national_ingestion_storage_guard
+      set paused=true,pause_reason='hard_stop_storage_threshold',paused_at=coalesce(paused_at,now()),updated_at=now()
+      where singleton=true;
+  elsif auto_pause then
+    update public.national_ingestion_storage_guard
+      set paused=true,pause_reason='storage_threshold_50_percent',paused_at=coalesce(paused_at,now()),updated_at=now()
+      where singleton=true;
+  elsif g.resume_authorized and g.paused and not hard_stop then
+    update public.national_ingestion_storage_guard
+      set paused=false,pause_reason=null,paused_at=null,updated_at=now()
+      where singleton=true;
+  end if;
+
+  select * into g from public.national_ingestion_storage_guard where singleton=true;
+  return jsonb_build_object(
+    'allocation_bytes',g.allocation_bytes,
+    'pause_fraction',g.pause_fraction,
+    'hard_stop_fraction',g.hard_stop_fraction,
+    'database_bytes',db_bytes,
+    'wal_bytes',wal_bytes,
+    'observed_bytes',observed_bytes,
+    'observed_fraction',round(observed_fraction,4),
+    'observed_percent',round(observed_fraction*100,2),
+    'paused',g.paused,
+    'pause_reason',g.pause_reason,
+    'paused_at',g.paused_at,
+    'resume_authorized',g.resume_authorized,
+    'resume_authorized_at',g.resume_authorized_at,
+    'hard_stop',hard_stop,
+    'may_ingest',not g.paused and not hard_stop
+  );
+end;
+$$;
+
+create or replace function public.admin_set_national_ingestion_resume_authorization(p_authorized boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public','auth','extensions','pg_temp'
+as $$
+declare uid uuid:=auth.uid();
+begin
+  if uid is null or not public.is_platform_owner(uid) then raise exception 'Platform owner access required'; end if;
+  update public.national_ingestion_storage_guard
+    set resume_authorized=coalesce(p_authorized,false),
+        resume_authorized_at=case when p_authorized then now() else null end,
+        resume_authorized_by=case when p_authorized then uid else null end,
+        paused=case when p_authorized then false else paused end,
+        pause_reason=case when p_authorized then null else pause_reason end,
+        paused_at=case when p_authorized then null else paused_at end,
+        updated_at=now()
+    where singleton=true;
+  return public.national_ingestion_storage_status();
+end;
+$$;
+
+create or replace function public.enforce_national_ingestion_storage_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public','auth','extensions','pg_temp'
+as $$
+declare s jsonb;
+begin
+  s:=public.national_ingestion_storage_status();
+  if coalesce((s->>'may_ingest')::boolean,false)=false then
+    raise exception 'National ingestion paused by storage guard at %%% observed usage',coalesce(s->>'observed_percent','unknown') using errcode='P0001';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists national_ingestion_storage_guard_before_run on public.national_ingestion_runs;
+create trigger national_ingestion_storage_guard_before_run
+before insert on public.national_ingestion_runs
+for each row execute function public.enforce_national_ingestion_storage_guard();
+
+create or replace function public.admin_national_ingestion_status()
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public','auth','extensions','pg_temp'
+as $$
+declare v jsonb;
+begin
+ if not public.is_platform_owner(auth.uid()) then raise exception 'Platform owner access required'; end if;
+ select jsonb_build_object(
+  'markets',jsonb_build_object('total',count(*),'completed',count(*) filter(where status='completed'),'running',count(*) filter(where status='running'),'pending',count(*) filter(where status='pending'),'failed',count(*) filter(where status='failed'),'blocked',count(*) filter(where status='blocked')),
+  'current_market',(select to_jsonb(m) from public.national_ingestion_markets m where m.status in ('running','pending') order by m.priority,m.population_rank nulls last limit 1),
+  'top_10',(select coalesce(jsonb_agg(to_jsonb(t) order by t.population_rank),'[]'::jsonb) from public.national_ingestion_markets t where t.market_kind='city' and t.population_rank<=10),
+  'sources',(select coalesce(jsonb_agg(to_jsonb(s) order by s.priority),'[]'::jsonb) from public.national_ingestion_source_policies s),
+  'today_usage',(select coalesce(jsonb_agg(to_jsonb(u)),'[]'::jsonb) from (select source_key,sum(requests_used)::int requests_used,sum(bytes_downloaded)::bigint bytes_downloaded,sum(records_imported)::int records_imported,sum(records_updated)::int records_updated from public.national_ingestion_runs where started_at>=date_trunc('day',now()) group by source_key) u),
+  'recent_runs',(select coalesce(jsonb_agg(to_jsonb(r) order by r.started_at desc),'[]'::jsonb) from (select id,market_id,source_key,status,requests_used,bytes_downloaded,records_seen,records_imported,records_updated,error,started_at,finished_at from public.national_ingestion_runs order by started_at desc limit 12) r),
+  'storage_guard',public.national_ingestion_storage_status()
+ ) into v from public.national_ingestion_markets;
+ return v;
+end;
+$$;
+
+revoke all on function public.national_ingestion_storage_status() from public, anon;
+revoke all on function public.admin_set_national_ingestion_resume_authorization(boolean) from public, anon;
+revoke all on function public.admin_national_ingestion_status() from public, anon;
+grant execute on function public.national_ingestion_storage_status() to authenticated, service_role;
+grant execute on function public.admin_set_national_ingestion_resume_authorization(boolean) to authenticated;
+grant execute on function public.admin_national_ingestion_status() to authenticated;
