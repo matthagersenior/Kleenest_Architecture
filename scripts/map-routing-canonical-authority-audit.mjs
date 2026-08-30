@@ -9,11 +9,13 @@ const forbiddenRuntimeFiles=[
 ];
 const forbiddenMapStyles=['runtime/MapSurfaceV3.css','runtime/MapSurfaceProductionFixed.css','runtime/MapSurfacePolish.css'];
 for(const rel of [...forbiddenRuntimeFiles,...forbiddenMapStyles])if(fs.existsSync(path.join(src,rel)))errors.push(`Competing runtime authority still exists: src/${rel}`);
-const required=['runtime/MapSurface.jsx','runtime/MapSurface.css','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js','domains/routing/cache.js'];
+const required=['runtime/MapSurface.jsx','runtime/MapSurface.css','runtime/MapMarkerSystem.jsx','runtime/osmPlaceData.js','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js','domains/routing/cache.js'];
 for(const rel of required)if(!fs.existsSync(path.join(src,rel)))errors.push(`Canonical authority missing: src/${rel}`);
 if(!errors.length){
  const map=fs.readFileSync(path.join(src,'runtime/MapSurface.jsx'),'utf8');
  const mapCss=fs.readFileSync(path.join(src,'runtime/MapSurface.css'),'utf8');
+ const marker=fs.readFileSync(path.join(src,'runtime/MapMarkerSystem.jsx'),'utf8');
+ const placeData=fs.readFileSync(path.join(src,'runtime/osmPlaceData.js'),'utf8');
  const route=fs.readFileSync(path.join(src,'runtime/RouteSurface.jsx'),'utf8');
  const routing=fs.readFileSync(path.join(src,'domains/routing/route.js'),'utf8');
  const cache=fs.readFileSync(path.join(src,'domains/routing/cache.js'),'utf8');
@@ -35,6 +37,11 @@ if(!errors.length){
  if(!map.includes('/route?add=')||!map.includes('/route?locationId='))errors.push('MapSurface.jsx must expose explicit stop and destination route contracts.');
  if(!map.includes("searchParams.get('routePreview')==='active'"))errors.push('MapSurface.jsx must own active-route preview mode.');
  for(const token of ['services?.routing?.cache?.getActive?.()','ROUTE_SOURCE','ROUTE_LAYER',"type:'geojson'","type:'line'"])if(!map.includes(token))errors.push(`MapSurface.jsx missing canonical route-preview token: ${token}`);
+ if(!map.includes("from './osmPlaceData.js'"))errors.push('MapSurface.jsx must consume the canonical place identity resolver.');
+ if(!map.includes('logos=placeLogoCandidates(place)')||!map.includes('if(logos[logoIndex])'))errors.push('MapSurface marker pins must retry the canonical logo candidate chain before fallback.');
+ for(const token of ['BRAND_DOMAINS','BRAND_SLUGS','businessIdentity','domainFromPlace','placeLogoCandidates','cdn.simpleicons.org','contact:website','kleenest.map.identity.'])if(!placeData.includes(token))errors.push(`osmPlaceData.js missing canonical brand identity token: ${token}`);
+ for(const forbidden of ['BRAND_DOMAINS','BRAND_SLUGS','brandIconCandidates','brandIconUrl','domainFromPlace','businessIdentity'])if(marker.includes(forbidden))errors.push(`MapMarkerSystem.jsx retains competing brand authority: ${forbidden}`);
+ if(marker.includes('placeLogo(')||marker.includes('placeIconKey('))errors.push('MapMarkerSystem.jsx must not retain a competing logo/icon resolver.');
  if(!route.includes('services?.routing?.request'))errors.push('RouteSurface.jsx must consume services.routing.request.');
  if(route.includes('createRouteCache'))errors.push('RouteSurface.jsx must not construct route cache authority.');
  if(route.includes('kleenest.routeMapMode'))errors.push('RouteSurface.jsx must not use hidden localStorage route mode.');
@@ -64,4 +71,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one canonical brand resolver, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
