@@ -13,7 +13,7 @@ const required=[
  ['src/runtime/AdminReviewModerationPage.jsx',['AiAssistPanel','task="admin_moderation"','AI moderation triage','Do not recommend or make a final enforcement decision']],
  ['src/runtime/AdminMaintenancePage.jsx',['AiAssistPanel','task="admin_operations"','Admin operations copilot','cannot run maintenance actions']],
  ['src/runtime/CapabilityHubPage.jsx',['AiAssistPanel','task="admin_operations"','Capability reconciliation copilot','cannot change capability definitions, entitlements, or service wiring']],
- ['src/runtime/RouteSurface.jsx',['AiAssistPanel','task="route_plan"','Route planning copilot','do not change the route automatically']],
+ ['src/runtime/RouteSurface.jsx',['AiAssistPanel','task="route_plan"','Route recommendation','Only information that helps with these stops and their order.','maximum 80 words','Do not explain your framework','propose changes outside stop order/reliability']],
  ['src/runtime/VerifiedReviewDraft.jsx',['AiAssistPanel','task="visit_review"','Verified review draft','Use draft','Do not invent amenities']],
  ['src/runtime/VisitSurface.jsx',['VerifiedReviewDraft','onApply={answer=>setReview','Publish verified review']],
  ['src/runtime/LocationEvidenceInterpretation.jsx',['AiAssistPanel','task="evidence_interpretation"','Evidence confidence guide','Only call something contradictory']],
@@ -36,4 +36,4 @@ else {
 }
 if(!gateway.includes('generated?.requestId ?? lastFailure?.request_id ?? null'))missing.push('AI gateway must preserve failure request IDs for telemetry correlation');
 if(missing.length){console.error('AI Assist convergence audit failed.');for(const item of missing)console.error(`- ${item}`);process.exit(1);}
-console.log('AI Assist convergence audit passed: authenticated free-first OpenRouter -> Gemini -> OpenAI failover, deterministic grounded fallback, server-only provider credentials, normalized safe runtime diagnostics, failure request-ID telemetry, provider attempt observability, provider-state event propagation, centralized service authority, Fleet/Business/Enterprise/Admin/consumer AI surfaces, and human review before mutations.');
+console.log('AI Assist convergence audit passed: authenticated free-first OpenRouter -> Gemini -> OpenAI failover, deterministic grounded fallback, server-only provider credentials, normalized safe runtime diagnostics, failure request-ID telemetry, provider attempt observability, provider-state event propagation, centralized service authority, task-scoped Route/Fleet/Business/Enterprise/Admin/consumer AI surfaces, and human review before mutations.');
