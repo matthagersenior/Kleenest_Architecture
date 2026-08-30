@@ -4,11 +4,9 @@ import { useAppContext } from '../AppContext.jsx';
 
 const providerMessage=(result)=>{
   if(result?.provider!=='grounded_fallback')return '';
-  if(result?.provider_status==='missing_api_key')return 'Model provider is not configured; showing Kleenest\'s deterministic grounded fallback.';
-  if(result?.provider_status==='provider_error'){
-    if(result?.provider_error_type==='insufficient_quota'||result?.provider_error_code==='credit_balance_exhausted')return 'Model provider capacity is unavailable; showing Kleenest\'s deterministic grounded fallback.';
-    return 'Model provider is temporarily unavailable; showing Kleenest\'s deterministic grounded fallback.';
-  }
+  if(result?.provider_error_code==='missing_api_key'||result?.provider_error_type==='configuration_error')return 'Model providers are not fully configured; showing Kleenest\'s deterministic grounded fallback.';
+  if(result?.provider_error_type==='insufficient_quota'||result?.provider_error_code==='credit_balance_exhausted'||result?.provider_status===429)return 'Model provider capacity is unavailable; showing Kleenest\'s deterministic grounded fallback.';
+  if(result?.provider_error_code||result?.provider_error_type||Number(result?.provider_status)>=400)return 'Model providers are temporarily unavailable; showing Kleenest\'s deterministic grounded fallback.';
   return 'Using Kleenest\'s deterministic grounded fallback.';
 };
 
@@ -37,9 +35,9 @@ export default function AiAssistPanel({
     finally{setBusy(false);}
   };
   const apply=()=>{if(result?.answer&&typeof onApply==='function')onApply(result.answer,result);};
-  const modelAssisted=result?.provider==='openai';
+  const modelAssisted=Boolean(result?.provider&&result.provider!=='grounded_fallback');
   const fallback=result?.provider==='grounded_fallback';
-  const providerIssue=fallback&&result?.provider_status==='provider_error';
+  const providerIssue=fallback&&Boolean(result?.provider_error_code||result?.provider_error_type||Number(result?.provider_status)>=400);
   const fallbackMessage=providerMessage(result);
   return <section className={`detail-panel ai-assist-panel ${className}`.trim()} data-context-key={contextKey.length}>
     <div className="panel-heading">
