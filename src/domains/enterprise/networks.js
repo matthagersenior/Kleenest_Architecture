@@ -8,6 +8,7 @@ export function createEnterprisePartnerNetworkService(client) {
     benchmark: async (networkId, start, end) => rpc('get_partner_network_benchmark',{p_network_id:networkId,p_start:start,p_end:end}),
     allocationRoi: async (networkId, start, end) => rpc('get_partner_allocation_roi',{p_network_id:networkId,p_start:start,p_end:end}),
     campaignRoi: async (campaignId, start, end) => rpc('get_partner_campaign_roi',{p_campaign_id:campaignId,p_start:start,p_end:end}),
+    controlPlaneSnapshot: async (businessId, windowDays=30) => rpc('enterprise_control_plane_snapshot',{p_business_id:businessId,p_window_days:windowDays}),
     createNetwork: async name => rpc('create_enterprise_partner_network',{p_name:name}),
     listOwnedNetworks: async businessId => rpc('enterprise_list_owned_networks',{p_business_id:businessId}).then(data=>data??[]),
     updateNetwork: async (networkId,name,enabled=true) => rpc('enterprise_update_network',{p_network_id:networkId,p_name:name,p_enabled:enabled}),
