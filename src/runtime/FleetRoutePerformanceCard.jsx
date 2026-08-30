@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, Clock3, Play, TimerReset } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
+import AiAssistPanel from './AiAssistPanel.jsx';
 
 const formatMinutes=value=>value==null?'—':`${Number(value).toFixed(1)} min`;
 const formatPercent=value=>value==null?'—':`${Number(value).toFixed(0)}%`;
@@ -26,6 +27,7 @@ export default function FleetRoutePerformanceCard({ businessId, route }) {
 
   const stops=Array.isArray(performance?.stops)?performance.stops:[];
   const canDispatch=['planned','paused'].includes(route?.status)&&route?.driver_id&&route?.vehicle_id;
+  const hasMeasuredOutcome=Boolean(performance&&(performance.actual_duration_minutes!=null||stops.some(stop=>stop.actual_arrived_at||stop.actual_completed_at)));
   return <section className="fleet-route-performance" aria-label={`Performance for ${route?.name||'route'}`}>
     <div className="compact-actions">
       {canDispatch&&<button className="button primary" type="button" onClick={dispatch} disabled={busy==='dispatch'}><Play size={14}/>{busy==='dispatch'?'Dispatching…':'Dispatch route'}</button>}
@@ -43,6 +45,7 @@ export default function FleetRoutePerformanceCard({ businessId, route }) {
         <div className="reward-stat"><span>Avg dwell</span><strong>{formatMinutes(performance.avg_actual_dwell_minutes)}</strong></div>
         <div className="reward-stat"><span>Dwell variance</span><strong>{formatMinutes(performance.avg_dwell_variance_minutes)}</strong></div>
       </div>
+      {hasMeasuredOutcome&&<AiAssistPanel task="fleet_debrief" context={{route,performance}} title="Fleet route debrief" description="Turns measured ETA, TTL, dwell, stop-completion, and duration outcomes into an operator review." instruction="Identify the largest measured variances and what the dispatcher should inspect before changing future route plans. Never invent a cause that is not in the data."/>}
       {stops.length>0&&<div className="crud-records fleet-stop-performance">{stops.map(stop=><article className="business-row crud-record-row" key={stop.id}>
         <div className="crud-record-main">
           <strong>Stop {stop.stop_order} · {stop.metadata?.display_name||'Location'}</strong>
