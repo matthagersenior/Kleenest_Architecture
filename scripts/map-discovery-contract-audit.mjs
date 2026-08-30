@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root=path.resolve('src');
 const required=[
- ['domains/maps/network.js',['createMapNetworkService','map_network_nearby_v1','ingest-map-candidates-v3','record_location_discovery_event','amenityNamesFrom']],
+ ['domains/maps/network.js',['createMapNetworkService','map_network_nearby_v1','ingest-map-candidates-v3','record_location_discovery_event','amenityNamesFrom','LIVE_DISCOVERY_RETRY_MS','kleenest:map-discovery-recovered','scheduleDiscoveryRetry']],
  ['domains/maps/networkDiscoveryPolicy.js',['NETWORK_DISCOVERY_POLICY','collectOnOpen','enrichExisting','shareNetworkEvents']],
  ['runtime/MapSurface.jsx',["from 'maplibre-gl'",'services?.maps?.nearby','discover:true',"category:'all'",'projectLocationAuthority','placeLogoCandidates','bathroomIntelligence','maplibregl.Marker','/route?add=','placeContact','placeHours','placeFreshness','compactFacts']],
  ['runtime/osmPlaceData.js',['raw_data?.osm_tags','source_metadata','placeHours','placeFreshness','amenityObject']],
@@ -24,6 +24,10 @@ else{
 }
 const map=texts.get('domains/maps/network.js')||'';
 for(const forbidden of ['demoLocations','sampleLocations','mockLocations','fallbackDemo','demo accounts'])if(map.toLowerCase().includes(forbidden.toLowerCase()))missing.push(`domains/maps/network.js: forbidden demo fallback ${forbidden}`);
+if(!/LIVE_DISCOVERY_RETRY_MS\s*=\s*Object\.freeze\(\[30000,120000,300000\]\)/.test(map))missing.push('domains/maps/network.js: degraded discovery retry must remain 30s -> 2m -> 5m');
+if(!map.includes("new CustomEvent('kleenest:map-discovery-recovered'"))missing.push('domains/maps/network.js: recovered discovery event missing');
+if(!/retryAttempt=Math\.min\(retryAttempt\+1,LIVE_DISCOVERY_RETRY_MS\.length-1\)/.test(map))missing.push('domains/maps/network.js: retry backoff must cap at the 5-minute cadence');
+if(!/if\(result\?\.degraded\|\|result\?\.acquisition_status==='unavailable'\)scheduleDiscoveryRetry/.test(map))missing.push('domains/maps/network.js: degraded provider result must schedule automatic recovery');
 const surface=texts.get('runtime/MapSurface.jsx')||'';
 for(const forbidden of ['demoLocations','sampleLocations','mockLocations','demo accounts','fakeLocations','createClient(','supabase.from(','supabase.rpc('])if(surface.toLowerCase().includes(forbidden.toLowerCase()))missing.push(`runtime/MapSurface.jsx: forbidden competing data path ${forbidden}`);
 if(surface.includes('/route?locationId=')||surface.includes('/route?destinationLocationId='))missing.push('runtime/MapSurface.jsx: destination-specific route handoffs must not return');
@@ -39,4 +43,4 @@ if(!/p_amenity_names\s*:\s*amenityNames\.length\s*\?\s*amenityNames\s*:\s*null/.
 if(!/amenity_names\s*:\s*amenityNames/.test(map))missing.push('domains/maps/network.js: live ingestion must receive amenity filters');
 const context=texts.get('AppContext.jsx')||'';for(const forbidden of ['createUniversalDiscoveryService','universalDiscovery'])if(context.includes(forbidden))missing.push(`AppContext.jsx: redundant discovery service ${forbidden}`);
 if(missing.length){console.error(missing.join('\n'));process.exit(1)}
-console.log('Canonical map discovery audit passed: live provider outages degrade to canonical results, persistence is best-effort, and rich Overpass data still projects through the single map authority.');
+console.log('Canonical map discovery audit passed: live provider outages degrade to canonical results, persistence is best-effort, and automatic recovery retries at 30s, 2m, then 5m.');
