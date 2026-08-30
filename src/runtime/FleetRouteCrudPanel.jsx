@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Edit3, Plus, Route as RouteIcon, Save, Trash2, UserRound, Truck } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
+import FleetRoutePerformanceCard from './FleetRoutePerformanceCard.jsx';
 
 const arr = value => Array.isArray(value) ? value : [];
 const idOf = value => value?.id || value?.route_id || '';
@@ -161,7 +162,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
         <div>
           <span className="eyebrow">FLEET DISPATCH</span>
           <h2>Routes & driver assignment</h2>
-          <p className="muted">Create, edit, delete, schedule, and assign Fleet routes to authorized drivers.</p>
+          <p className="muted">Create, assign, dispatch, and measure Fleet routes with driver, vehicle, ETA, duration, TTL, dwell, and stop completion metrics.</p>
         </div>
         <RouteIcon size={22} />
       </div>
@@ -200,13 +201,13 @@ export default function FleetRouteCrudPanel({ businessId }) {
       )}
 
       <div className="crud-records">
-        {!loading && !routes.length && !editing && <p className="muted">No Fleet routes yet. Create the first route and assign a driver when ready.</p>}
+        {!loading && !routes.length && !editing && <p className="muted">No Fleet routes yet. Create the first route and assign a driver and vehicle when ready.</p>}
         {routes.map(route => {
           const routeId = idOf(route);
           const driver = driverById.get(String(route.driver_id));
           const vehicle = vehicleById.get(String(route.vehicle_id));
           return (
-            <article className="business-row crud-record-row" key={routeId}>
+            <article className="business-row crud-record-row fleet-route-record" key={routeId}>
               <div className="crud-record-main">
                 <strong>{labelOf(route)}</strong>
                 <span>{route.status || 'planned'} · {route.distance_miles ?? '—'} mi · {route.stops_count ?? 0} stops</span>
@@ -217,6 +218,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
                 <button className="icon-button" title="Edit route" onClick={() => startEdit(route)}><Edit3 size={15} /></button>
                 <button className="icon-button" title="Delete route" onClick={() => remove(route)} disabled={busy === `delete-${routeId}`}><Trash2 size={15} /></button>
               </div>
+              <FleetRoutePerformanceCard businessId={businessId} route={route}/>
             </article>
           );
         })}
