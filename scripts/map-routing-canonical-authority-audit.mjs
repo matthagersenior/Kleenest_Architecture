@@ -7,17 +7,27 @@ const forbiddenRuntimeFiles=[
   'runtime/MapSurfaceProduction.jsx','runtime/MapSurfaceProductionFixed.jsx','runtime/MapSurfaceStable.jsx','runtime/MapSurfaceV2.jsx','runtime/MapSurfaceV3.jsx',
   'runtime/RouteSurfaceFixed.jsx','runtime/RouteSurfaceMobileFixed.jsx'
 ];
-for(const rel of forbiddenRuntimeFiles)if(fs.existsSync(path.join(src,rel)))errors.push(`Competing runtime source still exists: src/${rel}`);
-const required=['runtime/MapSurface.jsx','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js','domains/routing/cache.js'];
+const forbiddenMapStyles=['runtime/MapSurfaceV3.css','runtime/MapSurfaceProductionFixed.css','runtime/MapSurfacePolish.css'];
+for(const rel of [...forbiddenRuntimeFiles,...forbiddenMapStyles])if(fs.existsSync(path.join(src,rel)))errors.push(`Competing runtime authority still exists: src/${rel}`);
+const required=['runtime/MapSurface.jsx','runtime/MapSurface.css','runtime/RouteSurface.jsx','runtime/CanonicalAppRuntime.jsx','AppContext.jsx','domains/maps/network.js','domains/routing/route.js','domains/routing/cache.js'];
 for(const rel of required)if(!fs.existsSync(path.join(src,rel)))errors.push(`Canonical authority missing: src/${rel}`);
 if(!errors.length){
  const map=fs.readFileSync(path.join(src,'runtime/MapSurface.jsx'),'utf8');
+ const mapCss=fs.readFileSync(path.join(src,'runtime/MapSurface.css'),'utf8');
  const route=fs.readFileSync(path.join(src,'runtime/RouteSurface.jsx'),'utf8');
  const routing=fs.readFileSync(path.join(src,'domains/routing/route.js'),'utf8');
  const runtime=fs.readFileSync(path.join(src,'runtime/CanonicalAppRuntime.jsx'),'utf8');
  const context=fs.readFileSync(path.join(src,'AppContext.jsx'),'utf8');
  const packageJson=fs.readFileSync(path.join(repo,'package.json'),'utf8');
  if(!map.includes("from 'maplibre-gl'"))errors.push('MapSurface.jsx must own the MapLibre renderer.');
+ if(!map.includes("import './MapSurface.css'"))errors.push('MapSurface.jsx must import the canonical MapSurface.css.');
+ const localMapCssImports=[...map.matchAll(/import\s+['"]\.\/MapSurface[^'"]*\.css['"]/g)].map(match=>match[0]);
+ if(localMapCssImports.length!==1)errors.push(`MapSurface.jsx must import exactly one local map stylesheet; found ${localMapCssImports.length}.`);
+ if(/MapSurface(?:V\d+|Production|Stable|Fixed|Polish)\.css/.test(map))errors.push('MapSurface.jsx must not import versioned or legacy map stylesheets.');
+ if(/map-v\d|map-fixed-|production-fixed/i.test(map))errors.push('MapSurface.jsx must not expose generation-specific presentation classes.');
+ if(!map.includes('className="page map-surface"'))errors.push('MapSurface.jsx must use the canonical map-surface root class.');
+ if(/leaflet/i.test(mapCss))errors.push('MapSurface.css must not contain Leaflet-era selectors or rules.');
+ for(const token of ['.map-surface','.map-canvas','.maplibre-host','.kleenest-maplibre-marker','.map-selection','.amenity-picker'])if(!mapCss.includes(token))errors.push(`MapSurface.css missing canonical presentation token: ${token}`);
  if(!map.includes('services?.maps?.nearby'))errors.push('MapSurface.jsx must consume services.maps.nearby.');
  if(/from ['\"]leaflet['\"]|from ['\"]react-leaflet['\"]|require\(['\"]leaflet['\"]\)/.test(map))errors.push('MapSurface.jsx must not use Leaflet.');
  if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route handoff mode.');
@@ -47,4 +57,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface, one RouteSurface, one map service, one routing service/cache/live authority, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one RouteSurface, one map service, one routing service/cache/live authority, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
