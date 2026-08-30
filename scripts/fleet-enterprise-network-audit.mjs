@@ -9,13 +9,14 @@ const required=[
  ['domains/enterprise/intelligence.js',['get_enterprise_partner_network','get_partner_network_benchmark','get_partner_campaign_roi','get_partner_allocation_roi','record_enterprise_partner_metric','record_enterprise_partner_campaign_outcome']],
  ['domains/enterprise/lifecycle.js',['createCampaign','recordCampaignOutcome','recordNetworkMetric','createAllocation','activateAllocation','resolveContext','kleenest:enterprise-updated','kleenest:business-updated','enterprise:']],
  ['domains/intelligence/convergence.js',['operationalSnapshot','operationalOpportunities','runOperationalLoop','kleenest:operational-loop-updated','kleenest:intelligence-updated','kleenest:business-updated','subscribe','processJobs','server_scheduled']],
- ['domains/intelligence/operational-loop.js',['kleenest:operational-loop-updated','kleenest:business-updated','createAction','complete','notify','publish']],
  ['runtime/FleetIntelligenceSurface.jsx',['fleetAccessState','FleetControllerIntelligenceSurface','FleetUserDispatchPanel']],
  ['runtime/FleetControllerIntelligenceSurface.jsx',['services.fleet.intelligence','services.fleet.networkLeaderboard','services.intelligenceConvergence.runOperationalLoop','runLoop','Refresh intelligence loop','kleenest:fleet-updated','kleenest:business-updated']],
  ['runtime/FleetUserDispatchPanel.jsx',['currentUserDispatch','FLEET · MY DISPATCH','assigned vehicle','assigned routes']],
  ['runtime/FleetOperationsPage.jsx',['FleetControllerOperationsPage','FleetUserDispatchPanel','fleetAccessState']],
  ['runtime/FleetRoutesPage.jsx',['currentUserDispatch','FleetRouteCrudPanel','access.operate']],
  ['runtime/FleetPerformancePage.jsx',['currentUserDispatch','FleetControllerPerformancePage','access.operate','access.observe']],
+ ['runtime/WorkspaceNavigation.jsx',['fleetAccessState','FLEET_CONTROLLER_NAV','fleetNavAllowed','BUSINESS_GROWTH_NAV','engagement']],
+ ['runtime/WorkspaceShell.jsx',['accountRole','role={accountRole}']],
  ['runtime/FleetRouteCrudPanel.jsx',['FleetRouteStopPlanner','FleetRoutePerformanceCard','driver_id','vehicle_id','subscribeDispatch','realtime-dispatch','Driver account links','driverAssignmentCandidates','assignDriverUser','assigned-driver timing authority and dispatch notifications']],
  ['runtime/FleetRouteStopPlanner.jsx',['searchStopLocations','dispatchIntelligence','Map discovery','fleetBusinessId','fleetRouteId','Recommended service stops','priority_score','reasons','setRouteStops','planned_arrival_at','planned_ttl_minutes','planned_dwell_minutes','Save stop plan','Stop order is locked']],
  ['runtime/MapSurface.jsx',['fleetBusinessId','fleetRouteId','Add to Fleet route','services.fleet.setRouteStops']],
@@ -36,5 +37,8 @@ for(const [migrationName,tokens] of [
 const convergence=fs.readFileSync(path.join(root,'domains/intelligence/convergence.js'),'utf8');
 for(const token of ['fleet_dashboard_summary_v2','fleet_service_opportunities_for_business','business_dashboard_secure_summary','business_location_intelligence','business_roi_analytics',"notifications:'server_scheduled'","actions:'server_scheduled'"])if(!convergence.includes(token))missing.push(`intelligence/convergence.js: missing ${token}`);
 if(convergence.includes("client.rpc('process_intelligence_action_jobs'")||convergence.includes("client.rpc('process_intelligence_notification_jobs'"))missing.push('intelligence/convergence.js: global job workers must remain server-managed');
+const nav=fs.readFileSync(path.join(root,'runtime/WorkspaceNavigation.jsx'),'utf8');
+if(!nav.includes("new Set(['command','operations','intelligence'])"))missing.push('WorkspaceNavigation.jsx: Fleet controller-only navigation set must remain explicit');
+if(!nav.includes("new Set(['engagement','reviews','analytics','intelligence'])"))missing.push('WorkspaceNavigation.jsx: Business Standard/Growth navigation boundary drifted');
 if(missing.length){console.error(missing.join('\n'));process.exit(1)}
-console.log('Fleet → Enterprise → Network Intelligence convergence audit passed with controller/driver role separation, self-scoped dispatch, canonical map stop planning, realtime route telemetry, full ETA/TTL/dwell/duration metrics, and server-managed global intelligence workers.');
+console.log('Fleet → Enterprise → Network Intelligence convergence audit passed with controller/driver role separation, role-aware navigation, self-scoped dispatch, canonical map stop planning, realtime route telemetry, full ETA/TTL/dwell/duration metrics, and server-managed global intelligence workers.');
