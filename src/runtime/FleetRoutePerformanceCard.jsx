@@ -3,6 +3,7 @@ import { Activity, Clock3, Play, TimerReset } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 
 const formatMinutes=value=>value==null?'—':`${Number(value).toFixed(1)} min`;
+const formatPercent=value=>value==null?'—':`${Number(value).toFixed(0)}%`;
 const formatTime=value=>value?new Date(value).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'—';
 
 export default function FleetRoutePerformanceCard({ businessId, route }) {
@@ -34,16 +35,26 @@ export default function FleetRoutePerformanceCard({ businessId, route }) {
     {performance&&<>
       <div className="reward-stats fleet-route-metrics">
         <div className="reward-stat"><span>Stops</span><strong>{performance.completed_stops??0}/{performance.total_stops??0}</strong></div>
+        <div className="reward-stat"><span>On-time arrivals</span><strong>{formatPercent(performance.arrived_by_plan_pct)}</strong></div>
         <div className="reward-stat"><span>ETA variance</span><strong>{formatMinutes(performance.avg_eta_variance_minutes)}</strong></div>
+        <div className="reward-stat"><span>TTL variance</span><strong>{formatMinutes(performance.avg_ttl_variance_minutes)}</strong></div>
         <div className="reward-stat"><span>Actual duration</span><strong>{formatMinutes(performance.actual_duration_minutes)}</strong></div>
-        <div className="reward-stat"><span>Dwell</span><strong>{formatMinutes(performance.avg_actual_dwell_minutes)}</strong></div>
+        <div className="reward-stat"><span>Duration variance</span><strong>{formatMinutes(performance.duration_variance_minutes)}</strong></div>
+        <div className="reward-stat"><span>Avg dwell</span><strong>{formatMinutes(performance.avg_actual_dwell_minutes)}</strong></div>
+        <div className="reward-stat"><span>Dwell variance</span><strong>{formatMinutes(performance.avg_dwell_variance_minutes)}</strong></div>
       </div>
       {stops.length>0&&<div className="crud-records fleet-stop-performance">{stops.map(stop=><article className="business-row crud-record-row" key={stop.id}>
-        <div className="crud-record-main"><strong>Stop {stop.stop_order}</strong><span>{stop.status} · planned {formatTime(stop.planned_arrival_at)} · actual {formatTime(stop.actual_arrived_at)}</span><span><Clock3 size={13}/> TTL {formatMinutes(stop.planned_ttl_minutes)} · ETA Δ {formatMinutes(stop.eta_variance_minutes)} · dwell {formatMinutes(stop.actual_dwell_minutes)}</span></div>
+        <div className="crud-record-main">
+          <strong>Stop {stop.stop_order} · {stop.metadata?.display_name||'Location'}</strong>
+          <span>{stop.status} · planned {formatTime(stop.planned_arrival_at)} · actual {formatTime(stop.actual_arrived_at)}</span>
+          <span><Clock3 size={13}/> ETA Δ {formatMinutes(stop.eta_variance_minutes)} · TTL planned {formatMinutes(stop.planned_ttl_minutes)} / actual {formatMinutes(stop.actual_ttl_minutes)} / Δ {formatMinutes(stop.ttl_variance_minutes)}</span>
+          <span>Dwell planned {formatMinutes(stop.planned_dwell_minutes)} / actual {formatMinutes(stop.actual_dwell_minutes)} / Δ {formatMinutes(stop.dwell_variance_minutes)}</span>
+        </div>
         <div className="compact-actions">
           {!stop.actual_arrived_at&&<button className="button secondary" type="button" onClick={()=>timing(stop.id,'arrived')} disabled={busy.startsWith(stop.id)}><Activity size={13}/>Arrived</button>}
           {stop.status==='arrived'&&<button className="button secondary" type="button" onClick={()=>timing(stop.id,'service_started')} disabled={busy.startsWith(stop.id)}>Start service</button>}
           {stop.status!=='completed'&&stop.status!=='skipped'&&<button className="button primary" type="button" onClick={()=>timing(stop.id,'completed')} disabled={busy.startsWith(stop.id)}>Complete</button>}
+          {stop.status!=='completed'&&stop.status!=='skipped'&&<button className="button secondary" type="button" onClick={()=>timing(stop.id,'skipped')} disabled={busy.startsWith(stop.id)}>Skip</button>}
         </div>
       </article>)}</div>}
     </>}
