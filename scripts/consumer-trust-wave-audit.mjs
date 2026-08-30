@@ -22,6 +22,11 @@ const checks = [
   ['Evidence journey exposes authoritative trust impact', /TrustContributionImpact/, 'src/runtime/LocationEvidencePage.jsx'],
   ['Trust impact compares canonical trust, evidence, freshness, and staleness', /trust score[\s\S]*evidence signals[\s\S]*freshness[\s\S]*freshness state/, 'src/runtime/TrustContributionImpact.jsx'],
   ['Trust impact avoids synthetic rewards', /backend-returned|canonical location authority|unchanged scores are valid/i, 'src/runtime/TrustContributionImpact.jsx'],
+  ['Quest service reads active participation through the canonical RPC', /quest_my_active_progress/, 'src/domains/progression/quests.js'],
+  ['Quest surface loads available and active quest state together', /services\.quests\.available\(30\)[\s\S]*services\.quests\.active\(20\)/, 'src/runtime/QuestSurface.jsx'],
+  ['Quest surface shows backend participation progress and earned XP', /xp_earned[\s\S]*completed[\s\S]*last_event_at/, 'src/runtime/QuestSurface.jsx'],
+  ['Active quest RPC is security invoker and authenticated-only', /security invoker[\s\S]*revoke execute[\s\S]*anon[\s\S]*grant execute[\s\S]*authenticated/i, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
+  ['Active quest RPC scopes participation and step events to auth uid', /p\.user_id=auth\.uid\(\)[\s\S]*e\.user_id=auth\.uid\(\)/, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
 ];
 
 const failures = [];
@@ -40,4 +45,4 @@ if (failures.length) {
 const visit = read('src/runtime/VisitSurface.jsx');
 const usesInjectedPhoto = /services\.locationPhoto\.uploadEvidencePhoto/.test(visit);
 const usesCompatibilityPhoto = /uploadEvidencePhoto/.test(visit);
-console.log(`Consumer Trust Wave audit passed (${checks.length} contracts) with verified review drafting, canonical evidence interpretation, before/after trust impact, and authoritative progression refresh. Photo path: ${usesInjectedPhoto ? 'injected service' : usesCompatibilityPhoto ? 'compatibility export' : 'missing'}.`);
+console.log(`Consumer Trust Wave audit passed (${checks.length} contracts) with verified review drafting, canonical evidence interpretation, before/after trust impact, authoritative progression refresh, and live user-scoped quest participation. Photo path: ${usesInjectedPhoto ? 'injected service' : usesCompatibilityPhoto ? 'compatibility export' : 'missing'}.`);
