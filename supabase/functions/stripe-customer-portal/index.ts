@@ -1,0 +1,8 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import Stripe from "npm:stripe@18.5.0";
+import { createClient } from "npm:@supabase/supabase-js@2.57.0";
+const stripe=new Stripe(Deno.env.get('STRIPE_SECRET_KEY')||'',{apiVersion:'2025-07-30.basil'});
+const admin=createClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'');
+const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
+const defaultReturn='https://matthagersenior.github.io/Kleenest_Architecture/#/pricing?portal=return';
+Deno.serve(async req=>{if(req.method==='OPTIONS')return new Response('ok',{headers});try{const auth=req.headers.get('Authorization');if(!auth)return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers});const token=auth.replace(/^Bearer\s+/i,'');const {data:{user},error:authError}=await admin.auth.getUser(token);if(authError||!user)return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers});const body=await req.json().catch(()=>({}));const {data:billing,error:billingError}=await admin.from('stripe_billing_customers').select('stripe_customer_id').eq('user_id',user.id).maybeSingle();if(billingError)throw billingError;if(!billing?.stripe_customer_id)throw new Error('No Stripe billing account exists for this user');const session=await stripe.billingPortal.sessions.create({customer:billing.stripe_customer_id,return_url:body?.returnUrl||defaultReturn});return new Response(JSON.stringify({url:session.url}),{headers});}catch(error){return new Response(JSON.stringify({error:error instanceof Error?error.message:'Unable to open billing portal'}),{status:400,headers});}});
