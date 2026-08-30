@@ -5,6 +5,41 @@ const nestedTags = place => {
   return source;
 };
 const first = (...values) => values.map(v => String(v ?? '').trim()).find(Boolean) || '';
+const normalizeBrand = value => String(value ?? '').trim().toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+const canonicalBrand = value => normalizeBrand(value).replace(/ /g, '');
+
+const BRAND_DOMAINS = {
+  starbucks:'starbucks.com',mcdonalds:'mcdonalds.com',target:'target.com',walmart:'walmart.com',walgreens:'walgreens.com',cvs:'cvs.com',costco:'costco.com',
+  'whole foods':'wholefoodsmarket.com',kroger:'kroger.com',shell:'shell.com',bp:'bp.com',exxon:'exxonmobil.com',exxonmobil:'exxonmobil.com',chevron:'chevron.com',
+  '7 eleven':'7-eleven.com','chick fil a':'chick-fil-a.com',subway:'subway.com','taco bell':'tacobell.com',dunkin:'dunkindonuts.com',panera:'panerabread.com',
+  publix:'publix.com',aldi:'aldi.us','sams club':'samsclub.com','home depot':'homedepot.com',lowes:'lowes.com'
+};
+const BRAND_SLUGS = {
+  starbucks:'starbucks',mcdonalds:'mcdonalds',target:'target',walmart:'walmart',walgreens:'walgreens',cvs:'cvs-health',costco:'costco',
+  'whole foods':'whole-foods-market',kroger:'kroger',shell:'shell',bp:'bp',exxon:'exxonmobil',exxonmobil:'exxonmobil',chevron:'chevron',
+  '7 eleven':'7--eleven','chick fil a':'chick-fil-a',subway:'subway','taco bell':'taco-bell',dunkin:'dunkin',panera:'panera-bread',publix:'publix',
+  aldi:'aldi','sams club':'sams-club','home depot':'the-home-depot',lowes:'lowes'
+};
+const brandKey = place => {
+  const text = canonicalBrand([place?.brand, place?.brand_name, place?.operator_name, place?.business_name, place?.name, nestedTags(place).brand, nestedTags(place).operator].filter(Boolean).join(' '));
+  return Object.keys(BRAND_SLUGS).find(key => { const candidate=canonicalBrand(key); return text===candidate || text.includes(candidate); }) || '';
+};
+const businessIdentity = place => {
+  const id=place?.business_id||place?.businessId;
+  if(!id || typeof window==='undefined') return null;
+  try { const raw=window.localStorage.getItem(`kleenest.map.identity.${id}`); return raw?JSON.parse(raw):null; } catch { return null; }
+};
+const hostname = raw => {
+  if(!raw) return '';
+  try { const url=String(raw).match(/^https?:\/\//i)?String(raw):`https://${raw}`; return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; }
+};
+const domainFromPlace = place => {
+  const tags=nestedTags(place);
+  const direct=hostname(first(place?.website_url,place?.websiteUrl,place?.website,place?.url,place?.domain,tags.website,tags['contact:website']));
+  if(direct) return direct;
+  const key=brandKey(place);
+  return key?BRAND_DOMAINS[key]||'':'';
+};
 
 export const osmTags = (place = {}) => nestedTags(place);
 
@@ -44,15 +79,12 @@ export function placeContact(place = {}) {
 }
 
 export function placeLogoCandidates(place = {}) {
-  const tags = nestedTags(place);
-  const direct = first(place.logo_url, place.logoUrl, place.business_logo_url, place.businessLogoUrl, place.brand_logo_url, place.brandLogoUrl, place.image_url, place.image, tags.logo, tags['brand:logo'], tags.image);
-  const brand = placeBrand(place).toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-  const domains = {starbucks:'starbucks.com',mcdonalds:'mcdonalds.com',target:'target.com',walmart:'walmart.com',walgreens:'walgreens.com',cvs:'cvs.com',costco:'costco.com',kroger:'kroger.com',shell:'shell.com',bp:'bp.com',exxon:'exxonmobil.com',chevron:'chevron.com',subway:'subway.com','taco bell':'tacobell.com','chick fil a':'chick-fil-a.com',dunkin:'dunkindonuts.com',panera:'panerabread.com',publix:'publix.com',aldi:'aldi.us','home depot':'homedepot.com',lowes:'lowes.com'};
-  const domain = Object.entries(domains).find(([key]) => brand === key || brand.includes(key))?.[1] || '';
-  const urls = [];
-  if (direct) urls.push(direct);
-  if (domain) urls.push(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`);
-  if (domain) urls.push(`https://${domain}/favicon.ico`);
+  const tags=nestedTags(place), identity=businessIdentity(place), key=brandKey(place), domain=domainFromPlace(place), urls=[];
+  const direct=[identity?.logoUrl,place.logo_url,place.logoUrl,place.business_logo_url,place.businessLogoUrl,place.brand_logo_url,place.brandLogoUrl,place.image_url,place.image,tags.logo,tags['brand:logo'],tags.image].map(v=>String(v??'').trim()).filter(Boolean);
+  urls.push(...direct);
+  if(key&&BRAND_SLUGS[key]) urls.push(`https://cdn.simpleicons.org/${BRAND_SLUGS[key]}/111827`);
+  if(domain) urls.push(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`);
+  if(domain) urls.push(`https://${domain}/favicon.ico`);
   return [...new Set(urls)];
 }
 export const placeLogo = place => placeLogoCandidates(place)[0] || '';
