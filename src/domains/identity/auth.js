@@ -1,7 +1,12 @@
+const normalizeBase=value=>String(value||'').trim().replace(/\/+$/,'');
+const normalizePath=value=>`/${String(value||'/').replace(/^\/+/, '')}`;
+
 export function createIdentityService(client, { appUrl = path => path } = {}) {
   if (!client) throw new Error('Supabase client is required.');
-  const oauth = provider => client.auth.signInWithOAuth({ provider, options: { redirectTo: appUrl('/') } });
-  const emailRedirect = () => appUrl('/profile');
+  const configuredPublicBase=normalizeBase(import.meta.env.VITE_PUBLIC_APP_URL);
+  const redirectUrl=path=>configuredPublicBase?`${configuredPublicBase}${normalizePath(path)}`:appUrl(path);
+  const oauth = provider => client.auth.signInWithOAuth({ provider, options: { redirectTo: redirectUrl('/') } });
+  const emailRedirect = () => redirectUrl('/profile');
   return Object.freeze({
     getCurrentUser: async () => { const { data, error } = await client.auth.getUser(); if (error) throw error; return data.user ?? null; },
     signUp: ({ email, password, fullName = '' }) => client.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: emailRedirect() } }),
