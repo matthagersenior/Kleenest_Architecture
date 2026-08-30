@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Plus, Save, Search, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Save, Search, Sparkles, Trash2 } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 
 const toLocal=value=>{if(!value)return'';const d=new Date(value);if(Number.isNaN(d.getTime()))return'';const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
@@ -11,6 +11,7 @@ export default function FleetRouteStopPlanner({businessId,route}){
   const locked=Boolean(route?.dispatch_locked)||['active','completed','cancelled'].includes(route?.status);
   const [query,setQuery]=useState('');
   const [results,setResults]=useState([]);
+  const [dispatchIntel,setDispatchIntel]=useState(null);
   const [stops,setStops]=useState([]);
   const [busy,setBusy]=useState('');
   const [error,setError]=useState('');
@@ -36,16 +37,36 @@ export default function FleetRouteStopPlanner({businessId,route}){
 
   const selectedIds=useMemo(()=>new Set(stops.map(stop=>String(stop.location_id))),[stops]);
   const search=async event=>{event.preventDefault();if(!query.trim())return;setBusy('search');setError('');try{setResults(await services.fleet.searchStopLocations(query.trim()))}catch(e){setError(e.message||'Unable to search locations.')}finally{setBusy('')}};
-  const add=result=>{if(selectedIds.has(String(result.id)))return;setStops(current=>[...current,{location_id:result.id,display_name:result.name||'Location',address:[result.address,result.city,result.state].filter(Boolean).join(', '),planned_arrival_at:'',planned_ttl_minutes:'',planned_dwell_minutes:'',metadata:{display_name:result.name||'Location',address:[result.address,result.city,result.state].filter(Boolean).join(', ')}}]);};
+  const loadDispatchIntel=async()=>{setBusy('intel');setError('');try{setDispatchIntel(await services.fleet.dispatchIntelligence(businessId,routeId,12))}catch(e){setError(e.message||'Unable to load dispatch intelligence.')}finally{setBusy('')}};
+  const add=result=>{
+    const locationId=result.id||result.location_id;
+    if(!locationId||selectedIds.has(String(locationId)))return;
+    const address=[result.address,result.city,result.state].filter(Boolean).join(', ');
+    setStops(current=>[...current,{
+      location_id:locationId,
+      display_name:result.name||'Location',
+      address,
+      planned_arrival_at:'',
+      planned_ttl_minutes:'',
+      planned_dwell_minutes:'',
+      metadata:{display_name:result.name||'Location',address,dispatch_priority_score:result.priority_score??null,dispatch_reasons:result.reasons??[]}
+    }]);
+  };
   const update=(index,key,value)=>setStops(current=>current.map((stop,i)=>i===index?{...stop,[key]:value}:stop));
   const move=(index,delta)=>setStops(current=>{const next=[...current];const target=index+delta;if(target<0||target>=next.length)return current;[next[index],next[target]]=[next[target],next[index]];return next});
   const remove=index=>setStops(current=>current.filter((_,i)=>i!==index));
   const save=async()=>{setBusy('save');setError('');setMessage('');try{await services.fleet.setRouteStops(businessId,routeId,stops.map(stop=>({location_id:stop.location_id,planned_arrival_at:toIso(stop.planned_arrival_at),planned_ttl_minutes:stop.planned_ttl_minutes===''?null:Number(stop.planned_ttl_minutes),planned_dwell_minutes:stop.planned_dwell_minutes===''?null:Number(stop.planned_dwell_minutes),metadata:{...stop.metadata,display_name:stop.display_name,address:stop.address}})));setMessage('Stop plan saved. Dispatch will lock this order.')}catch(e){setError(e.message||'Unable to save route stops.')}finally{setBusy('')}};
 
+  const candidates=Array.isArray(dispatchIntel?.candidate_stops)?dispatchIntel.candidate_stops:[];
+  const readyDrivers=(dispatchIntel?.drivers||[]).filter(item=>item.ready).length;
+  const readyVehicles=(dispatchIntel?.vehicles||[]).filter(item=>item.ready).length;
+
   return <section className="fleet-stop-planner">
     <div className="panel-heading"><div><span className="eyebrow">STOP PLAN</span><h3>Ordered route stops</h3><p className="muted">Search verified Kleenest locations and set planned arrival, TTL, and dwell before dispatch.</p></div></div>
+    {!locked&&<div className="compact-actions"><button className="button secondary" type="button" onClick={loadDispatchIntel} disabled={busy==='intel'}><Sparkles size={14}/>{busy==='intel'?'Analyzing…':'Dispatch intelligence'}</button>{dispatchIntel&&<span className="status-pill">{readyDrivers} ready drivers · {readyVehicles} ready vehicles</span>}</div>}
     {locked?<p className="state">Stop order is locked for this dispatched route.</p>:<form className="compact-actions" onSubmit={search}><label className="form-field"><span>Find a location</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Name, address, city, restroom…"/></label><button className="button secondary" type="submit" disabled={busy==='search'}><Search size={14}/>{busy==='search'?'Searching…':'Search'}</button></form>}
     {error&&<p className="form-error" role="alert">{error}</p>}{message&&<p className="form-success" role="status">{message}</p>}
+    {!locked&&candidates.length>0&&<section className="detail-panel fleet-dispatch-intelligence"><span className="eyebrow">DISPATCH INTELLIGENCE</span><h4>Recommended service stops</h4><p className="muted">Ranked from authoritative service-opportunity facts. Generative AI can later explain and optimize these same recommendations without changing route authority.</p><div className="crud-records">{candidates.map(candidate=><article className="business-row crud-record-row" key={candidate.location_id}><div className="crud-record-main"><strong>{candidate.name}</strong><span>Priority {candidate.priority_score} · {(candidate.reasons||[]).join(' · ')||'service opportunity'}</span></div><button className="button secondary" type="button" onClick={()=>add(candidate)} disabled={selectedIds.has(String(candidate.location_id))}><Plus size={13}/>{selectedIds.has(String(candidate.location_id))?'Added':'Add recommended stop'}</button></article>)}</div></section>}
     {!locked&&results.length>0&&<div className="crud-records">{results.slice(0,8).map(result=><article className="business-row crud-record-row" key={result.id}><div className="crud-record-main"><strong>{result.name||'Location'}</strong><span>{[result.address,result.city,result.state].filter(Boolean).join(', ')}</span></div><button className="button secondary" type="button" onClick={()=>add(result)} disabled={selectedIds.has(String(result.id))}><Plus size={13}/>{selectedIds.has(String(result.id))?'Added':'Add stop'}</button></article>)}</div>}
     <div className="crud-records fleet-stop-plan-list">{stops.map((stop,index)=><article className="business-row crud-record-row" key={`${stop.location_id}:${index}`}><div className="crud-record-main"><strong>#{index+1} · {stop.display_name}</strong><span>{stop.address||stop.location_id}</span><div className="form-row"><label className="form-field"><span>Planned arrival</span><input type="datetime-local" value={stop.planned_arrival_at} disabled={locked} onChange={e=>update(index,'planned_arrival_at',e.target.value)}/></label><label className="form-field"><span>TTL (min)</span><input type="number" min="0" step="1" value={stop.planned_ttl_minutes} disabled={locked} onChange={e=>update(index,'planned_ttl_minutes',e.target.value)}/></label><label className="form-field"><span>Dwell (min)</span><input type="number" min="0" step="1" value={stop.planned_dwell_minutes} disabled={locked} onChange={e=>update(index,'planned_dwell_minutes',e.target.value)}/></label></div></div>{!locked&&<div className="compact-actions"><button className="icon-button" type="button" title="Move stop up" disabled={index===0} onClick={()=>move(index,-1)}><ArrowUp size={14}/></button><button className="icon-button" type="button" title="Move stop down" disabled={index===stops.length-1} onClick={()=>move(index,1)}><ArrowDown size={14}/></button><button className="icon-button" type="button" title="Remove stop" onClick={()=>remove(index)}><Trash2 size={14}/></button></div>}</article>)}</div>
     {!locked&&<div className="hero-actions"><button className="button primary" type="button" onClick={save} disabled={busy==='save'}><Save size={14}/>{busy==='save'?'Saving…':'Save stop plan'}</button></div>}
