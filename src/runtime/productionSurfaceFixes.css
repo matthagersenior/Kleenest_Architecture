@@ -15,6 +15,22 @@
 .app a:not([class*="button"]):not(.brand-mark):hover{opacity:.82}
 .app .workspace-nav-link,.app .workspace-icon-action,.app .brand-mark{border-bottom:0!important}
 
+/* Tier navigation reads as a purposeful workspace, not a row of undifferentiated links. */
+.workspace-nav{align-items:stretch!important;gap:10px!important}
+.workspace-nav-group{position:relative;gap:4px!important;padding:0 8px 0 0;border-right:1px solid color-mix(in srgb,var(--line,#dfe5ef) 78%,transparent)}
+.workspace-nav-group:last-child{border-right:0}
+.workspace-nav-group-label{display:inline-flex!important;align-items:center;gap:4px;padding:0 4px;color:var(--muted,#667085);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.workspace-nav-link{min-height:36px!important;display:inline-flex!important;align-items:center!important;border-radius:10px!important;padding:0 9px!important;transition:background .16s,border-color .16s,color .16s,transform .16s!important}
+.workspace-nav-link:hover{transform:translateY(-1px)}
+.workspace-nav-link.active{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent,#5367d9) 24%,var(--line,#dfe5ef))}
+
+/* Bathroom discovery has two obvious, adjacent navigation choices. */
+.place-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.place-navigation-actions{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px;flex:1 1 360px}
+.place-navigation-actions button{min-height:44px;border-radius:13px;font-weight:900}
+.place-action-details{min-height:44px;border-radius:13px}
+.place-action-primary{box-shadow:0 8px 18px color-mix(in srgb,var(--accent,#5367d9) 16%,transparent)}
+
 /* Game Center is a primary engagement destination, not a plain inline link. */
 a[href$="/games"]{display:inline-flex!important;align-items:center;justify-content:center;gap:8px;padding:11px 16px!important;border:1px solid rgba(86,54,190,.22)!important;border-radius:14px!important;background:linear-gradient(135deg,#5b32c8,#7b61ff)!important;color:#fff!important;box-shadow:0 10px 24px rgba(91,50,200,.22);font-weight:900!important;text-decoration:none!important}
 a[href$="/games"]:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(91,50,200,.28);opacity:1!important}
@@ -32,8 +48,9 @@ a[href$="/games"]:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(9
 .social-capability-card span{color:#667085;font-size:12px;line-height:1.45}
 .social-capability-card b{font-size:22px;line-height:1;color:#101828}
 .social-capability-card .social-capability-action{margin-top:auto;color:#3047a5;font-size:12px;font-weight:900}
-@media(max-width:900px){.social-capability-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.social-capability-grid{grid-template-columns:1fr}.map-v3 .map-canvas{min-height:410px}.map-v3 .map-card{padding:14px}}
+@media(max-width:1000px){.workspace-nav-group-label{display:none!important}.workspace-nav-group{border-right:0;padding-right:0}}
+@media(max-width:900px){.social-capability-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-nav{gap:5px!important}}
+@media(max-width:600px){.social-capability-grid{grid-template-columns:1fr}.map-v3 .map-canvas{min-height:410px}.map-v3 .map-card{padding:14px}.place-navigation-actions{grid-template-columns:1fr}.place-action-details{width:100%}}
 
 /* Never allow the loading treatment to cover an initialized map after a resize. */
 .map-v3 .leaflet-container~.map-loading{pointer-events:none}
