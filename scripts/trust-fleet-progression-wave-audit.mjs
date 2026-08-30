@@ -29,6 +29,11 @@ const checks=[
  ['Fleet service exposes dispatch signal policy',['dispatchSignalPolicy','updateDispatchSignalPolicy','fleet_update_dispatch_signal_policy'],'src/domains/fleet/operations.js'],
  ['Fleet dispatch policy UI exposes manager-adjustable thresholds',['Occupancy-aware ranking','Fresh for (minutes)','High utilization threshold','Queue threshold','Save signal policy'],'src/runtime/FleetDispatchSignalPolicyPanel.jsx'],
  ['Fleet recommendations expose occupancy facts and policy',['FleetDispatchSignalPolicyPanel','occupancyText','occupancy_summary','dispatch_occupancy_summary','authoritative dispatch'],'src/runtime/FleetRouteStopPlanner.jsx'],
+ ['Follow mutation evaluates community badges',['toggle_follow_user','evaluate_user_badges(v_user)','grant execute on function public.toggle_follow_user(uuid) to authenticated'],'supabase/migrations/20260830003400_progression_fleet_operational_summary_v1.sql'],
+ ['Fleet operational summary is Fleet-access scoped',['fleet_operational_signal_summary','fleet_observe_access','route_completed','route_failed','job_completed','job_failed'],'supabase/migrations/20260830003400_progression_fleet_operational_summary_v1.sql'],
+ ['Fleet service exposes operational signal summary',['operationalSignals','fleet_operational_signal_summary'],'src/domains/fleet/operations.js'],
+ ['Fleet routes surface operational signals',['FleetOperationalSignalsPanel','access.observe'],'src/runtime/FleetRoutesPage.jsx'],
+ ['Fleet operational panel shows geofence and job outcomes',['24-hour operational signals','geofence entries','dwell events','completed','failed'],'src/runtime/FleetOperationalSignalsPanel.jsx'],
  ['Fleet operational notification trigger exists',['trg_fleet_operational_notification'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Fleet operational notification covers failures',['route_failed','job_failed'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Fleet geofence notification trigger exists',['trg_fleet_geofence_notification'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
@@ -51,4 +56,4 @@ for(const [label,contracts,file] of checks){
  }
 }
 if(failures.length){console.error('Trust + Fleet Operations + Progression wave audit FAILED');failures.forEach(x=>console.error(`- ${x}`));process.exit(1)}
-console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): counted amenity evidence, privacy-safe occupancy intelligence, comprehensive badges/rewards, configurable occupancy-aware Fleet dispatch, and source-event-driven Fleet owner inbox/push notifications are converged.`);
+console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): counted amenity evidence, privacy-safe occupancy intelligence, comprehensive automatic badge/reward evaluation, configurable occupancy-aware Fleet dispatch, event-driven owner notifications, and operational signal summaries are converged.`);
