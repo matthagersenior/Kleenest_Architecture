@@ -1,0 +1,42 @@
+import { useMemo, useState } from 'react';
+import { Check, RefreshCw, Sparkles } from 'lucide-react';
+import { useAppContext } from '../AppContext.jsx';
+
+export default function AiAssistPanel({
+  task,
+  context,
+  instruction='',
+  title='AI Assist',
+  description='Grounded in the current Kleenest data on this screen.',
+  actionLabel='Ask AI',
+  applyLabel='Use suggestion',
+  onApply=null,
+  className=''
+}){
+  const {services}=useAppContext();
+  const [result,setResult]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const contextKey=useMemo(()=>{try{return JSON.stringify(context??{}).slice(0,12000)}catch{return String(Date.now())}},[context]);
+  const run=async()=>{
+    setBusy(true);setError('');
+    try{
+      const response=await services.intelligenceConvergence.aiAssist({task,context,instruction});
+      setResult(response);
+    }catch(e){setError(e?.message||'AI Assist is unavailable.');}
+    finally{setBusy(false);}
+  };
+  const apply=()=>{if(result?.answer&&typeof onApply==='function')onApply(result.answer,result);};
+  return <section className={`detail-panel ai-assist-panel ${className}`.trim()} data-context-key={contextKey.length}>
+    <div className="panel-heading">
+      <div><span className="eyebrow">AI ASSIST</span><h3>{title}</h3><p className="muted">{description}</p></div>
+      <Sparkles size={20}/>
+    </div>
+    <div className="hero-actions">
+      <button className="button secondary" type="button" onClick={run} disabled={busy}><RefreshCw size={14}/>{busy?'Thinking…':result?'Refresh AI':'Ask AI'}</button>
+      {result?.answer&&onApply&&<button className="button primary" type="button" onClick={apply}><Check size={14}/>{applyLabel}</button>}
+    </div>
+    {error&&<p className="form-error" role="alert">{error}</p>}
+    {result?.answer&&<div className="metric-card ai-assist-answer"><strong>{result.provider==='openai'?'Model-assisted recommendation':'Grounded recommendation'}</strong><span>{result.answer}</span><small>Review required before any change is applied.</small></div>}
+  </section>;
+}
