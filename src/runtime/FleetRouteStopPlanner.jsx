@@ -16,7 +16,23 @@ export default function FleetRouteStopPlanner({businessId,route}){
   const [error,setError]=useState('');
   const [message,setMessage]=useState('');
 
-  useEffect(()=>{let alive=true;if(!routeId)return;services.fleet.routePerformance(businessId,routeId).then(data=>{if(!alive)return;setStops((data?.stops||[]).map(stop=>({location_id:stop.location_id,display_name:stop.metadata?.display_name||`Location ${String(stop.location_id||'').slice(0,8)}`,address:stop.metadata?.address||'',planned_arrival_at:toLocal(stop.planned_arrival_at),planned_ttl_minutes:stop.planned_ttl_minutes??'',planned_dwell_minutes:stop.planned_dwell_minutes??'',metadata:stop.metadata||{}}))}).catch(()=>{});return()=>{alive=false}},[services,businessId,routeId]);
+  useEffect(()=>{
+    let alive=true;
+    if(!routeId)return()=>{alive=false};
+    services.fleet.routePerformance(businessId,routeId).then(data=>{
+      if(!alive)return;
+      setStops((data?.stops||[]).map(stop=>({
+        location_id:stop.location_id,
+        display_name:stop.metadata?.display_name||`Location ${String(stop.location_id||'').slice(0,8)}`,
+        address:stop.metadata?.address||'',
+        planned_arrival_at:toLocal(stop.planned_arrival_at),
+        planned_ttl_minutes:stop.planned_ttl_minutes??'',
+        planned_dwell_minutes:stop.planned_dwell_minutes??'',
+        metadata:stop.metadata||{}
+      })));
+    }).catch(()=>{});
+    return()=>{alive=false};
+  },[services,businessId,routeId]);
 
   const selectedIds=useMemo(()=>new Set(stops.map(stop=>String(stop.location_id))),[stops]);
   const search=async event=>{event.preventDefault();if(!query.trim())return;setBusy('search');setError('');try{setResults(await services.fleet.searchStopLocations(query.trim()))}catch(e){setError(e.message||'Unable to search locations.')}finally{setBusy('')}};
