@@ -13,6 +13,9 @@ const checks=[
  ['Asset scorecard authority uses measured outcomes',['fleet_asset_exception_scorecards','completion_rate_pct','late_arrival_rate_pct','skipped_stops','dwell_overruns','critical_alerts'],'supabase/migrations/20260830004100_fleet_asset_exception_scorecards_v1.sql'],
  ['Fleet alerts publish through realtime',['supabase_realtime','fleet_alerts','fleet_route_exception_drilldown'],'supabase/migrations/20260830004200_fleet_alerts_realtime_route_drilldown_v1.sql'],
  ['Route drilldown is Fleet scoped',['fleet_route_exception_drilldown','fleet_observe_access','arrival_variance_minutes','actual_dwell_minutes','operational_events'],'supabase/migrations/20260830004200_fleet_alerts_realtime_route_drilldown_v1.sql'],
+ ['Trend authority is Fleet scoped',['fleet_exception_trends','fleet_observe_access','Authentication required','grant execute'],'supabase/migrations/20260830004300_fleet_exception_trends_maintenance_v1.sql'],
+ ['Daily trends preserve measured exception classes',['failed_routes','late_arrivals','dwell_overruns','push_failed','generate_series'],'supabase/migrations/20260830004300_fleet_exception_trends_maintenance_v1.sql'],
+ ['Vehicle trends correlate maintenance without synthetic causality',['fleet_maintenance_records','maintenance_records','open_maintenance','last_maintenance_at','exception_count'],'supabase/migrations/20260830004300_fleet_exception_trends_maintenance_v1.sql'],
  ['Fleet service exposes exception operations',['exceptionIntelligence','assetScorecards','routeExceptionDrilldown','exceptionPolicy','exceptionAlerts','updateExceptionPolicy','resolveAlert'],'src/domains/fleet/operations.js'],
  ['Fleet realtime subscription includes alerts',["table:'fleet_alerts'","source:'fleet_alerts'",'subscribeDispatch'],'src/domains/fleet/operations.js'],
  ['Fleet exception UI exposes thresholds',['FLEET OPERATIONS 2.0','Late stop after (minutes)','Stop dwell overrun (minutes)','Geofence dwell anomaly (minutes)','Save exception policy'],'src/runtime/FleetExceptionIntelligencePanel.jsx'],
@@ -24,4 +27,4 @@ const checks=[
 const failures=[];
 for(const [label,tokens,file] of checks){let text;try{text=read(file)}catch{failures.push(`${label}: missing ${file}`);continue}for(const token of tokens){if(!text.includes(token)){failures.push(`${label}: contract ${JSON.stringify(token)} not found in ${file}`);break}}}
 if(failures.length){console.error('Fleet Operations 2.0 audit FAILED');failures.forEach(x=>console.error(`- ${x}`));process.exit(1)}
-console.log(`Fleet Operations 2.0 audit passed (${checks.length} contracts): exception intelligence, configurable thresholds, event-driven alerts, push-delivery health, realtime cross-device alert refresh, route drill-down, dedupe, manager resolution, and measured driver/vehicle reliability scorecards are converged.`);
+console.log(`Fleet Operations 2.0 audit passed (${checks.length} contracts): exception intelligence, configurable thresholds, event-driven alerts, push-delivery health, realtime cross-device alert refresh, route drill-down, measured asset reliability, daily exception trends, and maintenance correlation are converged.`);
