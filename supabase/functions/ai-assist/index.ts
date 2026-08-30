@@ -119,10 +119,13 @@ Deno.serve(async (req) => {
       console.error('ai-assist provider fallback', JSON.stringify({trace_id:traceId,task,...providerDiagnostic}));
     }
     if (!answer) answer = fallback(task, context);
+    const providerStatus = providerDiagnostic?.status ?? (provider === 'openai' ? 200 : null);
+    const providerErrorCode = providerDiagnostic?.error_code ?? null;
+    const providerErrorType = providerDiagnostic?.error_type ?? null;
     try {
-      await supabaseAdmin.from('data_feature_events').insert({event_type:'ai_assist_generated',feature_code:'ai_assist',subject_type:'user',subject_id:user.id,source_table:'edge_function',value_text:task,metadata:{provider,model,task,trace_id:traceId,provider_request_id:providerRequestId,provider_status:providerDiagnostic?.status??200,provider_error_code:providerDiagnostic?.error_code??null,provider_error_type:providerDiagnostic?.error_type??null}});
+      await supabaseAdmin.from('data_feature_events').insert({event_type:'ai_assist_generated',feature_code:'ai_assist',subject_type:'user',subject_id:user.id,source_table:'edge_function',value_text:task,metadata:{provider,model,task,trace_id:traceId,provider_request_id:providerRequestId,provider_status:providerStatus,provider_error_code:providerErrorCode,provider_error_type:providerErrorType}});
     } catch {}
-    return new Response(JSON.stringify({task,answer,provider,model,review_required:true,trace_id:traceId}), {headers});
+    return new Response(JSON.stringify({task,answer,provider,model,review_required:true,trace_id:traceId,provider_status:providerStatus,provider_error_code:providerErrorCode,provider_error_type:providerErrorType}), {headers});
   } catch (error) {
     return new Response(JSON.stringify({error:error instanceof Error ? error.message : 'AI assist failed'}), {status:400,headers});
   }
