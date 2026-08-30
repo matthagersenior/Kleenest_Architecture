@@ -8,6 +8,7 @@ const checks = [
   ['Visit surface uses the consumer trust journey', /Publish the trusted review/, 'src/runtime/VisitSurface.jsx'],
   ['Visit surface exposes photo evidence', /Photo evidence/, 'src/runtime/VisitSurface.jsx'],
   ['Visit surface reaches photo-aware evidence mutation', /restroomObservationWithPhoto/, 'src/runtime/VisitSurface.jsx'],
+  ['Visit surface exposes verified review drafting without replacing publish authority', /VerifiedReviewDraft[\s\S]*Publish verified review/, 'src/runtime/VisitSurface.jsx'],
   ['Canonical evidence service exposes photo observation', /restroomObservationWithPhoto/, 'src/domains/consumer/location-evidence.js'],
   ['Evidence service refreshes trust/intelligence after observation', /refresh_location_trust_state|refresh_location_intelligence/, 'src/domains/consumer/location-evidence.js'],
   ['Evidence service dispatches progression/quest consequences', /quest|progression/i, 'src/domains/consumer/location-evidence.js'],
@@ -16,6 +17,11 @@ const checks = [
   ['Offline replay preserves photo-linked observations', /submit_restroom_observation_with_photo/, 'src/domains/offline/packs.js'],
   ['Offline replay remains idempotent', /findAuthoritativeReplay/, 'src/domains/offline/packs.js'],
   ['Consumer activity telemetry is emitted', /publishConsumerActivity\(['"](checkin|evidence|review)/, 'src/runtime/VisitSurface.jsx'],
+  ['Evidence journey reads canonical location authority before and after contribution', /services\.locations\.getById\(locationId\)/, 'src/runtime/LocationEvidencePage.jsx'],
+  ['Evidence journey evaluates badges and refreshes milestones after contribution', /services\.progression\.evaluateBadges\(\)[\s\S]*services\.progression\.refreshMilestones\(\)/, 'src/runtime/LocationEvidencePage.jsx'],
+  ['Evidence journey exposes authoritative trust impact', /TrustContributionImpact/, 'src/runtime/LocationEvidencePage.jsx'],
+  ['Trust impact compares canonical trust, evidence, freshness, and staleness', /trust score[\s\S]*evidence signals[\s\S]*freshness[\s\S]*freshness state/, 'src/runtime/TrustContributionImpact.jsx'],
+  ['Trust impact avoids synthetic rewards', /backend-returned|canonical location authority|unchanged scores are valid/i, 'src/runtime/TrustContributionImpact.jsx'],
 ];
 
 const failures = [];
@@ -34,4 +40,4 @@ if (failures.length) {
 const visit = read('src/runtime/VisitSurface.jsx');
 const usesInjectedPhoto = /services\.locationPhoto\.uploadEvidencePhoto/.test(visit);
 const usesCompatibilityPhoto = /uploadEvidencePhoto/.test(visit);
-console.log(`Consumer Trust Wave audit passed (${checks.length} contracts). Photo path: ${usesInjectedPhoto ? 'injected service' : usesCompatibilityPhoto ? 'compatibility export' : 'missing'}.`);
+console.log(`Consumer Trust Wave audit passed (${checks.length} contracts) with verified review drafting, canonical evidence interpretation, before/after trust impact, and authoritative progression refresh. Photo path: ${usesInjectedPhoto ? 'injected service' : usesCompatibilityPhoto ? 'compatibility export' : 'missing'}.`);
