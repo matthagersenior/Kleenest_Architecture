@@ -18,13 +18,28 @@ export function createFollowService(client) {
       return rpc('follow_user', { p_user_id: targetUserId });
     },
     unfollow: async (targetUserId) => {
-      await user();
-      if (!targetUserId) throw new Error('A user is required.');
+      const me = await user();
+      if (!targetUserId || targetUserId === me.id) throw new Error('A different user is required.');
       return rpc('unfollow_user', { p_target_user_id: targetUserId });
+    },
+    toggle: async (targetUserId) => {
+      const me = await user();
+      if (!targetUserId || targetUserId === me.id) throw new Error('A different user is required.');
+      const following = Boolean(await rpc('is_following_user', { p_target_user_id: targetUserId }));
+      if (following) {
+        await rpc('unfollow_user', { p_target_user_id: targetUserId });
+        return { following: false, following_id: targetUserId };
+      }
+      const result = await rpc('follow_user', { p_user_id: targetUserId });
+      return { ...(result || {}), following: true, following_id: targetUserId };
     },
     listFollowing: async (limit = 100) => {
       await user();
       return (await rpc('list_following_users', { p_limit: limit })) ?? [];
+    },
+    listFollowers: async (limit = 100) => {
+      await user();
+      return (await rpc('list_follower_users', { p_limit: limit })) ?? [];
     },
     isFollowing: async (targetUserId) => {
       await user();
