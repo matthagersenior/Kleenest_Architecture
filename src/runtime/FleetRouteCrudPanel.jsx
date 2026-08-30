@@ -29,6 +29,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
   const [routes, setRoutes] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [driverCandidates, setDriverCandidates] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
@@ -38,16 +39,23 @@ export default function FleetRouteCrudPanel({ businessId }) {
 
   const driverById = useMemo(() => new Map(drivers.map(driver => [String(driver.id), driver])), [drivers]);
   const vehicleById = useMemo(() => new Map(vehicles.map(vehicle => [String(vehicle.id), vehicle])), [vehicles]);
+  const candidateByUserId = useMemo(() => new Map(driverCandidates.map(candidate => [String(candidate.user_id), candidate])), [driverCandidates]);
 
   const load = async () => {
     if (!businessId) return;
     setLoading(true);
     setError('');
     try {
-      const dashboard = await services.fleet.dashboard(businessId);
+      const [dashboardResult, candidatesResult] = await Promise.allSettled([
+        services.fleet.dashboard(businessId),
+        services.fleet.driverAssignmentCandidates ? services.fleet.driverAssignmentCandidates(businessId) : Promise.resolve([])
+      ]);
+      if (dashboardResult.status !== 'fulfilled') throw dashboardResult.reason;
+      const dashboard = dashboardResult.value;
       setRoutes(arr(dashboard?.route_records ?? dashboard?.routes));
       setDrivers(arr(dashboard?.driver_records ?? dashboard?.drivers));
       setVehicles(arr(dashboard?.vehicle_records ?? dashboard?.vehicles));
+      setDriverCandidates(candidatesResult.status === 'fulfilled' ? arr(candidatesResult.value) : []);
     } catch (e) {
       setError(e.message || 'Unable to load Fleet routes.');
     } finally {
@@ -108,12 +116,21 @@ export default function FleetRouteCrudPanel({ businessId }) {
   });
   const assignDriver = (route, driverId) => run(`driver-${idOf(route)}`, () => services.fleet.updateRoute(businessId, idOf(route), assignmentPayload(route, { driverId: driverId || null })), driverId ? 'Driver assigned to route.' : 'Driver removed from route.');
   const assignVehicle = (route, vehicleId) => run(`vehicle-${idOf(route)}`, () => services.fleet.updateRoute(businessId, idOf(route), assignmentPayload(route, { vehicleId: vehicleId || null })), vehicleId ? 'Vehicle assigned to route.' : 'Vehicle removed from route.');
+  const assignDriverAccount = (driver, userId) => run(`driver-account-${driver.id}`, () => services.fleet.assignDriverUser(businessId, driver.id, userId || null), userId ? 'Driver app account linked.' : 'Driver app account unlinked.');
 
   return (
     <section className="detail-panel business-card fleet-route-crud">
       <div className="panel-heading"><div><span className="eyebrow">FLEET DISPATCH</span><h2>Routes & assignments</h2><p className="muted">Create, plan, assign, dispatch, and measure Fleet routes with driver, vehicle, ETA, duration, TTL, dwell, and stop completion metrics.</p></div><RouteIcon size={22} /></div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {message && <p className="form-success" role="status">{message}</p>}
+
+      {driverCandidates.length > 0 && drivers.length > 0 && <section className="detail-panel fleet-driver-identity-panel">
+        <div className="panel-heading"><div><span className="eyebrow">DRIVER IDENTITY</span><h3>Driver account links</h3><p className="muted">Link Fleet driver records to business-member accounts so assigned-driver timing authority and dispatch notifications use the canonical user identity.</p></div><UserRound size={20} /></div>
+        <div className="crud-records">{drivers.map(driver => {
+          const linked = driver.user_id ? candidateByUserId.get(String(driver.user_id)) : null;
+          return <div className="business-row crud-record-row" key={`driver-account-${driver.id}`}><div className="crud-record-main"><strong>{labelOf(driver)}</strong><span>{driver.user_id ? `App account: ${linked?.display_name || linked?.username || 'Linked business member'}` : 'No app account linked'}</span></div><label className="inline-control"><span>Business member</span><select value={driver.user_id || ''} onChange={e => assignDriverAccount(driver, e.target.value)} disabled={busy === `driver-account-${driver.id}`}><option value="">No app account</option>{driverCandidates.map(candidate => <option key={candidate.user_id} value={candidate.user_id} disabled={Boolean(candidate.assigned_driver_id) && String(candidate.assigned_driver_id) !== String(driver.id)}>{candidate.display_name || candidate.username || 'Business member'} · {candidate.member_role}{candidate.assigned_driver_id && String(candidate.assigned_driver_id) !== String(driver.id) ? ` · assigned to ${candidate.assigned_driver_name || 'another driver'}` : ''}</option>)}</select></label></div>;
+        })}</div>
+      </section>}
 
       {editing ? (
         <form className="crud-form" onSubmit={save}>
