@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 const required=[
- ['supabase/functions/ai-assist/index.ts',['verify','OPENAI_API_KEY','gpt-5.6-luna','allowedTasks','review_required:true','grounded_fallback','business_growth','fleet_dispatch','fleet_debrief','enterprise_network','notification_copy','visit_review','evidence_interpretation','admin_moderation','admin_operations','route_plan']],
+ ['supabase/functions/ai-assist/index.ts',['verify','OPENAI_API_KEY','gpt-5.6-luna','allowedTasks','review_required:true','grounded_fallback','provider_status','provider_error_type','provider_error_code','openai_request_id','trace_id','business_growth','fleet_dispatch','fleet_debrief','enterprise_network','notification_copy','visit_review','evidence_interpretation','admin_moderation','admin_operations','route_plan']],
  ['src/domains/intelligence/convergence.js',["client.functions.invoke('ai-assist'",'aiAssist','kleenest:ai-assist-generated','review_required']],
- ['src/runtime/AiAssistPanel.jsx',['services.intelligenceConvergence.aiAssist','Review required before any change is applied','Grounded recommendation','Model-assisted recommendation']],
+ ['src/runtime/AiAssistPanel.jsx',['services.intelligenceConvergence.aiAssist','Review required before any change is applied','Grounded recommendation','Model-assisted recommendation',"result?.provider_status==='provider_error'","Model provider unavailable; showing Kleenest's deterministic grounded fallback.","Model: ${result.model}"]],
  ['src/runtime/FleetRouteStopPlanner.jsx',['AiAssistPanel','task="fleet_dispatch"','Fleet dispatch copilot']],
  ['src/runtime/FleetRoutePerformanceCard.jsx',['AiAssistPanel','task="fleet_debrief"','Fleet route debrief','largest measured variances','Never invent a cause']],
  ['src/runtime/BusinessGrowthEngagementPanel.jsx',['AiAssistPanel','task="business_growth"','Business growth copilot']],
@@ -25,4 +25,4 @@ const gateway=fs.readFileSync(path.resolve('supabase/functions/ai-assist/index.t
 if(gateway.includes('VITE_')||gateway.includes('dangerouslyAllowBrowser'))missing.push('AI provider credentials must remain server-side');
 if(!gateway.includes("supabaseAdmin.auth.getUser(token)"))missing.push('AI gateway must authenticate the caller');
 if(missing.length){console.error('AI Assist convergence audit failed.');for(const item of missing)console.error(`- ${item}`);process.exit(1);}
-console.log('AI Assist convergence audit passed: one authenticated gateway, centralized service boundary, Fleet pre/post intelligence, Business growth/action briefing/messaging, Enterprise analysis, Admin moderation/operations/capability reconciliation, consumer routing, verified-review drafting, and canonical evidence interpretation, grounded fallback, and human review before mutations.');
+console.log('AI Assist convergence audit passed: one authenticated gateway, provider diagnostics and transparent fallback state, centralized service boundary, Fleet pre/post intelligence, Business growth/action briefing/messaging, Enterprise analysis, Admin moderation/operations/capability reconciliation, consumer routing, verified-review drafting, canonical evidence interpretation, deterministic grounded fallback, and human review before mutations.');
