@@ -100,12 +100,20 @@ export default function FleetRouteCrudPanel({ businessId }) {
   const save = async event => {
     event.preventDefault();
     if (!form.name.trim()) { setError('Route name is required.'); return; }
+    const original = editing === 'new' ? null : routes.find(route => String(idOf(route)) === String(editing));
+    const originalStatus = original?.status || 'planned';
+    const statusChanged = Boolean(original) && form.status !== originalStatus;
     const payload = {
-      name: form.name.trim(), status: form.status, vehicleId: form.vehicle_id || null, driverId: form.driver_id || null,
+      name: form.name.trim(), status: original ? originalStatus : form.status, vehicleId: form.vehicle_id || null, driverId: form.driver_id || null,
       scheduledFor: toIso(form.scheduled_for), distanceMiles: form.distance_miles === '' ? null : Number(form.distance_miles),
       estimatedMinutes: form.estimated_minutes === '' ? null : Number(form.estimated_minutes), stopsCount: form.stops_count === '' ? 0 : Number(form.stops_count)
     };
-    await run('save-route', () => editing === 'new' ? services.fleet.createRoute(businessId, payload) : services.fleet.updateRoute(businessId, editing, payload), editing === 'new' ? 'Route created.' : 'Route updated.');
+    await run('save-route', async () => {
+      if (editing === 'new') return services.fleet.createRoute(businessId, payload);
+      const updated = await services.fleet.updateRoute(businessId, editing, payload);
+      if (statusChanged) await services.fleet.routeStatus(businessId, editing, form.status);
+      return updated;
+    }, editing === 'new' ? 'Route created.' : statusChanged ? `Route updated and status changed to ${form.status}.` : 'Route updated.');
   };
 
   const remove = route => run(`delete-${idOf(route)}`, () => services.fleet.deleteRoute(businessId, idOf(route)), 'Route deleted.');
@@ -134,7 +142,7 @@ export default function FleetRouteCrudPanel({ businessId }) {
 
       {editing ? (
         <form className="crud-form" onSubmit={save}>
-          <div className="form-row"><label className="form-field"><span>Route name</span><input required value={form.name} onChange={e => setForm(v => ({ ...v, name: e.target.value }))} /></label><label className="form-field"><span>Status</span><select value={form.status} onChange={e => setForm(v => ({ ...v, status: e.target.value }))}><option value="planned">Planned</option><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></label></div>
+          <div className="form-row"><label className="form-field"><span>Route name</span><input required value={form.name} onChange={e => setForm(v => ({ ...v, name: e.target.value }))} /></label><label className="form-field"><span>Status</span><select value={form.status} onChange={e => setForm(v => ({ ...v, status: e.target.value }))}><option value="planned">Planned</option><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select></label></div>
           <div className="form-row"><label className="form-field"><span>Assign driver</span><select value={form.driver_id} onChange={e => setForm(v => ({ ...v, driver_id: e.target.value }))}><option value="">Unassigned</option>{drivers.map(driver => <option key={driver.id} value={driver.id}>{labelOf(driver)}</option>)}</select></label><label className="form-field"><span>Vehicle</span><select value={form.vehicle_id} onChange={e => setForm(v => ({ ...v, vehicle_id: e.target.value }))}><option value="">No vehicle</option>{vehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{labelOf(vehicle)}</option>)}</select></label></div>
           <div className="form-row"><label className="form-field"><span>Scheduled for</span><input type="datetime-local" value={form.scheduled_for} onChange={e => setForm(v => ({ ...v, scheduled_for: e.target.value }))} /></label><label className="form-field"><span>Distance (mi)</span><input type="number" min="0" step="0.1" value={form.distance_miles} onChange={e => setForm(v => ({ ...v, distance_miles: e.target.value }))} /></label></div>
           <div className="form-row"><label className="form-field"><span>Estimated minutes</span><input type="number" min="0" step="1" value={form.estimated_minutes} onChange={e => setForm(v => ({ ...v, estimated_minutes: e.target.value }))} /></label><label className="form-field"><span>Stops</span><input type="number" min="0" step="1" value={form.stops_count} onChange={e => setForm(v => ({ ...v, stops_count: e.target.value }))} /></label></div>
