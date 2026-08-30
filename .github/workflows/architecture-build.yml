@@ -16,6 +16,7 @@ env:
   NODE_VERSION: 22
   VITE_SUPABASE_URL: https://ssgesjzdvdsqacdtasje.supabase.co
   VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_f1rbczgvWKSQy2g9mTDQZg_K9Wv19bL
+  VITE_PUBLIC_APP_URL: https://matthagersenior.github.io/Kleenest_Architecture
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -47,7 +48,8 @@ jobs:
           set -e
           test -n "$VITE_SUPABASE_URL"
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
-          echo "Supabase project configured."
+          test -n "$VITE_PUBLIC_APP_URL"
+          echo "Supabase project and public app URL configured."
       - name: Build production app
         run: npm run build
       - name: Verify correct Kleenest React artifact
