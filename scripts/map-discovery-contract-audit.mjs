@@ -15,7 +15,13 @@ const missing=[];const texts=new Map();
 for(const[rel,tokens]of required){const file=path.join(root,rel);if(!fs.existsSync(file)){missing.push(`${rel}: file missing`);continue}const text=fs.readFileSync(file,'utf8');texts.set(rel,text);for(const token of tokens)if(!text.includes(token))missing.push(`${rel}: missing ${token}`)}
 const edgePath=path.resolve('supabase/functions/ingest-map-candidates-v3/index.ts');
 if(!fs.existsSync(edgePath))missing.push('supabase/functions/ingest-map-candidates-v3/index.ts: file missing');
-else{const edge=fs.readFileSync(edgePath,'utf8');for(const token of ['out center tags','ingest_external_locations','SUPABASE_SERVICE_ROLE_KEY','source_metadata','osm_tags','opening_hours','contact:phone','contact:website','interactive-discovery-plus-canonical-persistence'])if(!edge.includes(token))missing.push(`ingest-map-candidates-v3: missing ${token}`);if(edge.includes('scheduled-maps-ingest')||edge.includes('interactive-discovery-only'))missing.push('ingest-map-candidates-v3: obsolete discovery-only persistence contract returned');}
+else{
+ const edge=fs.readFileSync(edgePath,'utf8');
+ for(const token of ['out center tags','ingest_external_locations','SUPABASE_SERVICE_ROLE_KEY','source_metadata','osm_tags','opening_hours','contact:phone','contact:website','interactive-discovery-plus-canonical-persistence','provider_unavailable','canonical_fallback','PERSISTENCE_DEFERRED','LIVE_DISCOVERY_UNAVAILABLE','deferred: true'])if(!edge.includes(token))missing.push(`ingest-map-candidates-v3: missing ${token}`);
+ for(const forbidden of ['scheduled-maps-ingest','interactive-discovery-only','stage:"acquisition_or_persistence"','DISCOVERY_FAILED'])if(edge.includes(forbidden))missing.push(`ingest-map-candidates-v3: obsolete fatal discovery coupling ${forbidden}`);
+ if(!/if\s*\(!acquired\.ok\)[\s\S]*?return json\(\{[\s\S]*?ok:\s*true/.test(edge))missing.push('ingest-map-candidates-v3: acquisition outage must return a degraded HTTP 200 contract');
+ if(!/const persistence = shouldPersist \? await persist\(locations\)/.test(edge))missing.push('ingest-map-candidates-v3: persistence must remain best-effort after live acquisition');
+}
 const map=texts.get('domains/maps/network.js')||'';
 for(const forbidden of ['demoLocations','sampleLocations','mockLocations','fallbackDemo','demo accounts'])if(map.toLowerCase().includes(forbidden.toLowerCase()))missing.push(`domains/maps/network.js: forbidden demo fallback ${forbidden}`);
 const surface=texts.get('runtime/MapSurface.jsx')||'';
@@ -33,4 +39,4 @@ if(!/p_amenity_names\s*:\s*amenityNames\.length\s*\?\s*amenityNames\s*:\s*null/.
 if(!/amenity_names\s*:\s*amenityNames/.test(map))missing.push('domains/maps/network.js: live ingestion must receive amenity filters');
 const context=texts.get('AppContext.jsx')||'';for(const forbidden of ['createUniversalDiscoveryService','universalDiscovery'])if(context.includes(forbidden))missing.push(`AppContext.jsx: redundant discovery service ${forbidden}`);
 if(missing.length){console.error(missing.join('\n'));process.exit(1)}
-console.log('Canonical map discovery audit passed: rich Overpass tags persist through Supabase authority and project to MapSurface, Location Details, route AI, and stop-only routing.');
+console.log('Canonical map discovery audit passed: live provider outages degrade to canonical results, persistence is best-effort, and rich Overpass data still projects through the single map authority.');
