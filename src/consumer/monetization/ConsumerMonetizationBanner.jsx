@@ -15,7 +15,7 @@ export default function ConsumerMonetizationBanner({ membershipTier = 'free', on
         </p>
       </div>
       {!premium && onUpgrade ? (
-        <button type="button" onClick={onUpgrade}>
+        <button type="button" className="button secondary consumer-monetization-action" onClick={onUpgrade}>
           Go ad-free · ${CONSUMER_MEMBERSHIP_PRICE_USD}/mo
         </button>
       ) : null}
