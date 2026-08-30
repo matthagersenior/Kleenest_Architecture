@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPinned, Settings2, Radio, Users, Building2, Wrench, Network, ShieldCheck, Database, ExternalLink, Globe2 } from 'lucide-react';
 import { useAppContext } from '../AppContext.jsx';
 import WorkspaceShell from './WorkspaceShell.jsx';
+import AiAssistPanel from './AiAssistPanel.jsx';
 import './AdminMaintenancePage.css';
 
 const MARKETS = [['STL','St. Louis'],['KCMO','Kansas City'],['NYC','New York City'],['LA','Los Angeles'],['CHI','Chicago'],['DFW','Dallas–Fort Worth'],['HOU','Houston'],['DC','Washington, DC'],['MIA','Miami'],['PHL','Philadelphia']];
@@ -20,8 +21,9 @@ export default function AdminMaintenancePage(){
   const { services, profile, isPlatformOwner, loading: authLoading } = useAppContext();
   const [busy, setBusy] = useState('');
   const [result, setResult] = useState(null);
+  const [resultOperation, setResultOperation] = useState('');
   const [open, setOpen] = useState(true);
-  const run = async (key, fn) => { if(authLoading || !isPlatformOwner || !profile)return; setBusy(key); setResult(null); try{setResult(await fn())}catch(error){setResult({ok:false,error:error?.message||String(error)})}finally{setBusy('')} };
+  const run = async (key, fn) => { if(authLoading || !isPlatformOwner || !profile)return; setBusy(key); setResult(null); setResultOperation(key); try{setResult(await fn())}catch(error){setResult({ok:false,error:error?.message||String(error)})}finally{setBusy('')} };
   const ingest = (key, source, market) => run(key, () => services.admin.ingestMarket(profile, source, market));
   const catalog = () => run('catalog', () => services.admin.catalogPublicDatasets(profile, 50));
 
@@ -44,6 +46,7 @@ export default function AdminMaintenancePage(){
 
     <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">DATASET INTELLIGENCE</span><h2>Catalog & review external evidence</h2><p>Cataloged datasets remain governed evidence and can be reviewed before canonical ingestion.</p></div><Database size={22}/></div><div className="action-row"><button disabled={!!busy} onClick={catalog}>{busy==='catalog'?'Cataloging…':'Discover public datasets'}</button><Link className="button secondary" to="/intelligence">Open network intelligence</Link><Link className="button secondary" to="/admin/crud">Review external data</Link></div></section>
 
+    {result&&<AiAssistPanel task="admin_operations" title="Admin operations copilot" description="Summarizes the authoritative result below and highlights failures, stale or low-quality signals, unusual counts, and the safest next checks. It cannot run maintenance actions." instruction="Summarize this administrative operation result. Identify concrete problems or anomalies and recommend only non-destructive next checks. Do not claim any repair occurred." context={{operation:resultOperation,result}}/>}
     {result&&<pre className="result">{JSON.stringify(result,null,2)}</pre>}
   </section></WorkspaceShell>;
 }
