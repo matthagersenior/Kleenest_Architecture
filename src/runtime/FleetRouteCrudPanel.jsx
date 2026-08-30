@@ -15,7 +15,7 @@ function toLocalDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value).slice(0, 16);
   const pad = n => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1, '0')}-${pad(date.getDate(), '0')}T${pad(date.getHours(), '0')}:${pad(date.getMinutes(), '0')}`;
 }
 
 function toIso(value) {
@@ -62,6 +62,12 @@ export default function FleetRouteCrudPanel({ businessId }) {
     };
     window.addEventListener('kleenest:fleet-updated', refresh);
     return () => window.removeEventListener('kleenest:fleet-updated', refresh);
+  }, [businessId, services]);
+  useEffect(() => {
+    if (!businessId || !services?.fleet?.subscribeDispatch) return undefined;
+    return services.fleet.subscribeDispatch(businessId, change => {
+      window.dispatchEvent(new CustomEvent('kleenest:fleet-updated', { detail: { businessId, reason: 'realtime-dispatch', source: change?.source } }));
+    });
   }, [businessId, services]);
 
   const reset = () => { setEditing(null); setForm(emptyForm); };
