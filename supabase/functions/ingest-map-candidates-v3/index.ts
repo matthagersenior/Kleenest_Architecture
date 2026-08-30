@@ -1,16 +1,281 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const ENDPOINTS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
-const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const json=(x:unknown,s=200)=>new Response(JSON.stringify(x),{status:s,headers:{...CORS,"Content-Type":"application/json","Cache-Control":"no-store"}});
-const AMENITY_QUERIES:Record<string,string[]>={restroom:['nwr["amenity"="toilets"]','nwr["building"="toilets"]','nwr["toilets"="yes"]','nwr["toilets:access"="public"]'],accessible_restroom:['nwr["amenity"="toilets"]["wheelchair"="yes"]','nwr["toilets:wheelchair"="yes"]'],wheelchair:['nwr["wheelchair"="yes"]'],drinking_water:['nwr["amenity"="drinking_water"]','nwr["drinking_water"="yes"]'],baby_changing:['nwr["changing_table"="yes"]','nwr["amenity"="toilets"]["changing_table"="yes"]'],shower:['nwr["amenity"="shower"]','nwr["shower"="yes"]'],handwashing:['nwr["handwashing"="yes"]'],seating:['nwr["amenity"="bench"]','nwr["seats"]'],parking:['nwr["amenity"="parking"]'],ev_charging:['nwr["amenity"="charging_station"]','nwr["amenity"="fuel"]["fuel:electricity"="yes"]'],wifi:['nwr["internet_access"="wlan"]','nwr["internet_access"="yes"]'],atm:['nwr["amenity"="atm"]']};
-const LABELS:Record<string,string>={restroom:"Restroom",accessible_restroom:"Accessible restroom",wheelchair:"Wheelchair accessible",drinking_water:"Drinking water",baby_changing:"Baby changing",shower:"Shower",handwashing:"Handwashing",seating:"Seating",parking:"Parking",ev_charging:"EV charging",wifi:"Wi-Fi",atm:"ATM"};
-function category(t:any){if(t.amenity==="toilets"||t.building==="toilets"||t.toilets==="yes"||t["toilets:access"]==="public")return"restroom";if(t.amenity==="fuel")return"gas_station";if(t.amenity==="restaurant"||t.amenity==="fast_food")return"restaurant";if(t.amenity==="cafe")return"cafe";if(["hospital","clinic","doctors","dentist","pharmacy"].includes(t.amenity))return"health";if(["park","nature_reserve","playground","sports_centre"].includes(t.leisure))return"park";if(["supermarket","convenience","mall","department_store","bakery","pharmacy"].includes(t.shop))return"shopping";if(["townhall","courthouse","police","fire_station"].includes(t.amenity)||t.office==="government")return"public_safety";return"service";}
-function amenities(t:any){const a:Record<string,boolean>={},yes=(v:unknown)=>["yes","true","public","customers","accessible"].includes(String(v??"").toLowerCase());if(t.amenity==="toilets"||t.building==="toilets"||yes(t.toilets)||t["toilets:access"]==="public")a.restroom=true;if(t.wheelchair==="yes"||t["toilets:wheelchair"]==="yes")a.wheelchair=true;if(t.amenity==="drinking_water"||yes(t.drinking_water))a.drinking_water=true;if(yes(t.changing_table)||t.amenity==="changing_table")a.baby_changing=true;if(t.amenity==="shower"||yes(t.shower))a.shower=true;if(yes(t.handwashing))a.handwashing=true;if(t.amenity==="bench"||t.seats!=null)a.seating=true;if(t.amenity==="parking")a.parking=true;if(t.amenity==="charging_station"||t["fuel:electricity"]==="yes")a.ev_charging=true;if(["wlan","yes"].includes(String(t.internet_access??"").toLowerCase()))a.wifi=true;if(t.amenity==="atm")a.atm=true;if(a.restroom&&a.wheelchair)a.accessible_restroom=true;return a;}
-function rows(es:any[]){const capturedAt=new Date().toISOString();return es.map(e=>{const t=e.tags||{},lat=Number(e.lat??e.center?.lat),lng=Number(e.lon??e.center?.lon);if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;const c=category(t),id=`osm:${e.type}:${e.id}`,am=amenities(t),labels=Object.keys(am).map(k=>LABELS[k]||k),address=[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" ")||t["addr:full"]||t["addr:place"]||"",phone=t.phone||t["contact:phone"]||"",website=t.website||t["contact:website"]||"",opening_hours=t.opening_hours||"";return{id,location_id:id,source_id:id,latitude:lat,longitude:lng,name:t.name||t.brand||t.operator||(c==="restroom"?"Public Restroom":`Unnamed ${c.replaceAll("_"," ")}`),category:c,place_type:c,address,city:t["addr:city"]||t["addr:town"]||t["addr:village"]||"",state:t["addr:state"]||"",postal_code:t["addr:postcode"]||"",country:t["addr:country"]||"",phone,website,opening_hours,brand:t.brand||null,operator_name:t.operator||null,source:"osm",source_dataset:"openstreetmap_live",source_external_id:id,osm_tags:t,amenities:am,amenity_labels:labels,source_metadata:{tags:t,amenities:am,amenity_labels:labels,opening_hours,phone,website,captured_at:capturedAt,provider:"overpass",source_dataset:"openstreetmap_live"},is_verified:false};}).filter(Boolean);}
-function baseQueries(lat:number,lng:number,r:number){const dlat=r/111320,dlng=r/(111320*Math.max(Math.cos(lat*Math.PI/180),.2)),b=`(${lat-dlat},${lng-dlng},${lat+dlat},${lng+dlng})`;return[`nwr[amenity~"restaurant|fast_food|cafe|fuel|toilets|hospital|clinic|doctors|dentist|pharmacy|library|bus_station|townhall|courthouse|police|fire_station"]${b}`,`nwr[building="toilets"]${b}`,`nwr[toilets="yes"]${b}`,`nwr["toilets:access"="public"]${b}`,`nwr[shop~"supermarket|convenience|mall|department_store|bakery|pharmacy"]${b}`,`nwr[leisure~"park|nature_reserve|playground|sports_centre"]${b}`,`nwr[railway="station"]${b}`,`nwr[tourism~"hotel|motel|hostel|museum|gallery"]${b}`];}
-function query(lat:number,lng:number,r:number,requested:string[]){const dlat=r/111320,dlng=r/(111320*Math.max(Math.cos(lat*Math.PI/180),.2)),b=`(${lat-dlat},${lng-dlng},${lat+dlat},${lng+dlng})`,selected=[...new Set(requested.flatMap(n=>AMENITY_QUERIES[n]||[]))],clauses=(selected.length?selected:baseQueries(lat,lng,r)).map(c=>c.includes("(")?c:`${c}${b}`);return`[out:json][timeout:15];(${clauses.join(";")};);out center tags;`;}
-async function one(ep:string,q:string){const c=new AbortController(),timer=setTimeout(()=>c.abort(),16000);try{const r=await fetch(ep,{method:"POST",headers:{"content-type":"text/plain","user-agent":"KleenestApp/1.0"},body:q,signal:c.signal});if(!r.ok)throw new Error(`HTTP ${r.status}`);const p=await r.json();return Array.isArray(p.elements)?p.elements:[]}finally{clearTimeout(timer)}}
-async function live(q:string){const results=await Promise.allSettled(ENDPOINTS.map(ep=>one(ep,q))),ok=results.filter((r):r is PromiseFulfilledResult<any[]>=>r.status==="fulfilled");if(!ok.length)throw new Error("All map discovery providers failed");const merged=ok.flatMap(r=>r.value),seen=new Set<string>();return{elements:merged.filter(e=>{const id=`${e.type}:${e.id}`;if(seen.has(id))return false;seen.add(id);return true}),providers_succeeded:ok.length,providers_attempted:ENDPOINTS.length};}
-async function persist(locations:any[]){if(!locations.length)return{imported_locations:0,updated_locations:0};const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!key)throw new Error("Supabase persistence environment is unavailable");const r=await fetch(`${url}/rest/v1/rpc/ingest_external_locations`,{method:"POST",headers:{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({p_source_key:"osm",p_rows:locations})});const text=await r.text();if(!r.ok)throw new Error(`Persistence failed: ${r.status} ${text.slice(0,240)}`);return text?JSON.parse(text):{};}
-Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response(null,{status:204,headers:CORS});if(req.method!=="POST")return json({ok:false,error:{code:"METHOD_NOT_ALLOWED",message:"POST required"}},405);try{const b=await req.json(),lat=Number(b.latitude??b.lat),lng=Number(b.longitude??b.lng),radius=Math.min(Math.max(Number(b.radius_km||8),1),20),requested=Array.isArray(b.amenity_names)?[...new Set(b.amenity_names.map((x:unknown)=>String(x).trim().toLowerCase()).filter((x:string)=>x in AMENITY_QUERIES))]:[];if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180)return json({ok:false,error:{code:"INVALID_COORDINATES",message:"valid lat/lng required"}},400);const acquired=await live(query(lat,lng,radius*1000,requested)),locations=rows(acquired.elements).filter((row:any)=>requested.every((n:string)=>Boolean(row.amenities?.[n]))),shouldPersist=b.collect!==false,persistence=shouldPersist?await persist(locations):{skipped:true};return json({ok:true,contract:"interactive-discovery-plus-canonical-persistence",canonical_persistence:shouldPersist?"ingest_external_locations":"skipped",acquisition_status:locations.length?"success":"empty",cached:false,discovered:locations.length,radius_km:radius,amenity_names:requested,providers_succeeded:acquired.providers_succeeded,providers_attempted:acquired.providers_attempted,persistence,locations});}catch(e){return json({ok:false,contract:"interactive-discovery-plus-canonical-persistence",error:{code:"DISCOVERY_FAILED",stage:"acquisition_or_persistence",message:e instanceof Error?e.message:String(e),retryable:true},locations:[]},502);}});
+const ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
+  status,
+  headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "no-store" },
+});
+const messageOf = (error: unknown) => error instanceof Error ? error.message : String(error);
+
+const AMENITY_QUERIES: Record<string, string[]> = {
+  restroom: ['nwr["amenity"="toilets"]', 'nwr["building"="toilets"]', 'nwr["toilets"="yes"]', 'nwr["toilets:access"="public"]'],
+  accessible_restroom: ['nwr["amenity"="toilets"]["wheelchair"="yes"]', 'nwr["toilets:wheelchair"="yes"]'],
+  wheelchair: ['nwr["wheelchair"="yes"]'],
+  drinking_water: ['nwr["amenity"="drinking_water"]', 'nwr["drinking_water"="yes"]'],
+  baby_changing: ['nwr["changing_table"="yes"]', 'nwr["amenity"="toilets"]["changing_table"="yes"]'],
+  shower: ['nwr["amenity"="shower"]', 'nwr["shower"="yes"]'],
+  handwashing: ['nwr["handwashing"="yes"]'],
+  seating: ['nwr["amenity"="bench"]', 'nwr["seats"]'],
+  parking: ['nwr["amenity"="parking"]'],
+  ev_charging: ['nwr["amenity"="charging_station"]', 'nwr["amenity"="fuel"]["fuel:electricity"="yes"]'],
+  wifi: ['nwr["internet_access"="wlan"]', 'nwr["internet_access"="yes"]'],
+  atm: ['nwr["amenity"="atm"]'],
+};
+const LABELS: Record<string, string> = {
+  restroom: "Restroom",
+  accessible_restroom: "Accessible restroom",
+  wheelchair: "Wheelchair accessible",
+  drinking_water: "Drinking water",
+  baby_changing: "Baby changing",
+  shower: "Shower",
+  handwashing: "Handwashing",
+  seating: "Seating",
+  parking: "Parking",
+  ev_charging: "EV charging",
+  wifi: "Wi-Fi",
+  atm: "ATM",
+};
+
+function category(tags: any) {
+  if (tags.amenity === "toilets" || tags.building === "toilets" || tags.toilets === "yes" || tags["toilets:access"] === "public") return "restroom";
+  if (tags.amenity === "fuel") return "gas_station";
+  if (["restaurant", "fast_food"].includes(tags.amenity)) return "restaurant";
+  if (tags.amenity === "cafe") return "cafe";
+  if (["hospital", "clinic", "doctors", "dentist", "pharmacy"].includes(tags.amenity)) return "health";
+  if (["park", "nature_reserve", "playground", "sports_centre"].includes(tags.leisure)) return "park";
+  if (["supermarket", "convenience", "mall", "department_store", "bakery", "pharmacy"].includes(tags.shop)) return "shopping";
+  if (["townhall", "courthouse", "police", "fire_station"].includes(tags.amenity) || tags.office === "government") return "public_safety";
+  return "service";
+}
+
+function amenities(tags: any) {
+  const result: Record<string, boolean> = {};
+  const yes = (value: unknown) => ["yes", "true", "public", "customers", "accessible"].includes(String(value ?? "").toLowerCase());
+  if (tags.amenity === "toilets" || tags.building === "toilets" || yes(tags.toilets) || tags["toilets:access"] === "public") result.restroom = true;
+  if (tags.wheelchair === "yes" || tags["toilets:wheelchair"] === "yes") result.wheelchair = true;
+  if (tags.amenity === "drinking_water" || yes(tags.drinking_water)) result.drinking_water = true;
+  if (yes(tags.changing_table) || tags.amenity === "changing_table") result.baby_changing = true;
+  if (tags.amenity === "shower" || yes(tags.shower)) result.shower = true;
+  if (yes(tags.handwashing)) result.handwashing = true;
+  if (tags.amenity === "bench" || tags.seats != null) result.seating = true;
+  if (tags.amenity === "parking") result.parking = true;
+  if (tags.amenity === "charging_station" || tags["fuel:electricity"] === "yes") result.ev_charging = true;
+  if (["wlan", "yes"].includes(String(tags.internet_access ?? "").toLowerCase())) result.wifi = true;
+  if (tags.amenity === "atm") result.atm = true;
+  if (result.restroom && result.wheelchair) result.accessible_restroom = true;
+  return result;
+}
+
+function rows(elements: any[]) {
+  const capturedAt = new Date().toISOString();
+  return elements.map(element => {
+    const tags = element.tags || {};
+    const latitude = Number(element.lat ?? element.center?.lat);
+    const longitude = Number(element.lon ?? element.center?.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    const placeCategory = category(tags);
+    const id = `osm:${element.type}:${element.id}`;
+    const placeAmenities = amenities(tags);
+    const amenityLabels = Object.keys(placeAmenities).map(key => LABELS[key] || key);
+    const address = [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" ") || tags["addr:full"] || tags["addr:place"] || "";
+    const phone = tags.phone || tags["contact:phone"] || "";
+    const website = tags.website || tags["contact:website"] || "";
+    const openingHours = tags.opening_hours || "";
+    return {
+      id,
+      location_id: id,
+      source_id: id,
+      latitude,
+      longitude,
+      name: tags.name || tags.brand || tags.operator || (placeCategory === "restroom" ? "Public Restroom" : `Unnamed ${placeCategory.replaceAll("_", " ")}`),
+      category: placeCategory,
+      place_type: placeCategory,
+      address,
+      city: tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "",
+      state: tags["addr:state"] || "",
+      postal_code: tags["addr:postcode"] || "",
+      country: tags["addr:country"] || "",
+      phone,
+      website,
+      opening_hours: openingHours,
+      brand: tags.brand || null,
+      operator_name: tags.operator || null,
+      source: "osm",
+      source_dataset: "openstreetmap_live",
+      source_external_id: id,
+      osm_tags: tags,
+      amenities: placeAmenities,
+      amenity_labels: amenityLabels,
+      source_metadata: {
+        tags,
+        amenities: placeAmenities,
+        amenity_labels: amenityLabels,
+        opening_hours: openingHours,
+        phone,
+        website,
+        captured_at: capturedAt,
+        provider: "overpass",
+        source_dataset: "openstreetmap_live",
+      },
+      is_verified: false,
+    };
+  }).filter(Boolean);
+}
+
+function baseQueries(latitude: number, longitude: number, radiusMeters: number) {
+  const dlat = radiusMeters / 111320;
+  const dlng = radiusMeters / (111320 * Math.max(Math.cos(latitude * Math.PI / 180), .2));
+  const bbox = `(${latitude - dlat},${longitude - dlng},${latitude + dlat},${longitude + dlng})`;
+  return [
+    `nwr[amenity~"restaurant|fast_food|cafe|fuel|toilets|hospital|clinic|doctors|dentist|pharmacy|library|bus_station|townhall|courthouse|police|fire_station"]${bbox}`,
+    `nwr[building="toilets"]${bbox}`,
+    `nwr[toilets="yes"]${bbox}`,
+    `nwr["toilets:access"="public"]${bbox}`,
+    `nwr[shop~"supermarket|convenience|mall|department_store|bakery|pharmacy"]${bbox}`,
+    `nwr[leisure~"park|nature_reserve|playground|sports_centre"]${bbox}`,
+    `nwr[railway="station"]${bbox}`,
+    `nwr[tourism~"hotel|motel|hostel|museum|gallery"]${bbox}`,
+  ];
+}
+
+function query(latitude: number, longitude: number, radiusMeters: number, requested: string[]) {
+  const dlat = radiusMeters / 111320;
+  const dlng = radiusMeters / (111320 * Math.max(Math.cos(latitude * Math.PI / 180), .2));
+  const bbox = `(${latitude - dlat},${longitude - dlng},${latitude + dlat},${longitude + dlng})`;
+  const selected = [...new Set(requested.flatMap(name => AMENITY_QUERIES[name] || []))];
+  const clauses = (selected.length ? selected : baseQueries(latitude, longitude, radiusMeters)).map(clause => clause.includes("(") ? clause : `${clause}${bbox}`);
+  return `[out:json][timeout:15];(${clauses.join(";")};);out center tags;`;
+}
+
+async function one(endpoint: string, overpassQuery: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 16000);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "text/plain", "user-agent": "KleenestApp/1.0" },
+      body: overpassQuery,
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    return Array.isArray(payload.elements) ? payload.elements : [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function live(overpassQuery: string) {
+  const results = await Promise.allSettled(ENDPOINTS.map(endpoint => one(endpoint, overpassQuery)));
+  const successes = results.filter((result): result is PromiseFulfilledResult<any[]> => result.status === "fulfilled");
+  const failures = results.map((result, index) => result.status === "rejected" ? { endpoint: ENDPOINTS[index], error: messageOf(result.reason) } : null).filter(Boolean);
+  if (!successes.length) return { ok: false as const, elements: [], providers_succeeded: 0, providers_attempted: ENDPOINTS.length, failures };
+  const seen = new Set<string>();
+  const merged = successes.flatMap(result => result.value).filter(element => {
+    const id = `${element.type}:${element.id}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  return { ok: true as const, elements: merged, providers_succeeded: successes.length, providers_attempted: ENDPOINTS.length, failures };
+}
+
+async function persist(locations: any[]) {
+  if (!locations.length) return { ok: true, imported_locations: 0, updated_locations: 0 };
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return { ok: false, deferred: true, error: "Supabase persistence environment is unavailable" };
+  try {
+    const response = await fetch(`${url}/rest/v1/rpc/ingest_external_locations`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_source_key: "osm", p_rows: locations }),
+    });
+    const text = await response.text();
+    if (!response.ok) return { ok: false, deferred: true, status: response.status, error: text.slice(0, 240) || `HTTP ${response.status}` };
+    return { ok: true, ...(text ? JSON.parse(text) : {}) };
+  } catch (error) {
+    return { ok: false, deferred: true, error: messageOf(error) };
+  }
+}
+
+Deno.serve(async request => {
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (request.method !== "POST") return json({ ok: false, error: { code: "METHOD_NOT_ALLOWED", message: "POST required" } }, 405);
+
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, error: { code: "INVALID_JSON", message: "JSON body required" } }, 400);
+  }
+
+  const latitude = Number(body.latitude ?? body.lat);
+  const longitude = Number(body.longitude ?? body.lng);
+  const radiusKm = Math.min(Math.max(Number(body.radius_km || 8), 1), 20);
+  const requested = Array.isArray(body.amenity_names)
+    ? [...new Set(body.amenity_names.map((value: unknown) => String(value).trim().toLowerCase()).filter((value: string) => value in AMENITY_QUERIES))]
+    : [];
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return json({ ok: false, error: { code: "INVALID_COORDINATES", message: "valid lat/lng required" } }, 400);
+  }
+
+  const acquired = await live(query(latitude, longitude, radiusKm * 1000, requested));
+  if (!acquired.ok) {
+    return json({
+      ok: true,
+      degraded: true,
+      contract: "interactive-discovery-plus-canonical-persistence",
+      acquisition_status: "provider_unavailable",
+      canonical_fallback: true,
+      retryable: true,
+      warning: {
+        code: "LIVE_DISCOVERY_UNAVAILABLE",
+        stage: "acquisition",
+        message: "Live discovery providers are temporarily unavailable. Use canonical nearby results and retry live discovery later.",
+      },
+      providers_succeeded: 0,
+      providers_attempted: acquired.providers_attempted,
+      provider_failures: acquired.failures,
+      discovered: 0,
+      radius_km: radiusKm,
+      amenity_names: requested,
+      persistence: { skipped: true, reason: "no_live_rows" },
+      locations: [],
+    });
+  }
+
+  const locations = rows(acquired.elements).filter((row: any) => requested.every(name => Boolean(row.amenities?.[name])));
+  const shouldPersist = body.collect !== false;
+  const persistence = shouldPersist ? await persist(locations) : { ok: true, skipped: true };
+  const persistenceWarning = shouldPersist && persistence.ok === false
+    ? { code: "PERSISTENCE_DEFERRED", stage: "persistence", message: "Live places are available, but canonical persistence was deferred. The map can continue using the live result." }
+    : null;
+
+  return json({
+    ok: true,
+    degraded: Boolean(persistenceWarning),
+    contract: "interactive-discovery-plus-canonical-persistence",
+    canonical_persistence: shouldPersist ? (persistence.ok ? "ingest_external_locations" : "deferred") : "skipped",
+    acquisition_status: locations.length ? "success" : "empty",
+    cached: false,
+    discovered: locations.length,
+    radius_km: radiusKm,
+    amenity_names: requested,
+    providers_succeeded: acquired.providers_succeeded,
+    providers_attempted: acquired.providers_attempted,
+    provider_failures: acquired.failures,
+    persistence,
+    warning: persistenceWarning,
+    locations,
+  });
+});
