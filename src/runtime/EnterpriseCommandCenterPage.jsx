@@ -21,7 +21,7 @@ export default function EnterpriseCommandCenterPage(){
     try{
       const businesses=arr(businessMemberships.length?businessMemberships:await services.business.listBusinesses({includeDemo:isPlatformOwner}));
       const source=businesses.filter(enterpriseTier).slice(0,25);
-      const next=(await Promise.all(source.map(async business=>{
+      const next=await Promise.all(source.map(async business=>{
         const businessId=business.business_id||business.id;
         try{return{business,snapshot:await services.enterprise.controlPlaneSnapshot(businessId,30),error:null};}
         catch(e){return{business,snapshot:{totals:{},networks:[]},error:e.message||'Enterprise authority unavailable'};}
