@@ -18,7 +18,12 @@ export function createRouteCache() {
       const key = routeKey(route); const entry = { ...route, key, cachedAt: new Date().toISOString() };
       writeAll([entry, ...readAll().filter(item => item.key !== key)]); return entry;
     },
-    setActive: route => { if (!route?.routeId) return route || null; const entry = { ...route, activeAt: new Date().toISOString() }; writeActive(entry); return entry; },
+    setActive: route => {
+      if (!route?.origin || !route?.destination) return route || null;
+      const entry = { ...route, activeAt: new Date().toISOString() };
+      writeActive(entry);
+      return entry;
+    },
     updateActive: patch => { const current = readActive(); if (!current) return null; const next = { ...current, ...patch, activeAt: new Date().toISOString() }; writeActive(next); return next; },
     clearActive: () => writeActive(null),
     remove: key => writeAll(readAll().filter(route => route.key !== key)),
