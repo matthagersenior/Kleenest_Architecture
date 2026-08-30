@@ -20,8 +20,10 @@ export function PlaceActions({ place, onDetails, onRoute, onNavigate }) {
   const id = place?.location_id || place?.id;
   const navigate = () => onNavigate ? onNavigate(place) : window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.latitude},${place.longitude}`)}`,'_blank','noopener,noreferrer');
   return <div className="place-actions">
-    <button className="primary place-action-primary" onClick={navigate}><Navigation size={16}/>Open / Navigate</button>
-    <button className="secondary" onClick={()=>onRoute?.(place)}><Route size={16}/>Add to route</button>
-    <button className="secondary" onClick={()=>onDetails?.(id)}><ExternalLink size={16}/>Details</button>
+    <div className="place-navigation-actions" aria-label="Bathroom navigation options">
+      <button className="primary place-action-primary" onClick={navigate}><Navigation size={16}/>Navigate to bathroom</button>
+      <button className="secondary place-action-route" onClick={()=>onRoute?.(place)}><Route size={16}/>Add to route</button>
+    </div>
+    <button className="secondary place-action-details" onClick={()=>onDetails?.(id)}><ExternalLink size={16}/>View details</button>
   </div>;
 }
