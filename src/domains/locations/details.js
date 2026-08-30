@@ -15,7 +15,7 @@ function normalizeAuthorityBundle(bundle) {
   const externalRecords = Array.isArray(root.external_records) ? root.external_records : [];
   const latestExternal = externalRecords[0] || null;
   const rawExternal = latestExternal?.raw_data ?? latestExternal?.rawData ?? null;
-  const rawTags = rawExternal?.tags ?? latestExternal?.tags ?? latestExternal?.osm_tags ?? null;
+  const rawTags = rawExternal?.osm_tags ?? rawExternal?.tags ?? rawExternal?.source_metadata?.tags ?? latestExternal?.tags ?? latestExternal?.osm_tags ?? location?.source_metadata?.tags ?? null;
   const interaction = asObject(root.interaction) || {};
 
   if (!location && !place) return null;
@@ -32,19 +32,20 @@ function normalizeAuthorityBundle(bundle) {
   } : null;
 
   const sourceProjection = {
-    source: location?.source ?? latestExternal?.source ?? latestExternal?.source_system ?? null,
-    source_dataset: location?.source_dataset ?? latestExternal?.source_dataset ?? null,
+    source: location?.source ?? rawExternal?.source ?? latestExternal?.source ?? latestExternal?.source_system ?? null,
+    source_dataset: location?.source_dataset ?? rawExternal?.source_dataset ?? latestExternal?.source_dataset ?? null,
     external_location_id: latestExternal?.external_location_id ?? latestExternal?.external_id ?? latestExternal?.osm_id ?? null,
     external_record_id: latestExternal?.id ?? null,
     external_records: externalRecords,
     raw_data: rawExternal,
     raw_tags: rawTags,
     osm_tags: rawTags,
+    source_metadata: location?.source_metadata ?? rawExternal?.source_metadata ?? null,
     source_provenance: latestExternal ? {
-      source: latestExternal.source ?? latestExternal.source_system ?? null,
-      dataset: latestExternal.source_dataset ?? null,
+      source: rawExternal?.source ?? latestExternal.source ?? latestExternal.source_system ?? null,
+      dataset: rawExternal?.source_dataset ?? latestExternal.source_dataset ?? null,
       external_id: latestExternal.external_location_id ?? latestExternal.external_id ?? latestExternal.osm_id ?? null,
-      captured_at: latestExternal.captured_at ?? latestExternal.ingested_at ?? latestExternal.created_at ?? null,
+      captured_at: rawExternal?.source_metadata?.captured_at ?? latestExternal.last_seen_at ?? latestExternal.source_updated_at ?? latestExternal.captured_at ?? latestExternal.ingested_at ?? latestExternal.created_at ?? null,
     } : null,
   };
 
