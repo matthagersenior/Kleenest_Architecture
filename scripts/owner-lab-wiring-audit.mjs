@@ -8,20 +8,19 @@ const crud=read('runtime/OwnerCrudWorkbench.jsx');
 const membership=read('runtime/OwnerMembershipControls.jsx');
 const intelligence=read('runtime/OwnerIntelligenceLab.jsx');
 const ownerService=read('domains/intelligence/owner.js');
+const convergence=read('domains/intelligence/convergence.js');
 const appContext=read('AppContext.jsx');
 const requiredRoutes=['/owner','/owner/data','/owner/preview','/owner/audit','/owner/intelligence','/owner/reports','/owner/reports/history'];
 for(const route of requiredRoutes)if(!runtime.includes(`path="${route}"`))errors.push(`missing owner route: ${route}`);
 for(const token of ['services.admin.invoke(profile','services.admin.crud(profile','services.admin.searchUsers(profile','services.admin.setAccountCapabilities(profile','services.admin.setBusinessAccess(profile'])if(!crud.includes(token)&&!membership.includes(token))errors.push(`missing governed admin service wiring: ${token}`);
-// The component consumes the service namespace while the factory defines its
-// capabilities. Accept optional chaining because the runtime intentionally
-// guards an unavailable service boundary before invoking it.
 const ownerServiceConsumer=/services(?:\?\.)?ownerIntelligence/.test(intelligence);
 const ownerServiceProvider=/ownerIntelligence\s*:/.test(appContext);
 if(!ownerServiceConsumer||!ownerServiceProvider)errors.push('missing owner intelligence service boundary');
 for(const token of ['businessGrowthAnalytics','businessSummaryAnalytics','businessEngagementAnalytics','businessCampaignAnalytics','businessRoiAnalytics','businessBenchmarkAnalytics','businessGrowthActions','fleetDashboardSummary','fleetMetricCapabilities','fleetServiceOpportunities','enterpriseNetworkMetrics','enterpriseCampaignRoi','enterprisePartnerRoi'])if(!intelligence.includes(token)||!ownerService.includes(token))errors.push(`missing intelligence wiring: ${token}`);
-for(const token of ['execute_intelligence_action','complete_intelligence_action','process_intelligence_action_jobs','create_intelligence_notification']){const files=['domains/intelligence/actions.js','domains/intelligence/convergence.js','domains/notifications/intelligence.js'];if(!files.some(f=>read(f).includes(token)))errors.push(`missing intelligence loop capability: ${token}`)}
+for(const token of ['execute_intelligence_action','complete_intelligence_action','create_intelligence_notification']){const files=['domains/intelligence/actions.js','domains/intelligence/convergence.js','domains/notifications/intelligence.js'];if(!files.some(f=>read(f).includes(token)))errors.push(`missing intelligence loop capability: ${token}`)}
+if(!convergence.includes("notifications:'server_scheduled'")||!convergence.includes("actions:'server_scheduled'"))errors.push('owner intelligence loop does not preserve server-managed worker authority');
 for(const token of ['intelligenceActions','execute','complete','action_id','/intelligence/actions/'])if(!intelligence.includes(token))errors.push(`missing direct intelligence action UI wiring: ${token}`);
 if(!membership.includes('/owner/data?resource=profiles')||!membership.includes('/owner/data?resource=businesses'))errors.push('membership controls are not linked to governed CRUD workbenches');
-const report={generatedAt:new Date().toISOString(),status:errors.length?'attention':'ok',checks:{ownerRoutes:requiredRoutes.length,crudGovernedServiceCalls:true,membershipControls:true,intelligenceServiceSurface:true,intelligenceLoop:true,directIntelligenceActions:true},errors};
+const report={generatedAt:new Date().toISOString(),status:errors.length?'attention':'ok',checks:{ownerRoutes:requiredRoutes.length,crudGovernedServiceCalls:true,membershipControls:true,intelligenceServiceSurface:true,intelligenceLoop:true,serverManagedWorkers:true,directIntelligenceActions:true},errors};
 console.log(JSON.stringify(report,null,2));
 if(errors.length)process.exitCode=1;
