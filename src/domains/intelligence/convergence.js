@@ -8,7 +8,7 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
   const rows=value=>Array.isArray(value)?value:[];
   const requireBusinessId=id=>{if(!id)throw new Error('Business is required.');return String(id);};
   const createIntelligenceActionLink=async args=>{const result=await actions?.createLink?.(args?.locationId,args?.businessId,args?.surface,args?.signalType,args?.actionType,args?.metadata||{});if(!result)throw new Error('Intelligence action service is unavailable.');return result;};
-  const process_intelligence_notification_jobs=async(limit=25)=>{const{data,error}=await client.rpc('process_intelligence_notification_jobs',{p_limit:limit});if(error)throw error;return data??0;};
+  const process_intelligence_notification_jobs=async()=>{throw new Error('Intelligence job workers are server-managed and cannot be executed from the client.');};
   const aiAssist=async({task,context={},instruction=''}={})=>{
     await requireUser();
     if(!task)throw new Error('AI task is required.');
@@ -67,20 +67,13 @@ export function createIntelligenceConvergenceService(client,{intelligence,notifi
     const id=requireBusinessId(businessId);
     return rows(await rpc(surface==='fleet'?'fleet_service_opportunities_for_business':'business_location_intelligence',{p_business_id:id}));
   };
-  const processJobs=async(limit=25)=>{
-    const[notificationsResult,actionsResult]=await Promise.all([
-      client.rpc('process_intelligence_notification_jobs',{p_limit:limit}),
-      client.rpc('process_intelligence_action_jobs',{p_limit:limit})
-    ]);
-    if(notificationsResult.error)throw notificationsResult.error;
-    if(actionsResult.error)throw actionsResult.error;
-    return{notifications:notificationsResult.data??0,actions:actionsResult.data??0};
-  };
-  const runOperationalLoop=async({businessId,surface='fleet',limit=25,start=null,end=null}={})=>{
+  const processJobs=async()=>Object.freeze({notifications:'server_scheduled',actions:'server_scheduled'});
+  const runOperationalLoop=async({businessId,surface='fleet',start=null,end=null}={})=>{
+    await requireUser();
     const id=requireBusinessId(businessId);
     const snapshot=await operationalSnapshot({businessId:id,surface,start,end});
     const signals=surface==='fleet'?rows(snapshot.opportunities):rows(snapshot.locationIntelligence);
-    const processed=await processJobs(limit);
+    const processed=await processJobs();
     const result=Object.freeze({businessId:id,surface,snapshot,signals,processed});
     emit('kleenest:operational-loop-updated',result);
     emit('kleenest:intelligence-updated',{businessId:id,surface,reason:'operational-loop'});
