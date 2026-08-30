@@ -20,13 +20,13 @@ const idOf = p => locationAuthorityId(p);
 const esc = v => safeText(v);
 
 function markerElement(place, selected) {
-  const status=placeStatus(place), logo=placeLogoCandidates(place)[0], initial=esc((placeBrand(place)||placeName(place)).slice(0,1).toUpperCase()||'K');
+  const status=placeStatus(place), logos=placeLogoCandidates(place), logo=logos[0], initial=esc((placeBrand(place)||placeName(place)).slice(0,1).toUpperCase()||'K');
   const el=document.createElement('div');
   el.className=`kleenest-maplibre-marker ${status.key}${selected?' selected':''}`;
   el.setAttribute('aria-label',placeName(place));
   el.innerHTML=`<span class="kleenest-maplibre-marker-logo">${logo?`<img src="${esc(logo)}" alt="" referrerpolicy="no-referrer">`:''}<span class="kleenest-maplibre-marker-fallback"${logo?' style="display:none"':''}>${initial}</span></span><span class="kleenest-maplibre-marker-status">${esc(status.glyph)}</span>`;
   const img=el.querySelector('img');
-  if(img)img.addEventListener('error',()=>{img.remove();const fallback=el.querySelector('.kleenest-maplibre-marker-fallback');if(fallback)fallback.style.display='grid';},{once:true});
+  if(img){let logoIndex=0;img.addEventListener('error',()=>{logoIndex+=1;if(logos[logoIndex]){img.src=logos[logoIndex];return;}img.remove();const fallback=el.querySelector('.kleenest-maplibre-marker-fallback');if(fallback)fallback.style.display='grid';});}
   return el;
 }
 
