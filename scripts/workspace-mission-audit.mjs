@@ -7,12 +7,16 @@ for(const [workspace,mission] of Object.entries(WORKSPACE_MISSIONS)){
   if(!WORKSPACES[workspace])failures.push(`${workspace}: workspace metadata missing`);
   if(!mission.purpose?.trim())failures.push(`${workspace}: purpose missing`);
   if(!mission.primaryOutcomes?.length)failures.push(`${workspace}: primary outcomes missing`);
-  if(!mission.requiredDomains?.length)failures.push(`${workspace}: required domains missing`);
+  if(!mission.requiredDomains?.length)failures.push(`${workspace}: required substrate domains missing`);
+  if(!mission.directDomains?.length)failures.push(`${workspace}: direct workspace domains missing`);
   for(const domain of mission.requiredDomains||[]){
+    if(!CAPABILITY_REGISTRY[domain])failures.push(`${workspace}: unknown required substrate domain ${domain}`);
+  }
+  for(const domain of mission.directDomains||[]){
     const capability=CAPABILITY_REGISTRY[domain];
-    if(!capability){failures.push(`${workspace}: unknown required domain ${domain}`);continue;}
+    if(!capability){failures.push(`${workspace}: unknown direct domain ${domain}`);continue;}
     const exposed=(capability.ui||[]).includes(workspace)||(capability.ui||[]).includes('all');
-    if(!exposed)failures.push(`${workspace}: ${domain} is required by mission but not exposed to workspace`);
+    if(!exposed)failures.push(`${workspace}: direct domain ${domain} is not exposed to workspace`);
   }
   if(workspace!=='admin'&&!(WORKSPACE_NAVIGATION[workspace]||[]).length)failures.push(`${workspace}: no navigation surface`);
 }
@@ -31,4 +35,4 @@ for(const token of ['inspect capability coverage','monitor ingestion and dataset
 }
 
 if(failures.length){console.error('Workspace mission audit failed.');for(const item of failures)console.error(`- ${item}`);process.exit(1)}
-console.log(`Workspace mission audit passed across ${Object.keys(WORKSPACE_MISSIONS).length} workspaces.`);
+console.log(`Workspace mission audit passed across ${Object.keys(WORKSPACE_MISSIONS).length} workspaces with substrate and direct-exposure contracts.`);
