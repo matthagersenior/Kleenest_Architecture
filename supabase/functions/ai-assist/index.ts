@@ -11,6 +11,19 @@ const allowedTasks = new Set(['business_growth','fleet_dispatch','fleet_debrief'
 const clamp = (value: unknown, max = 18000) => JSON.stringify(value ?? {}).slice(0, max);
 const text = (value: unknown) => String(value ?? '').trim();
 
+type ProviderName = 'openrouter'|'gemini'|'openai';
+type ProviderDiagnostic = { provider: ProviderName; status: number | null; request_id: string | null; error_code: string | null; error_type: string | null; error_message: string | null };
+type ProviderSuccess = { provider: ProviderName; answer: string; model: string; requestId: string|null };
+class ProviderError extends Error {
+  diagnostic: ProviderDiagnostic;
+  constructor(message: string, diagnostic: ProviderDiagnostic) { super(message); this.name = 'ProviderError'; this.diagnostic = diagnostic; }
+}
+const missingKey = (provider: ProviderName, key: string) => new ProviderError(`${key} is not configured`, {provider,status:null,request_id:null,error_code:'missing_api_key',error_type:'configuration_error',error_message:`${key} is not configured`});
+const diagnostic = (provider: ProviderName, status: number|null, requestId: string|null, payload: any): ProviderDiagnostic => {
+  const err = payload?.error || payload || {};
+  return {provider,status,request_id:requestId,error_code:text(err?.code || err?.status)||null,error_type:text(err?.type || err?.status)||null,error_message:text(err?.message || err?.error?.message).slice(0,500)||null};
+};
+
 function fallback(task: string, context: any) {
   if (task === 'visit_review') {
     const stars = Number(context?.stars || 0), clean = Number(context?.cleanliness || 0), observation = text(context?.observation).replaceAll('_', ' '), note = text(context?.note);
@@ -72,31 +85,86 @@ function systemPrompt(task: string) {
   return shared + (map[task] || '');
 }
 
-type ProviderDiagnostic = { status: number | null; request_id: string | null; error_code: string | null; error_type: string | null; error_message: string | null };
-class ProviderError extends Error {
-  diagnostic: ProviderDiagnostic;
-  constructor(message: string, diagnostic: ProviderDiagnostic) { super(message); this.name = 'ProviderError'; this.diagnostic = diagnostic; }
+const userPrompt = (context: any, instruction: string) => `Instruction: ${instruction || 'Help with this task.'}\nAuthoritative context:\n${clamp(context)}`;
+
+async function openRouterAssist(task: string, context: any, instruction: string, traceId: string): Promise<ProviderSuccess> {
+  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+  if (!apiKey) throw missingKey('openrouter','OPENROUTER_API_KEY');
+  const model = Deno.env.get('OPENROUTER_MODEL') || 'openrouter/free';
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:'POST',
+    headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json','X-OpenRouter-Title':'Kleenest','X-Client-Request-Id':traceId},
+    body:JSON.stringify({model,messages:[{role:'system',content:systemPrompt(task)},{role:'user',content:userPrompt(context,instruction)}],max_tokens:700}),
+  });
+  const requestId = response.headers.get('x-request-id');
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new ProviderError(`OpenRouter error ${response.status}`, diagnostic('openrouter',response.status,requestId,payload));
+  const answer = text(payload?.choices?.[0]?.message?.content);
+  if (!answer) throw new ProviderError('OpenRouter returned no text', {provider:'openrouter',status:response.status,request_id:requestId,error_code:'empty_output',error_type:'provider_output_error',error_message:'OpenRouter returned no text'});
+  return {provider:'openrouter',answer,model:text(payload?.model)||model,requestId};
 }
 
-async function modelAssist(task: string, context: any, instruction: string, traceId: string) {
+function geminiText(payload: any) {
+  if (text(payload?.output_text)) return text(payload.output_text);
+  const out: string[] = [];
+  const walk = (value: any) => {
+    if (!value) return;
+    if (Array.isArray(value)) { value.forEach(walk); return; }
+    if (typeof value !== 'object') return;
+    if ((value.type === 'text' || value.type === 'output_text') && typeof value.text === 'string') out.push(value.text);
+    for (const [key, child] of Object.entries(value)) if (!['thought','thoughts','reasoning'].includes(key)) walk(child);
+  };
+  walk(payload?.steps);
+  return out.join('\n').trim();
+}
+
+async function geminiAssist(task: string, context: any, instruction: string, traceId: string): Promise<ProviderSuccess> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) throw missingKey('gemini','GEMINI_API_KEY');
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.7-flash';
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+    method:'POST',
+    headers:{'x-goog-api-key':apiKey,'Content-Type':'application/json','X-Client-Request-Id':traceId},
+    body:JSON.stringify({model,system_instruction:systemPrompt(task),input:userPrompt(context,instruction),store:false,generation_config:{thinking_level:'low'}}),
+  });
+  const requestId = response.headers.get('x-request-id') || response.headers.get('x-goog-request-id');
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new ProviderError(`Gemini error ${response.status}`, diagnostic('gemini',response.status,requestId,payload));
+  const answer = geminiText(payload);
+  if (!answer) throw new ProviderError('Gemini returned no text', {provider:'gemini',status:response.status,request_id:requestId,error_code:'empty_output',error_type:'provider_output_error',error_message:'Gemini returned no text'});
+  return {provider:'gemini',answer,model:text(payload?.model)||model,requestId};
+}
+
+async function openAiAssist(task: string, context: any, instruction: string, traceId: string): Promise<ProviderSuccess> {
   const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) throw new ProviderError('OPENAI_API_KEY is not configured', {status:null,request_id:null,error_code:'missing_api_key',error_type:'configuration_error',error_message:'OPENAI_API_KEY is not configured'});
+  if (!apiKey) throw missingKey('openai','OPENAI_API_KEY');
   const model = Deno.env.get('OPENAI_MODEL') || 'gpt-5.6-luna';
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'X-Client-Request-Id': traceId},
-    body: JSON.stringify({model,input:[{role:'system',content:[{type:'input_text',text:systemPrompt(task)}]},{role:'user',content:[{type:'input_text',text:`Instruction: ${instruction || 'Help with this task.'}\nAuthoritative context:\n${clamp(context)}`}]}],max_output_tokens:700}),
+    body: JSON.stringify({model,input:[{role:'system',content:[{type:'input_text',text:systemPrompt(task)}]},{role:'user',content:[{type:'input_text',text:userPrompt(context,instruction)}]}],max_output_tokens:700}),
   });
   const requestId = response.headers.get('x-request-id');
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const providerError = payload?.error || {};
-    throw new ProviderError(`AI provider error ${response.status}`, {status:response.status,request_id:requestId,error_code:text(providerError?.code)||null,error_type:text(providerError?.type)||null,error_message:text(providerError?.message).slice(0,500)||null});
-  }
+  if (!response.ok) throw new ProviderError(`OpenAI error ${response.status}`, diagnostic('openai',response.status,requestId,payload));
   const output = Array.isArray(payload?.output) ? payload.output : [];
   const answer = output.flatMap((item:any) => Array.isArray(item?.content) ? item.content : []).map((item:any) => item?.text).filter(Boolean).join('\n').trim();
-  if (!answer) throw new ProviderError('AI provider returned no text', {status:response.status,request_id:requestId,error_code:'empty_output',error_type:'provider_output_error',error_message:'AI provider returned no text'});
-  return {answer, model, requestId};
+  if (!answer) throw new ProviderError('OpenAI returned no text', {provider:'openai',status:response.status,request_id:requestId,error_code:'empty_output',error_type:'provider_output_error',error_message:'OpenAI returned no text'});
+  return {provider:'openai',answer,model,requestId};
+}
+
+async function providerAssist(task: string, context: any, instruction: string, traceId: string) {
+  const failures: ProviderDiagnostic[] = [];
+  const providers = [openRouterAssist,geminiAssist,openAiAssist];
+  for (const run of providers) {
+    try { return {generated:await run(task,context,instruction,traceId),failures}; }
+    catch (error) {
+      const failure = error instanceof ProviderError ? error.diagnostic : {provider:'openai' as ProviderName,status:null,request_id:null,error_code:'provider_exception',error_type:error instanceof Error ? error.name : 'unknown',error_message:error instanceof Error ? error.message.slice(0,500) : 'Unknown provider failure'};
+      failures.push(failure);
+      console.error('ai-assist provider attempt failed', JSON.stringify({trace_id:traceId,task,...failure}));
+    }
+  }
+  return {generated:null,failures};
 }
 
 Deno.serve(async (req) => {
@@ -110,20 +178,18 @@ Deno.serve(async (req) => {
     const body = await req.json(), task = text(body?.task);
     if (!allowedTasks.has(task)) return new Response(JSON.stringify({error:'Unsupported AI task'}), {status:400,headers});
     const context = body?.context ?? {}, instruction = text(body?.instruction).slice(0, 2000), traceId = crypto.randomUUID();
-    let provider: 'openai'|'grounded_fallback' = 'grounded_fallback', model: string|null = null, answer = '', providerRequestId: string|null = null, providerDiagnostic: ProviderDiagnostic|null = null;
+    const {generated,failures} = await providerAssist(task,context,instruction,traceId);
+    const provider = generated?.provider || 'grounded_fallback';
+    const model = generated?.model || null;
+    const answer = generated?.answer || fallback(task,context);
+    const lastFailure = failures.at(-1) || null;
+    const providerStatus = lastFailure?.status ?? (generated ? 200 : null);
+    const providerErrorCode = generated ? null : (lastFailure?.error_code ?? null);
+    const providerErrorType = generated ? null : (lastFailure?.error_type ?? null);
+    const providerRequestId = generated?.requestId ?? lastFailure?.request_id ?? null;
+    const providerAttempts = failures.map(({provider,status,error_code,error_type,request_id})=>({provider,status,error_code,error_type,request_id}));
     try {
-      const generated = await modelAssist(task, context, instruction, traceId);
-      provider = 'openai'; model = generated.model; answer = generated.answer; providerRequestId = generated.requestId;
-    } catch (error) {
-      providerDiagnostic = error instanceof ProviderError ? error.diagnostic : {status:null,request_id:null,error_code:'provider_exception',error_type:error instanceof Error ? error.name : 'unknown',error_message:error instanceof Error ? error.message.slice(0,500) : 'Unknown provider failure'};
-      console.error('ai-assist provider fallback', JSON.stringify({trace_id:traceId,task,...providerDiagnostic}));
-    }
-    if (!answer) answer = fallback(task, context);
-    const providerStatus = providerDiagnostic?.status ?? (provider === 'openai' ? 200 : null);
-    const providerErrorCode = providerDiagnostic?.error_code ?? null;
-    const providerErrorType = providerDiagnostic?.error_type ?? null;
-    try {
-      await supabaseAdmin.from('data_feature_events').insert({event_type:'ai_assist_generated',feature_code:'ai_assist',subject_type:'user',subject_id:user.id,source_table:'edge_function',value_text:task,metadata:{provider,model,task,trace_id:traceId,provider_request_id:providerRequestId,provider_status:providerStatus,provider_error_code:providerErrorCode,provider_error_type:providerErrorType}});
+      await supabaseAdmin.from('data_feature_events').insert({event_type:'ai_assist_generated',feature_code:'ai_assist',subject_type:'user',subject_id:user.id,source_table:'edge_function',value_text:task,metadata:{provider,model,task,trace_id:traceId,provider_request_id:providerRequestId,provider_status:providerStatus,provider_error_code:providerErrorCode,provider_error_type:providerErrorType,provider_attempts:providerAttempts}});
     } catch {}
     return new Response(JSON.stringify({task,answer,provider,model,review_required:true,trace_id:traceId,provider_status:providerStatus,provider_error_code:providerErrorCode,provider_error_type:providerErrorType}), {headers});
   } catch (error) {
