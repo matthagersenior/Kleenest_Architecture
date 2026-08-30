@@ -8,9 +8,11 @@ const checks=[
  ['Consumer service exposes review amenity inventory',['record_review_amenity_inventory'],'src/domains/consumer/location-evidence.js'],
  ['Consumer service exposes occupancy write authority',['submit_location_occupancy_observation'],'src/domains/consumer/location-evidence.js'],
  ['Consumer service exposes occupancy summary authority',['get_location_occupancy_summary'],'src/domains/consumer/location-evidence.js'],
+ ['Standalone amenity evidence carries quantity',['observedQuantity','observed_quantity','submit_amenity_observation'],'src/domains/consumer/location-evidence.js'],
  ['Review reads return amenity quantities',['review_amenity_feedback','observed_quantity','quantity:item.observed_quantity'],'src/domains/community/interactions.js'],
  ['Location reviews require verified visit authority',['Verify your visit before publishing a customer review','checkInId','services.reviews.create'],'src/runtime/LocationDetailsPageFixed.jsx'],
  ['Location review cards render amenity counts',['review-amenity-inventory','amenityText(a)'],'src/runtime/LocationDetailsPageFixed.jsx'],
+ ['Location details surface privacy-safe occupancy intelligence',['occupancySummary','OCCUPANCY','Privacy-safe aggregate','utilization_pct','queue_count'],'src/runtime/LocationDetailsPageFixed.jsx'],
  ['Amenity quantities persist in canonical evidence tables',['review_amenity_feedback add column if not exists observed_quantity','location_amenity_observations add column if not exists observed_quantity'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Occupancy substrate has RLS',['location_occupancy_observations enable row level security','location_occupancy_own_insert','location_occupancy_own_read'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Occupancy summary is privacy-safe aggregate',['sample_count','avg_occupancy_count','avg_utilization_pct','freshest_observed_at'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
@@ -20,6 +22,13 @@ const checks=[
  ['Progression service exposes full badge catalog',['badgeCatalog:','client.from(\'badges\')'],'src/domains/progression/service.js'],
  ['Badge catalog shows locked and earned requirements',['Every way to earn recognition','Not earned yet','reward_points'],'src/runtime/BadgeCatalogPanel.jsx'],
  ['Progression page renders comprehensive badge catalog',['BadgeCatalogPanel'],'src/runtime/ProgressionPage.jsx'],
+ ['Verified occupancy reward activity is supported',['occupancy_observation',"when 'occupancy_observation' then 10",'evaluate_user_badges'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
+ ['Standalone amenity quantity persists in observation authority',['observed_quantity','Present amenity quantity out of range','submit_amenity_observation'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
+ ['Fleet dispatch signal policy has protected configurable thresholds',['fleet_dispatch_signal_policies','occupancy_fresh_minutes','high_utilization_pct','queue_threshold','fleet_dispatch_signal_policy_update'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
+ ['Fleet dispatch intelligence consumes occupancy facts',['occupancy_summary','current utilization meets configured threshold','current queue meets configured threshold','authoritative_dispatch_intelligence_v2'],'supabase/migrations/20260830003200_occupancy_fleet_intelligence_amenity_quantity_v2.sql'],
+ ['Fleet service exposes dispatch signal policy',['dispatchSignalPolicy','updateDispatchSignalPolicy','fleet_update_dispatch_signal_policy'],'src/domains/fleet/operations.js'],
+ ['Fleet dispatch policy UI exposes manager-adjustable thresholds',['Occupancy-aware ranking','Fresh for (minutes)','High utilization threshold','Queue threshold','Save signal policy'],'src/runtime/FleetDispatchSignalPolicyPanel.jsx'],
+ ['Fleet recommendations expose occupancy facts and policy',['FleetDispatchSignalPolicyPanel','occupancyText','occupancy_summary','dispatch_occupancy_summary','authoritative dispatch'],'src/runtime/FleetRouteStopPlanner.jsx'],
  ['Fleet operational notification trigger exists',['trg_fleet_operational_notification'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Fleet operational notification covers failures',['route_failed','job_failed'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
  ['Fleet geofence notification trigger exists',['trg_fleet_geofence_notification'],'supabase/migrations/20260830002900_trust_fleet_occupancy_foundation.sql'],
@@ -42,4 +51,4 @@ for(const [label,contracts,file] of checks){
  }
 }
 if(failures.length){console.error('Trust + Fleet Operations + Progression wave audit FAILED');failures.forEach(x=>console.error(`- ${x}`));process.exit(1)}
-console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): counted review amenities, occupancy aggregation, comprehensive badges/rewards, and source-event-driven Fleet owner inbox/push notifications are converged.`);
+console.log(`Trust + Fleet Operations + Progression wave audit passed (${checks.length} contracts): counted amenity evidence, privacy-safe occupancy intelligence, comprehensive badges/rewards, configurable occupancy-aware Fleet dispatch, and source-event-driven Fleet owner inbox/push notifications are converged.`);
