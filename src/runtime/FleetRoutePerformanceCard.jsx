@@ -43,7 +43,6 @@ export default function FleetRoutePerformanceCard({ businessId, route }) {
         <div className="compact-actions">
           {!stop.actual_arrived_at&&<button className="button secondary" type="button" onClick={()=>timing(stop.id,'arrived')} disabled={busy.startsWith(stop.id)}><Activity size={13}/>Arrived</button>}
           {stop.status==='arrived'&&<button className="button secondary" type="button" onClick={()=>timing(stop.id,'service_started')} disabled={busy.startsWith(stop.id)}>Start service</button>}
-          !{''}
           {stop.status!=='completed'&&stop.status!=='skipped'&&<button className="button primary" type="button" onClick={()=>timing(stop.id,'completed')} disabled={busy.startsWith(stop.id)}>Complete</button>}
         </div>
       </article>)}</div>}
