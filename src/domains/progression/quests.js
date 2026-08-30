@@ -3,6 +3,7 @@ export function createQuestService(client){
   async function rpc(name,args={}){const{data,error}=await client.rpc(name,args);if(error)throw error;return data;}
   return Object.freeze({
     available:(limit=20)=>rpc('quest_list_available',{p_limit:Math.min(Math.max(Number(limit)||20,1),50)}),
+    active:(limit=20)=>rpc('quest_my_active_progress',{p_limit:Math.min(Math.max(Number(limit)||20,1),50)}).then(data=>Array.isArray(data)?data:[]),
     create:(ownerType,ownerId,payload)=>rpc('quest_create',{p_owner_type:ownerType,p_owner_id:ownerId,p_name:payload.name,p_description:payload.description??null,p_reward_config:payload.rewardConfig??{},p_targeting_config:payload.targetingConfig??{},p_route_config:payload.routeConfig??{},p_start_at:payload.startAt??null,p_end_at:payload.endAt??null}),
     listCreator:(ownerType,ownerId)=>rpc('quest_list_creator',{p_owner_type:ownerType,p_owner_id:ownerId}),
     addStep:(questId,step)=>rpc('quest_add_step',{p_quest_id:questId,p_step_order:step.order,p_step_type:step.type,p_title:step.title,p_description:step.description??null,p_location_id:step.locationId??null,p_geofence_id:step.geofenceId??null,p_qr_code_id:step.qrCodeId??null,p_required:step.required??true,p_xp_reward:step.xpReward??0,p_reward_config:step.rewardConfig??{},p_validation_config:step.validationConfig??{}}),
