@@ -16,6 +16,7 @@ if(!errors.length){
  const mapCss=fs.readFileSync(path.join(src,'runtime/MapSurface.css'),'utf8');
  const route=fs.readFileSync(path.join(src,'runtime/RouteSurface.jsx'),'utf8');
  const routing=fs.readFileSync(path.join(src,'domains/routing/route.js'),'utf8');
+ const cache=fs.readFileSync(path.join(src,'domains/routing/cache.js'),'utf8');
  const runtime=fs.readFileSync(path.join(src,'runtime/CanonicalAppRuntime.jsx'),'utf8');
  const context=fs.readFileSync(path.join(src,'AppContext.jsx'),'utf8');
  const packageJson=fs.readFileSync(path.join(repo,'package.json'),'utf8');
@@ -32,11 +33,17 @@ if(!errors.length){
  if(/from ['\"]leaflet['\"]|from ['\"]react-leaflet['\"]|require\(['\"]leaflet['\"]\)/.test(map))errors.push('MapSurface.jsx must not use Leaflet.');
  if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route handoff mode.');
  if(!map.includes('/route?add=')||!map.includes('/route?locationId='))errors.push('MapSurface.jsx must expose explicit stop and destination route contracts.');
+ if(!map.includes("searchParams.get('routePreview')==='active'"))errors.push('MapSurface.jsx must own active-route preview mode.');
+ for(const token of ['services?.routing?.cache?.getActive?.()','ROUTE_SOURCE','ROUTE_LAYER',"type:'geojson'","type:'line'"])if(!map.includes(token))errors.push(`MapSurface.jsx missing canonical route-preview token: ${token}`);
  if(!route.includes('services?.routing?.request'))errors.push('RouteSurface.jsx must consume services.routing.request.');
  if(route.includes('createRouteCache'))errors.push('RouteSurface.jsx must not construct route cache authority.');
  if(route.includes('kleenest.routeMapMode'))errors.push('RouteSurface.jsx must not use hidden localStorage route mode.');
  if(!route.includes('services?.routing?.cache'))errors.push('RouteSurface.jsx must consume the routing service cache authority.');
  if(!route.includes('to="/map?routeMode=stop"'))errors.push('RouteSurface.jsx must use explicit map stop-selection mode.');
+ if(!route.includes('to="/map?routePreview=active"'))errors.push('RouteSurface.jsx must hand route visualization to canonical MapSurface.');
+ if(!route.includes("active?.origin&&active?.destination&&active?.geometry"))errors.push('RouteSurface.jsx must recover built route geometry, not only persisted route IDs.');
+ if(cache.includes('if (!route?.routeId) return route || null'))errors.push('Route cache must not require a persisted routeId before saving active geometry.');
+ if(!cache.includes("if (!route?.origin || !route?.destination) return route || null"))errors.push('Route cache must validate built routes by origin/destination before active persistence.');
  if(!routing.includes('createRoutingService(client,{live=null,cache=null}={})'))errors.push('Routing service must accept canonical injected live/cache authorities.');
  if(!routing.includes('liveService=live||createLiveNetworkService(client)'))errors.push('Routing service must prefer injected Live Network authority.');
  if(!routing.includes('routeCache=cache||createRouteCache()'))errors.push('Routing service must own the route cache authority.');
@@ -57,4 +64,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one RouteSurface, one map service, one routing service/cache/live authority, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
