@@ -33,6 +33,11 @@ if(!errors.length){
  for(const token of ['.map-surface','.map-canvas','.maplibre-host','.kleenest-maplibre-marker','.map-selection','.amenity-picker'])if(!mapCss.includes(token))errors.push(`MapSurface.css missing canonical presentation token: ${token}`);
  if(!map.includes('services?.maps?.nearby'))errors.push('MapSurface.jsx must consume services.maps.nearby.');
  if(/from ['\"]leaflet['\"]|from ['\"]react-leaflet['\"]|require\(['\"]leaflet['\"]\)/.test(map))errors.push('MapSurface.jsx must not use Leaflet.');
+ if(!map.includes("el.className='kleenest-maplibre-anchor'"))errors.push('MapSurface markers must give MapLibre a transform-safe anchor wrapper.');
+ if(!map.includes('class="kleenest-maplibre-marker'))errors.push('MapSurface marker visuals must live inside the MapLibre anchor wrapper.');
+ if(!map.includes('navigationHref=place=>')||!map.includes('https://www.google.com/maps/dir/?api=1&destination='))errors.push('MapSurface must expose direct one-tap external navigation.');
+ const navigateButtons=(map.match(/>Navigate now<\/a>/g)||[]).length;
+ if(navigateButtons<2)errors.push(`MapSurface must expose Navigate now on pin selection and result cards; found ${navigateButtons}.`);
  if(!map.includes("searchParams.get('routeMode')==='stop'"))errors.push('MapSurface.jsx must use explicit query-based route handoff mode.');
  if(!map.includes('/route?add=')||!map.includes('/route?locationId='))errors.push('MapSurface.jsx must expose explicit stop and destination route contracts.');
  if(!map.includes("searchParams.get('routePreview')==='active'"))errors.push('MapSurface.jsx must own active-route preview mode.');
@@ -71,4 +76,4 @@ if(!errors.length){
  if(packageJson.includes('"leaflet"')||packageJson.includes('"react-leaflet"'))errors.push('Legacy Leaflet dependencies must not return.');
 }
 if(errors.length){console.error(errors.join('\n'));process.exit(1)}
-console.log('Map/routing authority audit passed: one MapSurface and stylesheet, one canonical brand resolver, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
+console.log('Map/routing authority audit passed: one MapSurface and stylesheet, transform-safe geographically pinned markers, direct one-tap navigation, one canonical brand resolver, one RouteSurface, one map service, one routing service/cache/live authority, canonical active-route geometry preview, explicit map-to-route contracts, MapLibre-only rendering, and the same canonical routes serve every membership tier.');
