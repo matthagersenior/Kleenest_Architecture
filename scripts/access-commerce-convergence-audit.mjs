@@ -6,7 +6,7 @@ const required=[
  ['src/domains/billing/catalog.js',["interval === 'once'",'max_users','PRODUCT_TYPES.ONE_TIME','PRODUCT_TYPES.RECURRING','rowTime','aRecurring']],
  ['src/domains/billing/commerce.js',['stripe-create-checkout','stripe-customer-portal','isRecurringPlan','isOneTimePlan','pricing_catalog','CHECKOUT_SOURCE_CODES']],
  ['src/runtime/PricingPage.jsx',['useSearchParams','oneTime','Buy ${card.copy.title}','refreshAuthContext','consumerRank','Included in current membership','recurringCode','syncDelays','checkoutConfirmed','session_id','kleenest:billing-updated']],
- ['src/runtime/AccessOffersPage.jsx',['priceCents','Checkout with Stripe','services.accessOffers.checkout','services.accessOffers.purchase','services.accessOffers.redeem','checkout=success']],
+ ['src/runtime/AccessOffersPage.jsx',['priceCents','Checkout with Stripe','services.accessOffers.checkout','services.accessOffers.purchase','services.accessOffers.redeem','checkout=success','syncDelays','session_id','offer=','kleenest:access-offer-updated']],
  ['supabase/migrations/20260829233000_guard_paid_single_use_access_checkout_boundary.sql',['paid access requires verified checkout','record_data_feature_event','commerce_mode','free_claim']],
  ['supabase/migrations/20260829235000_single_use_access_stripe_fulfillment_v1.sql',['fulfill_single_use_access_checkout','provider_checkout_session_id','service_role','checkout amount mismatch','stripe_checkout']],
  ['supabase/migrations/20260830082054_commerce_plan_code_convergence_v1.sql',['plan_code','pricing_catalog(code)','subscriptions_user_plan_code_status_idx']],
@@ -19,6 +19,8 @@ for(const [rel,tokens] of required){const file=path.join(root,rel);if(!fs.exists
 const page=fs.readFileSync(path.join(root,'src/runtime/AccessOffersPage.jsx'),'utf8');
 if(!page.includes('paid=priceCents(o)>0'))missing.push('AccessOffersPage.jsx: priced-offer classification missing');
 if(!page.includes("paid?(busy===`checkout:${o.id}`?'Opening checkout…':'Checkout with Stripe')"))missing.push('AccessOffersPage.jsx: priced offers do not route to verified Stripe checkout');
+if(!page.includes("rows.some(row=>String(row?.offer_id||'')===String(offerId)"))missing.push('AccessOffersPage.jsx: paid offer return does not confirm the exact fulfilled offer');
+if(!page.includes('syncDelays.length-1'))missing.push('AccessOffersPage.jsx: paid offer webhook convergence retry boundary missing');
 const freeGuard=fs.readFileSync(path.join(root,'supabase/migrations/20260829233000_guard_paid_single_use_access_checkout_boundary.sql'),'utf8');
 if(!freeGuard.includes('coalesce(o.price_cents,0) > 0'))missing.push('checkout boundary migration: database direct-claim price guard missing');
 const fulfillment=fs.readFileSync(path.join(root,'supabase/migrations/20260829235000_single_use_access_stripe_fulfillment_v1.sql'),'utf8');
@@ -38,4 +40,4 @@ const checkout=fs.readFileSync(path.join(root,'supabase/functions/stripe-create-
 if(!checkout.includes("plan.interval==='once'?'membership_one_time':'subscription'"))missing.push('Stripe checkout does not derive mode from canonical catalog interval');
 if(!checkout.includes('plan=${encodeURIComponent(planCode)}&session_id={CHECKOUT_SESSION_ID}'))missing.push('Stripe checkout success redirect does not carry an authoritative plan/session target');
 if(missing.length){console.error(missing.join('\n'));process.exit(1)}
-console.log('Access → Commerce convergence audit passed: free access claims remain authoritative, paid access offers and one-time consumer memberships use Stripe payment-mode fulfillment, recurring catalog plans use subscription mode, organization entitlements recompute from all active recurring billing rows, inherited consumer membership access cannot be redundantly repurchased, and checkout redirects converge against the exact Stripe-backed target before declaring access active.');
+console.log('Access → Commerce convergence audit passed: free access claims remain authoritative, paid access offers and one-time consumer memberships use Stripe payment-mode fulfillment, recurring catalog plans use subscription mode, organization entitlements recompute from all active recurring billing rows, inherited consumer membership access cannot be redundantly repurchased, and both membership and paid access redirects converge against their exact Stripe-backed fulfillment targets before declaring access active.');
