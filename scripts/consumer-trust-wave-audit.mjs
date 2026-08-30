@@ -26,7 +26,8 @@ const checks = [
   ['Quest surface loads available and active quest state together', /services\.quests\.available\(30\)[\s\S]*services\.quests\.active\(20\)/, 'src/runtime/QuestSurface.jsx'],
   ['Quest surface shows backend participation progress and earned XP', /xp_earned[\s\S]*completed[\s\S]*last_event_at/, 'src/runtime/QuestSurface.jsx'],
   ['Active quest RPC is security invoker and authenticated-only', /security invoker[\s\S]*revoke execute[\s\S]*anon[\s\S]*grant execute[\s\S]*authenticated/i, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
-  ['Active quest RPC scopes participation and step events to auth uid', /p\.user_id=auth\.uid\(\)[\s\S]*e\.user_id=auth\.uid\(\)/, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
+  ['Active quest RPC scopes participation to auth uid', /p\.user_id\s*=\s*auth\.uid\(\)/, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
+  ['Active quest RPC scopes step events to auth uid', /e\.user_id\s*=\s*auth\.uid\(\)/, 'supabase/migrations/20260830002800_quest_my_active_progress_v1.sql'],
 ];
 
 const failures = [];
