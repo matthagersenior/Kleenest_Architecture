@@ -20,7 +20,7 @@ A route or service file by itself is not completion.
 | Offline packs/sync | REQUIRED | — | — | — | REQUIRED | REQUIRED | HEALTH |
 | Live network | REQUIRED | business signals | advanced signals | network signals | REQUIRED | REQUIRED | OBSERVE |
 | Social/messaging | REQUIRED | customer engagement where canonical | engagement | engagement | recipient/network subset | subset | MODERATE |
-| Family | REQUIRED | — | — | — | group/Premium boundary only | group boundary | ADMIN |
+| Family | GATED CONSUMER UPGRADE: purchaser + up to 4 additional users (5 seats total), shared Premium value at family economics | — | — | — | family entitlement may be consumed only through canonical Consumer/Premium identity | same | ADMIN/ENTITLEMENT OBSERVE |
 | Progression/rewards/games/contests | REQUIRED | engagement/contest management | REQUIRED management | REQUIRED | Premium recipient linkage | linkage | OBSERVE |
 | Preferred/single-use access | REQUIRED | program/provider side | program/provider side | network/provider side | recipient subset | recipient subset | ADMIN |
 | QR | scan/check-in | REQUIRED lifecycle | REQUIRED + analytics | REQUIRED + network | operational attribution | cross-location | OBSERVE/ADMIN |
@@ -39,6 +39,25 @@ A route or service file by itself is not completion.
 | Ingestion | worker only | worker only | worker only | worker only | worker only | worker only | CONTROL/HEALTH only |
 | Capability/admin controls | — | — | — | org governance only | — | org governance only | REQUIRED |
 
+## Family capability contract
+
+Family is not a separate application and is not a default free Consumer feature. It is a **Consumer capability layer and paid upgrade** designed to reduce the effective per-user Premium cost for a household/group of up to five people.
+
+Canonical product behavior:
+
+1. A Consumer account purchases/owns the Family upgrade and becomes the family owner.
+2. One Family subscription provides **5 total seats**: the owner plus up to four additional accepted members.
+3. Members retain independent Consumer identities, profiles, history, progression, privacy boundaries and personal data; Family shares entitlement, not accounts or credentials.
+4. Accepted active members receive the Premium capability set through the canonical family entitlement check. The backend remains authoritative for access; the client must not infer Premium from invitation state alone.
+5. Invites, acceptance, removal/leave/revocation, seat count and owner state must refresh authoritative family state and Premium entitlement immediately.
+6. The Consumer membership/upgrade surface must show Family as a distinct upgrade option with the five-seat value proposition and savings relative to purchasing five individual Premium memberships. Exact price/savings copy must come from the active commerce/catalog authority rather than being hard-coded into the app.
+7. Family does not grant Business, Fleet or Enterprise capabilities. If the same identity has those products, they remain independently entitled.
+8. Family membership must not merge favorites, messages, location history, reviews, game progress or other personal Consumer data unless a separate explicit shared-family feature is later defined.
+9. Owner/control-plane may observe and administer entitlement/support state through privileged audited contracts, but it is not a family-member runtime.
+10. Family telemetry must cover upgrade exposure, purchase/restore outcome, invite lifecycle, seat utilization and entitlement activation without leaking private member content.
+
+Existing canonical backend evidence already includes `family_groups`, `family_members`, `family_accounts`, `family_invites`, `create_family_group`, `invite_family_member`, `accept_family_invite`, and `family_has_premium_access`. Implementation should extend/wire that authority rather than create a parallel family store.
+
 ## Current repository evidence
 
 ### Consumer/Premium — Kleenest_Production
@@ -48,7 +67,7 @@ Current mobile routes visibly cover AI assistant, access, account deletion, acti
 1. Game Freshness Engine must be wired into the actual games.tsx round loop, not merely exist in the service/backend.
 2. Native Premium purchase/restore and ad-free entitlement behavior require exact Android verification.
 3. Native notification registration/delivery and Android permission behavior require exact APK verification.
-4. Family must be traced against the current mobile UI/service, not inferred from backend tables.
+4. Family must be implemented as the gated five-seat Consumer upgrade: membership/catalog entry, purchase/restore entitlement, owner + four additional seats, invite/accept/remove/leave lifecycle, authoritative Premium propagation, seat utilization and telemetry.
 5. Photos/contribution flow requires exact Android media/storage verification.
 6. Every repaired capability must pass current-head CI and APK build.
 
@@ -93,15 +112,16 @@ Owner is intentionally not product-parity UI. Current routes are control plane, 
 ## Cross-app collision checks
 
 - Enterprise remains a capability layer in Business and Fleet; no Enterprise app.
+- Family remains a gated Consumer capability layer; no Family app and no automatic Business/Fleet/Enterprise grants.
 - Fleet's bundled Business Standard does not copy Business runtime into Fleet.
 - Ingestion remains worker infrastructure; customer apps do not receive ingestion controls.
 - AI remains a canonical server-assisted capability; provider secrets never move to apps.
 - Shared network state crosses apps through Supabase authority/events, never direct source imports.
-- Consumer Free/Premium functional feature parity is preserved; Premium value does not create artificial feature omissions.
+- Consumer Free/Premium core functional parity is preserved; Premium/Family value is expressed through the explicitly entitled capability/value contract rather than accidental omissions.
 
 ## Repair order from this sweep
 
-1. Finish Consumer release gates already in flight (fresh games, family/media/purchase/push verification, CI/APK).
+1. Finish Consumer release gates already in flight (fresh games, Family five-seat upgrade, media/purchase/push verification, CI/APK).
 2. Close Business depth/tier/action gaps and rebuild exact-head Business APK.
 3. Fleet full operational parity sweep and repair, then APK.
 4. Expand Owner from current control-plane foundation into its missing canonical admin/health/governance surfaces, then private APK.
