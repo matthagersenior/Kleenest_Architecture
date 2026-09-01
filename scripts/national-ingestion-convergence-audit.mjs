@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 const checks=[
- ['src/runtime/AdminMaintenancePage.jsx',['NATIONAL DATA INGESTION · AUTOMATIC','nationalIngestionStatus','nationalIngestionStorageStatus','Authorize ingestion continuation','Return to 50% automatic pause','Every 15 minutes']],
+ ['src/runtime/AdminMaintenancePage.jsx',['NATIONAL DATA INGESTION · LIVE','nationalIngestionStatus','active_markets','recent_runs','scheduler','Authorize ingestion continuation','Return to 50% automatic pause']],
  ['src/domains/admin/operations.js',["nationalIngestionStatus:profile=>ownerRpc(profile,'admin_national_ingestion_status')","nationalIngestionStorageStatus:profile=>ownerRpc(profile,'national_ingestion_storage_status')","setNationalIngestionResumeAuthorization:(profile,authorized)=>ownerRpc(profile,'admin_set_national_ingestion_resume_authorization'"]],
  ['supabase/functions/national-ingestion-orchestrator/index.ts',['national_ingestion_markets','national_ingestion_source_policies','national_ingestion_runs','ingest_external_locations','DATA_GOV_API_KEY','overpass-api.de','cycle()']],
  ['supabase/migrations/20260830110000_national_ingestion_queue_and_quota_control.sql',['national_ingestion_markets','national_ingestion_source_policies','admin_national_ingestion_status','kleenest-national-ingestion','*/15 * * * *']],
@@ -16,4 +16,4 @@ const edge=fs.existsSync('supabase/functions/national-ingestion-orchestrator/ind
 if(!edge.includes('daily_request_limit')||!edge.includes('daily_byte_limit'))missing.push('national ingestion worker must enforce source quotas');
 if(!/(?:market_kind|kind)\s*===\s*['"]city['"]\s*\?\s*0\.10\s*:\s*0\.18/.test(edge))missing.push('national ingestion worker must tile city/state markets deterministically');
 if(missing.length){console.error('National ingestion convergence audit failed.');for(const item of missing)console.error(`- ${item}`);process.exit(1);}
-console.log('National ingestion convergence audit passed: quota-aware scheduled ingestion, owner-controlled 50% storage guard with non-bypassable hard stop, canonical persistence, national queue status, and no competing manual ingestion controls.');
+console.log('National ingestion convergence audit passed: live owner observability, quota-aware scheduled ingestion, owner-controlled 50% storage guard with non-bypassable hard stop, canonical persistence, and no competing manual ingestion controls.');
