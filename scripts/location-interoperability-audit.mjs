@@ -12,13 +12,13 @@ const mapArgs = {
   p_category: null, p_search: null, p_amenity_names: []
 };
 
-// PostgREST can briefly retain a stale function privilege/schema view immediately
-// after a production migration. Retry only transient permission/schema-cache failures;
-// never turn a real application error into a passing audit.
+// Smoke the same canonical discovery RPC used by the consumer app. PostgREST can
+// briefly retain a stale privilege/schema view immediately after migrations, so retry
+// only transient permission failures; never turn a real application error into a pass.
 let mapRows = null;
 let mapError = null;
 for (let attempt = 1; attempt <= 3; attempt += 1) {
-  const result = await supabase.rpc('map_network_nearby_v1', mapArgs);
+  const result = await supabase.rpc('map_network_nearby_v2', mapArgs);
   mapRows = result.data;
   mapError = result.error;
   if (!mapError) break;
