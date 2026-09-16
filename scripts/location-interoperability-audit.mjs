@@ -6,7 +6,7 @@ if (!url || !key) throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHAB
 
 const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 const origin = { latitude: 38.627, longitude: -90.199 };
-const radiusMeters = 80467;
+const radiusMeters = 8047;
 const mapArgs = {
   p_lat: origin.latitude, p_lng: origin.longitude, p_radius_m: radiusMeters, p_limit: 50,
   p_category: null, p_search: null, p_amenity_names: []
