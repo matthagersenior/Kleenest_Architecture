@@ -1,0 +1,124 @@
+---
+title: Kleenest Architecture — Interoperability Matrix
+---
+flowchart LR
+
+classDef canonical fill:#e8f0fe,stroke:#3367d6,stroke-width:2px;
+classDef working fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+classDef review fill:#fff8e1,stroke:#f57c00,stroke-width:2px;
+classDef broken fill:#ffebee,stroke:#c62828,stroke-width:2px;
+classDef infra fill:#f3e5f5,stroke:#6a1b9a,stroke-width:1px;
+classDef legacy fill:#eeeeee,stroke:#616161,stroke-width:1px;
+
+subgraph UI["UI / Product surfaces"]
+  MAP["Map / Discovery"]
+  PLACE["Place Detail"]
+  CHECK["Check-in"]
+  REVIEW["Reviews"]
+  ROUTE["Routes"]
+  BIZ["Business"]
+  FLEET["Fleet"]
+  ENT["Enterprise"]
+  NOTIF["Notifications"]
+  REWARD["Rewards / Gamification"]
+end
+
+subgraph SERVICES["Frontend service boundaries"]
+  DISC_S["Discovery service"]
+  LOC_S["Canonical location service"]
+  CHECK_S["Check-in service"]
+  REVIEW_S["Review service"]
+  ROUTE_S["Route service"]
+  BIZ_S["Business service"]
+  FLEET_S["Fleet service"]
+  NOTIF_S["Notification service"]
+end
+
+subgraph RPC["Canonical / supporting backend contracts"]
+  DISC_R["prepare_universal_location_discovery"]
+  LOC_R["Canonical locations / location resolution"]
+  CHECK_R["kleenest_map_check_in"]
+  REVIEW_R["create_review"]
+  ROUTE_R["Route RPCs / route events"]
+  BIZ_R["Business CRUD gateway / service RPCs"]
+  FLEET_R["Fleet controller RPCs"]
+  NOTIF_R["Notification read / delivery status"]
+end
+
+subgraph INGEST["Ingestion / discovery runtime"]
+  CAND["ingest-map-candidates-v3\nCURRENT DISCOVERY"]
+  MAPS["maps-ingest v22\nSCHEDULED INGESTION"]
+  OLD1["ingest-map-candidates\nlegacy candidate family"]
+  OLD2["ingest-map-candidates-v2\nlegacy candidate family"]
+  PD["public-data-ingest family\nbase / v2 / v3 / v4"]
+  MB["market-bathroom-ingest family\nbase / v2 / v3 / v4 / v5"]
+end
+
+subgraph DATA["Canonical data / projections"]
+  LOC["locations"]
+  OBS["external_observations"]
+  JOB["external_import_jobs"]
+  EVENTS["feature events / domain events"]
+  NOTIFS["notifications"]
+  DELIVERY["notification_push_deliveries"]
+end
+
+subgraph WORKERS["Workers / triggers / infrastructure"]
+  TRIG_OBS["external observation triggers"]
+  TRIG_LOC["location projections"]
+  GAM["gamification activity trigger"]
+  PUSH["deliver-push-notification"]
+  INTEL["intelligence workers"]
+  CACHE["map discovery cache / lease"]
+end
+
+MAP --> DISC_S --> DISC_R --> CAND
+PLACE --> LOC_S --> LOC_R --> LOC
+CHECK --> CHECK_S --> CHECK_R --> LOC
+REVIEW --> REVIEW_S --> REVIEW_R --> LOC
+ROUTE --> ROUTE_S --> ROUTE_R
+BIZ --> BIZ_S --> BIZ_R
+FLEET --> FLEET_S --> FLEET_R
+NOTIF --> NOTIF_S --> NOTIF_R
+
+CAND --> CACHE --> LOC
+MAPS --> JOB --> PD
+MAPS --> JOB --> MB
+PD --> OBS
+MB --> OBS
+OBS --> TRIG_OBS --> LOC
+LOC --> TRIG_LOC
+CHECK_R --> EVENTS
+REVIEW_R --> EVENTS
+ROUTE_R --> EVENTS
+CHECK_R --> GAM
+REVIEW_R --> GAM
+NOTIF_R --> NOTIFS --> PUSH --> DELIVERY
+EVENTS --> INTEL --> NOTIFS
+
+OLD1 -.->|"RETIREMENT REVIEW"| CAND
+OLD2 -.->|"RETIREMENT REVIEW"| CAND
+PD -.->|"CALLER / AUTH / WRITE MATRIX"| LOC
+MB -.->|"CALLER / AUTH / WRITE MATRIX"| LOC
+
+G1["🔴 Scheduler → maps-ingest v22\nNo live v22 job yet"]
+G2["🟠 Version-family callers\nnot fully proven absent"]
+G3["🟠 Auth/write equivalence\nrequired before retirement"]
+G4["🟡 Downstream ingestion\ntrigger verification"]
+G5["🟡 Notification delivery\nproduction delivery rows currently empty"]
+
+MAPS -.-> G1
+OLD1 -.-> G2
+OLD2 -.-> G2
+PD -.-> G3
+MB -.-> G3
+OBS -.-> G4
+DELIVERY -.-> G5
+
+class DISC_R,LOC_R,CHECK_R,REVIEW_R,ROUTE_R,BIZ_R,FLEET_R,NOTIF_R canonical;
+class CAND,LOC,OBS,JOB,EVENTS,NOTIFS working;
+class PD,MB,INTEL,CACHE review;
+class MAPS,G1 broken;
+class TRIG_OBS,TRIG_LOC,GAM,PUSH,DELIVERY infra;
+class OLD1,OLD2 legacy;
+class G2,G3,G4,G5 review;
