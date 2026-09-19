@@ -1,0 +1,17 @@
+-- Reconcile live capability runtime grants with the canonical 794ac831 contract.
+-- Keep capability authorization authenticated-only; the UI consumes these RPCs after session establishment.
+
+revoke execute on function public.get_business_service_entitlement(uuid) from public, anon;
+grant execute on function public.get_business_service_entitlement(uuid) to authenticated;
+
+revoke execute on function public.has_fleet_access(uuid) from public, anon;
+grant execute on function public.has_fleet_access(uuid) to authenticated;
+
+revoke execute on function public.fleet_actor_is_manager(uuid) from public, anon;
+grant execute on function public.fleet_actor_is_manager(uuid) to authenticated;
+
+revoke execute on function public.fleet_metric_controller_authorized(uuid) from public, anon;
+grant execute on function public.fleet_metric_controller_authorized(uuid) to authenticated;
+
+revoke execute on function public.fleet_metric_source_allowed(text, text) from public, anon;
+grant execute on function public.fleet_metric_source_allowed(text, text) to authenticated;
