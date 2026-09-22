@@ -1,0 +1,22 @@
+state,source,target,relationship,priority,notes
+working,Map / Discovery,Discovery service,UI action, P1,current consumer discovery path
+working,Discovery service,prepare_universal_location_discovery,service contract,P1,canonical discovery contract
+working,prepare_universal_location_discovery,ingest-map-candidates-v3,backend path,P1,current discovery runtime
+working,ingest-map-candidates-v3,map discovery cache / lease,cache path,P1,cache/lease infrastructure
+working,map discovery cache / lease,locations,canonical output,P1,canonical presentation data
+broken,Scheduler,maps-ingest v22,scheduled invocation,P0,no live v22 job observed yet
+review,maps-ingest v22,external_import_jobs,job lifecycle,P0,must reach started/terminal state
+review,maps-ingest v22,public-data-ingest family,ingestion responsibility,P1,do not merge until write/auth equivalence proven
+review,maps-ingest v22,market-bathroom-ingest family,ingestion responsibility,P1,do not merge until write/auth equivalence proven
+review,ingest-map-candidates,ingest-map-candidates-v3,version family,P1,retirement requires caller proof
+review,ingest-map-candidates-v2,ingest-map-candidates-v3,version family,P1,retirement requires caller proof
+review,external_observations,observation triggers,projection,P1,downstream verification required
+working,Check-in,kleenest_map_check_in,canonical capability,P1,domain contract
+working,Reviews,create_review,canonical capability,P1,domain contract
+working,Check-in,feature events,event capture,P1,cross-cutting trigger
+working,Reviews,feature events,event capture,P1,cross-cutting trigger
+working,Notifications,deliver-push-notification,push delivery, P1,worker infrastructure
+review,notifications,notification_push_deliveries,delivery observability,P1,delivery status boundary added
+review,Business,Business service,UI/service boundary,P1,verify complete action chain
+review,Fleet,Fleet controller RPCs,UI/backend boundary,P1,verify metric configuration chain
+review,Enterprise,authoritative outcomes,engagement semantics,P1,verify event/outcome authority
