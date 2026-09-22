@@ -21,7 +21,7 @@ export default function ReportingHistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const rows = await services.reporting.list(scope);
+      const rows = await services.reporting.list(scope, scope === 'business' ? selectedBusinessId : null);
       setSchedules(rows);
       const all = await Promise.all(rows.map(schedule => services.reporting.runs(schedule.id)));
       setRuns(all.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
@@ -46,10 +46,12 @@ export default function ReportingHistoryPage() {
     window.addEventListener('kleenest:intelligence-updated', refresh);
     window.addEventListener('kleenest:intelligence-action-completed', refresh);
     window.addEventListener('kleenest:business-updated', refresh);
+    window.addEventListener('kleenest:reporting-updated', refresh);
     return () => {
       window.removeEventListener('kleenest:intelligence-updated', refresh);
       window.removeEventListener('kleenest:intelligence-action-completed', refresh);
       window.removeEventListener('kleenest:business-updated', refresh);
+      window.removeEventListener('kleenest:reporting-updated', refresh);
     };
   }, [load, scope, selectedBusinessId]);
 
