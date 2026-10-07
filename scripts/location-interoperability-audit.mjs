@@ -13,8 +13,10 @@ const mapArgs = {
 };
 
 // Smoke the same canonical discovery RPC used by the consumer app. PostgREST can
-// briefly retain a stale privilege/schema view immediately after migrations, so retry
-// only transient permission failures; never turn a real application error into a pass.
+// briefly retain a stale privilege/schema view immediately after migrations, and the
+// live database can transiently hit statement_timeout under ingestion pressure. Retry
+// only those bounded transient failures; repeated errors still fail the audit.
+const transientMapCodes = new Set(['42501', '57014']);
 let mapRows = null;
 let mapError = null;
 for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -22,7 +24,7 @@ for (let attempt = 1; attempt <= 3; attempt += 1) {
   mapRows = result.data;
   mapError = result.error;
   if (!mapError) break;
-  if (mapError.code !== '42501' || attempt === 3) break;
+  if (!transientMapCodes.has(mapError.code) || attempt === 3) break;
   await new Promise(resolve => setTimeout(resolve, attempt * 1500));
 }
 if (mapError) throw mapError;
