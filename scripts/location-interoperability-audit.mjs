@@ -20,7 +20,7 @@ const transientMapCodes = new Set(['42501', '57014']);
 let mapRows = null;
 let mapError = null;
 for (let attempt = 1; attempt <= 3; attempt += 1) {
-  const result = await supabase.rpc('map_network_nearby_v1', mapArgs);
+  const result = await supabase.rpc('map_network_nearby_v2', mapArgs);
   mapRows = result.data;
   mapError = result.error;
   if (!mapError) break;
